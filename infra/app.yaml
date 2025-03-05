@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vm-api
+  namespace: vm-interface
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: vm-api}
+  template:
+    metadata:
+      labels: {app: vm-api}
+    spec:
+      serviceAccountName: vm-api
+      securityContext: {fsGroup: 1000}
+      volumes:
+      - name: console-tls
+        secret: {secretName: vm-console-tls}
+      - name: recordings
+        persistentVolumeClaim: {claimName: vm-recordings}
+      containers:
+      - name: api
+        image: vm-interface:ci
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          valueFrom: {secretKeyRef: {name: vm-db-app, key: uri}}
+        - name: TEST_IDENTITIES
+          valueFrom: {secretKeyRef: {name: vm-api-test, key: identities}}
+        volumeMounts:
+        - name: recordings
+          mountPath: /var/lib/vm-recordings
+        readinessProbe:
+          httpGet: {path: /api/v1/health, port: 3000}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests: {cpu: 100m, memory: 128Mi}
+          limits: {cpu: "1", memory: 512Mi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities: {drop: ["ALL"]}
+      - name: console
+        image: vm-interface:ci
+        imagePullPolicy: Never
+        command: ["node","--import","tsx","src/run-console-gateway.ts"]
+        ports:
+        - containerPort: 3443
+        env:
+        - name: DATABASE_URL
+          valueFrom: {secretKeyRef: {name: vm-db-app, key: uri}}
+        - name: CONSOLE_ALLOWED_ORIGIN
+          value: "https://localhost:3443"
+        volumeMounts:
+        - name: console-tls
+          mountPath: /var/run/console-tls
+          readOnly: true
+        readinessProbe:
+          tcpSocket: {port: 3443}
+        resources:
+          requests: {cpu: 100m, memory: 128Mi}
+          limits: {cpu: "1", memory: 512Mi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities: {drop: ["ALL"]}
+      - name: recording
+        image: vm-interface:ci
+        imagePullPolicy: Never
+        command: ["node","--import","tsx","src/run-recording-worker.ts"]
+        env:
+        - name: DATABASE_URL
+          valueFrom: {secretKeyRef: {name: vm-db-app, key: uri}}
+        volumeMounts:
+        - name: recordings
+          mountPath: /var/lib/vm-recordings
+        resources:
+          requests: {cpu: 100m, memory: 128Mi}
+          limits: {cpu: "1", memory: 512Mi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities: {drop: ["ALL"]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm-api
+  namespace: vm-interface
+spec:
+  selector: {app: vm-api}
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+  - name: wss
+    port: 3443
+    targetPort: 3443

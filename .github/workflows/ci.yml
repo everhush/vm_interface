@@ -1,0 +1,91 @@
+name: API and real KVM smoke
+on:
+  push:
+    branches: [main, 'implementation/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vm-interface-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund
+      - run: python3 -m unittest discover -s scripts -p 'test_*.py' && bash -n scripts/provision-ci.sh scripts/watch-launcher-ci.sh
+      - run: npm run typecheck && npm run lint && npm test && npm run build
+  kvm:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provision isolated K3s with actual KVM
+        run: bash scripts/provision-ci.sh
+      - name: Build and deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build -t vm-interface:ci .
+          docker save vm-interface:ci | sudo k3s ctr images import -
+          A=$(openssl rand -hex 32); B=$(openssl rand -hex 32)
+          echo "::add-mask::$A"; echo "::add-mask::$B"
+          echo "TOKEN_A=$A" >> "$GITHUB_ENV"; echo "TOKEN_B=$B" >> "$GITHUB_ENV"
+          kubectl -n vm-interface create secret generic vm-api-test --from-literal=identities="{\"alpha\":\"$A\",\"beta\":\"$B\"}"
+          umask 077
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" -keyout /tmp/console-tls.key -out /tmp/console-tls.crt
+          kubectl -n vm-interface create secret tls vm-console-tls --key=/tmp/console-tls.key --cert=/tmp/console-tls.crt
+          rm -f /tmp/console-tls.key
+          chmod 644 /tmp/console-tls.crt
+          kubectl apply -f infra/app.yaml
+          kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
+          python3 scripts/check-rbac-ci.py
+      - name: Exercise the deployed HTTP API
+        run: |
+          set -euo pipefail
+          kubectl -n vm-interface port-forward svc/vm-api 3000:3000 3443:3443 > /tmp/vm-port.log 2>&1 &
+          port_pid=$!
+          bash scripts/watch-launcher-ci.sh &
+          diag_pid=$!
+          trap 'kill "$port_pid" "$diag_pid" 2>/dev/null || true' EXIT
+          curl --retry 20 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:3000/api/v1/health
+          python3 scripts/e2e-smoke.py
+          python3 scripts/e2e-persistent.py
+          docker run --rm --network host --user "$(id -u):$(id -g)" -e TOKEN_A -e TOKEN_B -v "$PWD/evidence:/app/evidence" -v /tmp/console-tls.crt:/tmp/console-ca.pem:ro vm-interface:ci node --import tsx scripts/e2e-vnc.ts
+          if ! command -v tesseract >/dev/null; then sudo apt-get update && sudo apt-get install -y tesseract-ocr; fi
+          npm install --no-audit --no-fund
+          CONSOLE_CA_PATH=/tmp/console-tls.crt node --import tsx scripts/e2e-input.ts
+          docker run --rm --network host --user "$(id -u):$(id -g)" -e TOKEN_A -e TOKEN_B -v "$PWD/evidence:/app/evidence" vm-interface:ci node --import tsx scripts/e2e-recording.ts
+          python3 scripts/e2e-exchange.py
+      - name: VirtioFS guest compatibility probe (infrastructure only)
+        run: |
+          set -euo pipefail
+          if ! command -v skopeo >/dev/null; then sudo apt-get update && sudo apt-get install -y skopeo; fi
+          python3 scripts/probe-virtiofs-ci.py
+      - name: Diagnostics (no secret or implicit guest screen collection)
+        if: always()
+        run: |
+          mkdir -p evidence
+          kubectl get nodes -o wide > evidence/nodes.txt 2>&1 || true
+          kubectl -n vm-interface get vm,vmi,pods > evidence/state.txt 2>&1 || true
+          kubectl -n vm-interface get dv,pvc > evidence/storage-state.txt 2>&1 || true
+          kubectl -n vm-interface get events --sort-by=.lastTimestamp > evidence/events.txt 2>&1 || true
+          kubectl -n vm-interface logs deployment/vm-api -c api --tail=200 > evidence/api.log 2>&1 || true
+          kubectl -n vm-interface logs deployment/vm-api -c console --tail=100 > evidence/console-gateway.log 2>&1 || true
+          kubectl -n vm-interface logs deployment/vm-api -c recording --tail=100 > evidence/recording-worker.log 2>&1 || true
+          kubectl -n kubevirt get pods > evidence/kubevirt.txt 2>&1 || true
+          kubectl -n kubevirt logs daemonset/virt-handler --tail=200 > evidence/virt-handler.log 2>&1 || true
+          kubectl -n kubevirt logs deployment/virt-controller --tail=200 > evidence/virt-controller.log 2>&1 || true
+          kubectl -n kubevirt get kubevirt kubevirt -o jsonpath='{.spec.configuration.developerConfiguration.disabledFeatureGates}' > evidence/kubevirt-feature-gates.txt 2>&1 || true
+          kubectl get nodes -o custom-columns=NAME:.metadata.name,KVM:.status.allocatable.devices\\.kubevirt\\.io/kvm > evidence/kvm-capacity.txt 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kvm-smoke-evidence
+          path: evidence/
