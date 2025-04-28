@@ -8,7 +8,7 @@ const base=process.env.API_URL||"http://127.0.0.1:3000/api/v1";
 const wss=process.env.VNC_URL||"wss://127.0.0.1:3443/api/v1";
 const a=process.env.TOKEN_A,b=process.env.TOKEN_B;
 assert.ok(a&&b);
-const ca=readFileSync("/tmp/console-ca.pem");
+const ca=readFileSync(process.env.CONSOLE_CA_PATH||"/tmp/console-ca.pem");
 async function call(method:string,path:string,token=a,data?:unknown,expected=200){
  const res=await fetch(base+path,{method,headers:{authorization:"Bearer "+token,"content-type":"application/json","idempotency-key":randomUUID()},...(data!==undefined?{body:JSON.stringify(data)}:{}),signal:AbortSignal.timeout(30000)});
  assert.equal(res.status,expected,method+" "+path);

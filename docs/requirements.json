@@ -12,15 +12,20 @@
         "actual guest kernel boot screen"
       ],
       "pending": [
-        "ARM64 eligible runner",
-        "immutable dependency and operator verification"
+        "full consolidated static checks",
+        "immutable npm dependency lock and publisher verification",
+        "native device and operator compatibility"
       ],
       "evidence": [
         45542879476,
         45543634216,
         45543719409
       ],
-      "status": "partial-blocked-arm64"
+      "status": "candidate-pending-qualification",
+      "preparedInCandidate": [
+        "one-command dedicated device provisioning for x86 and ARM64, host KVM preflight",
+        "separate consolidated non-KVM checks workflow"
+      ]
     },
     {
       "issue": 2,
@@ -33,14 +38,19 @@
         "hashed account keys and scoped permissions"
       ],
       "pending": [
-        "desired state reconciliation and cancellation",
-        "audit and rate limits"
+        "static and device validation",
+        "safe cancellation only where existing operation supports it; no generic uncertain replay"
       ],
       "evidence": [
         45542879476,
         45544070366
       ],
-      "status": "partial"
+      "status": "candidate-pending-qualification",
+      "preparedInCandidate": [
+        "durable observed operation convergence and restart test",
+        "redacted audit, per-account request limits and bounded bodies",
+        "Console HTTP input now enforces per-account rate limit, audit and activity tracking"
+      ]
     },
     {
       "issue": 3,
@@ -51,15 +61,20 @@
         "guest status"
       ],
       "pending": [
-        "guest login",
-        "reset",
-        "firmware/advanced configuration",
-        "live hardware certification"
+        "Full static checks and real cold resize, firmware, reset, advanced schema dry-run/replay tests",
+        "Conditional live update/migration/GPU/device support only after eligible qualification; broader native CRD coverage not implemented"
       ],
       "evidence": [
-        45542879476
+        45542879476,
+        45550528465
       ],
-      "status": "partial"
+      "status": "candidate-pending-qualification",
+      "preparedInCandidate": [
+        "hard reset, boot-order change, conditional ARM64 UEFI uploaded disk",
+        "native QEMU virtio-mem growth/reclaim evidence from 45550528465 (not KubeVirt live resize)",
+        "cold boot-order and optical tray control",
+        "Strict versioned native KubeVirt subset canonicalized through the same quota and idempotency path"
+      ]
     },
     {
       "issue": 4,
@@ -71,16 +86,21 @@
         "virtio-mem guest driver present (not live resize)"
       ],
       "pending": [
-        "product file bytes",
-        "arbitrary authorized media",
-        "growth/export/recovery",
-        "real product VirtioFS API roundtrip (static checks 45549409150 passed)"
+        "Real file exchange and media import, Windows signed drivers and Android mount",
+        "Arbitrary disk attachment/detachment beyond declared slots, disk expansion/export remain implementation work",
+        "Snapshot/backup only where supported storage path passes conformance"
       ],
       "evidence": [
         45542879476,
         45544070366
       ],
-      "status": "partial"
+      "status": "candidate-pending-qualification",
+      "preparedInCandidate": [
+        "product VirtioFS, bounded file exchange, authorized direct/resumable CDI imports, conditional Windows/Android exchange profiles",
+        "independent auxiliary disk import, quota and transfer status",
+        "independent auxiliary installer driver ISO with read-only SATA and quota",
+        "Read-only auxiliary Windows driver ISO with independent verified media transfer and safe boot order"
+      ]
     },
     {
       "issue": 5,
@@ -92,15 +112,19 @@
         "guest-visible WSS human takeover and HTTP batch markers observed in failed-run artifact; regression revalidation required"
       ],
       "pending": [
-        "input lease/priority and real input",
-        "opt-in recording/playable retrieval"
+        "consolidated static checks",
+        "real video, pointer and guest app proof; no current platform MP4"
       ],
       "evidence": [
         45542879476,
         45544070366,
         45548980997
       ],
-      "status": "partial"
+      "status": "candidate-pending-qualification",
+      "preparedInCandidate": [
+        "API input lease, video capture, actual script-driven proof with original MP4 and trace, standalone verifier",
+        "Independent raw video frame decode, pixel comparison and ordered OCR verification"
+      ]
     },
     {
       "issue": 6,
@@ -112,27 +136,33 @@
         "key and ticket isolation and revocation"
       ],
       "pending": [
-        "private networking/exposure",
-        "idle stop",
-        "failure reconciliation",
-        "request limits/audit"
+        "actual network and recovery/idle conformance",
+        "qualified public exposure, failure/node/storage pressure and operational limits incomplete"
       ],
       "evidence": [
         45542879476,
         45544070366
       ],
-      "status": "partial"
+      "status": "candidate-pending-qualification",
+      "preparedInCandidate": [
+        "private TCP tunnel, redacted audit, idle stop and recovery tests"
+      ]
     },
     {
       "issue": 7,
       "scope": "Windows x64 API-only demonstration",
       "verified": [],
       "pending": [
-        "authorized media",
-        "install boot input file software recording"
+        "Acquire authorized actual Windows installer, 7-Zip and pinned signed MSIs; construct driver ISO and validate signer/package service compatibility",
+        "Qualify exact-version setup/application UI scenario and native guest workflow"
       ],
       "evidence": [],
-      "status": "open"
+      "status": "candidate-pending-qualification",
+      "preparedInCandidate": [
+        "Windows API-only native runner, 7-Zip fixture, authorized import and actual video/result assertions",
+        "separate read-only auxiliary driver ISO and guest bootstrap path",
+        "Offline signed-driver ISO packager, guest Authenticode validation and mount proof from random API-uploaded challenge"
+      ]
     },
     {
       "issue": 8,
@@ -141,16 +171,19 @@
         "free ARM host probe only"
       ],
       "pending": [
-        "eligible native KVM runner",
-        "compatible image",
-        "APK actual bytes and functional check",
-        "recording"
+        "actual archive download, publisher attestation and qemu-img checks",
+        "native UEFI boot compatibility, guest exchange driver/SAF, exact-version UI scenario, APK build",
+        "native device validation"
       ],
       "evidence": [
         45543634216,
         45543719409
       ],
-      "status": "blocked-hardware"
+      "status": "candidate-pending-qualification",
+      "preparedInCandidate": [
+        "ARM64 gated UEFI disk API, Android signed test APK source/build and UI/file proof runner",
+        "pinned ARM64 LineageOS QEMU 23.2 dual-disk release metadata and safe offline archive preparation"
+      ]
     },
     {
       "issue": 9,
@@ -159,14 +192,44 @@
         "partial smoke pipelines"
       ],
       "pending": [
-        "all scope and both showcases",
-        "three consecutive comprehensive passes"
+        "Full static checks; remaining mandatory backend implementation gaps; native media and exact UI scenario qualification",
+        "Actual two native showcases, original API MP4 evidence and 3/3 comprehensive reviewed passes"
       ],
       "evidence": [
         45542879476,
         45543854617
       ],
-      "status": "open"
+      "status": "candidate-pending-qualification",
+      "preparedInCandidate": [
+        "consolidated branch, device docs, evidence verifier and independent static checks",
+        "validation-only handoff issue #12; readiness gate remains blocked"
+      ]
     }
-  ]
+  ],
+  "candidateBranch": "prep/device-validation",
+  "candidateStatus": "not-ready-for-validation-only-handoff",
+  "nonKvmLocalEvidence": {
+    "scope": "isolated local tests on Node 22 transpiled with TypeScript 5.8 and Python; not full Node 24 build",
+    "passed": [
+      "request body: 2 tests",
+      "test identity authorization: 2 tests",
+      "input ownership and release: 1 test",
+      "Android archive preparation: 2 synthetic archive tests"
+    ],
+    "limitations": [
+      "dependency registry DNS unavailable",
+      "hosted checks have no visible run",
+      "actual Android release archive unavailable locally",
+      "No consolidated Node 24 dependency install/typecheck/lint/build result; no candidate workflow run or commit status visible",
+      "No authorized real Windows MSI/ISO bytes, xorriso or PowerShell locally; guest mount and exact scenario remain unqualified",
+      "No original API-recorded MP4 in recovered CI artifacts; synthetic verifier fixtures are not product evidence"
+    ],
+    "sourceBlobsVerified": true,
+    "candidateCodeCommit": "a4d2dcde025b16c685b605face839a9fdcd8eebf",
+    "additionalPassed": [
+      "Windows driver-media packaging: 2 unit tests with synthetic MSI header fixtures",
+      "Evidence frame verifier: 2 unit tests with actual synthetic test-video decode/OCR and tampered frame rejection"
+    ],
+    "latestCodeReviewed": "6dad51eb4bdf0f236acb295096662053ed91ece4"
+  }
 }

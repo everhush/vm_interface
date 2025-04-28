@@ -18,3 +18,24 @@ test("rejected idempotent replay preserves HTTP failure and never becomes accept
  assert.deepEqual(replaySubmission({id:"op",status:"submitted",result:{id:"vm"}}),{operationId:"op",status:"submitted",result:{id:"vm"}});
  assert.equal(replaySubmission({id:"op",status:"unknown",result:null}).status,"unknown");
 });
+
+import {safeIntent} from "../src/operation";
+import {lifecycleObservation} from "../src/reconcile-operation";
+test("durable intent never persists console input or credentials",()=>{
+ const id="12345678-1234-1234-1234-123456789abc";
+ const vm="vm-"+"a".repeat(32);
+ assert.deepEqual(safeIntent({action:"input",id:vm,batch:{events:[{text:"secret"}]},token:"secret"},id),{action:"input",computerId:vm});
+ assert.deepEqual(safeIntent({action:"create",spec:{cloudInit:"secret"}},id),{action:"create",computerId:"vm-12345678123412341234123456789abc"});
+});
+test("restart observation requires a distinct VMI and verified VM identity",()=>{
+ const vm={metadata:{uid:"vm-uid"},status:{}};
+ const old={metadata:{uid:"old"},status:{phase:"Running"}};
+ const next={metadata:{uid:"new"},status:{phase:"Running"}};
+ const target={vmUid:"vm-uid",previousInstanceUid:"old"};
+ assert.equal(lifecycleObservation("restart",vm,old,target).state,"waiting");
+ assert.equal(lifecycleObservation("restart",vm,next,target).state,"converged");
+ assert.equal(lifecycleObservation("restart",vm,next,{vmUid:"other"}).state,"uncertain");
+ assert.equal(lifecycleObservation("restart",vm,next,{vmUid:"vm-uid"}).state,"uncertain");
+ assert.equal(lifecycleObservation("stop",vm,null,target).state,"converged");
+ assert.equal(lifecycleObservation("delete",null,null,target).state,"waiting");
+});

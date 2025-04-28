@@ -108,6 +108,20 @@ try{
  await call("DELETE",lease,human.token,undefined,200,"Console");
  writeFileSync("evidence/input-ownership.json",JSON.stringify({automationVisible:true,humanTakeover:true,automationDenied:true,observerDenied:true,keyRevocation:true,httpBatchVisible:true,httpBatchReplay:true,firstGeneration:first.generation,lastGeneration:taken.generation},null,2));
  console.log("Actual guest-visible keyboard input and human takeover verified");
+ // Hard reset is separately confirmed; unlike restart it keeps the VMI UID.
+ const uid=(await call("GET",path,a)).instance.metadata.uid;
+ await call("POST",path+"/reset",b,{confirmHardReset:true,instanceUid:uid},404);
+ await call("POST",path+"/reset",a,{confirmHardReset:false,instanceUid:uid},422);
+ await call("POST",path+"/reset",a,{confirmHardReset:true,instanceUid:randomUUID()},409);
+ for(const v of viewers){v.client.end();v.ws.terminate()}
+ const resetKey=randomUUID(),resetBody={confirmHardReset:true,instanceUid:uid};
+ const reset=await call("POST",path+"/reset",a,resetBody,202,"Bearer",resetKey);
+ assert.equal(reset.result.instanceUid,uid);
+ await awaitScreen(path,"evidence/reset-login.png",s=>/login\s*:/i.test(s)&&!normalize(s).includes("batchok")&&!normalize(s).includes("humancontrol"),180);
+ assert.equal((await call("GET",path,a)).instance.metadata.uid,uid);
+ assert.equal((await call("POST",path+"/reset",a,resetBody,202,"Bearer",resetKey)).operationId,reset.operationId);
+ writeFileSync("evidence/reset-verification.json",JSON.stringify({sameVmiUid:true,oldInputAbsent:true,guestLoginPromptReturned:true,crossAccountDenied:true,confirmationRequired:true,replayOperationIdStable:true},null,2));
+ console.log("Actual hard reset guest login prompt returned with the same VMI UID");
 }finally{
  for(const v of viewers){v.client.end();v.ws.terminate()}
  if(keyId)await call("DELETE","/keys/"+keyId,a);

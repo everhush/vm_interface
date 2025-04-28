@@ -6,10 +6,11 @@ export const vmPath=(id="")=>"/apis/kubevirt.io/v1/namespaces/"+ns()+"/virtualma
 export const dvPath=(id:string)=>"/apis/cdi.kubevirt.io/v1beta1/namespaces/"+ns()+"/datavolumes/"+id;
 export const pvcPath=(id:string)=>"/api/v1/namespaces/"+ns()+"/persistentvolumeclaims/"+id;
 export const vmiPath=(id:string)=>"/apis/kubevirt.io/v1/namespaces/"+ns()+"/virtualmachineinstances/"+id;
+export const resetPath=(id:string)=>"/apis/subresources.kubevirt.io/v1/namespaces/"+ns()+"/virtualmachineinstances/"+id+"/reset";
 export const actionPath=(id:string,action:string)=>"/apis/subresources.kubevirt.io/v1/namespaces/"+ns()+"/virtualmachines/"+id+"/"+action;
 // Lifecycle subresources return an empty response and do not declare JSON production.
 export function acceptFor(method:string,path:string){
- return method==="PUT" && /^\/apis\/subresources\.kubevirt\.io\/v1\/namespaces\/[^/]+\/virtualmachines\/[^/]+\/(start|stop|restart)$/.test(path) ? "*/*" : "application/json";
+ return method==="PUT" && (/^\/apis\/subresources\.kubevirt\.io\/v1\/namespaces\/[^/]+\/virtualmachines\/[^/]+\/(start|stop|restart)$/.test(path) || /^\/apis\/subresources\.kubevirt\.io\/v1\/namespaces\/[^/]+\/virtualmachineinstances\/[^/]+\/reset$/.test(path)) ? "*/*" : "application/json";
 }
 export async function kube(method:string,path:string,body?:unknown,contentType="application/json"):Promise<unknown>{
  const dir="/var/run/secrets/kubernetes.io/serviceaccount/";
@@ -25,7 +26,7 @@ export async function kube(method:string,path:string,body?:unknown,contentType="
   req.on("timeout",()=>req.destroy(Error("Kubernetes request timed out")));req.on("error",reject);req.end(payload);
  });
 }
-export type Resource={metadata?:{name?:string;uid?:string;resourceVersion?:string;deletionTimestamp?:string;labels?:Record<string,string>;ownerReferences?:{kind:string;uid:string}[]};spec?:unknown;status?:unknown};
+export type Resource={metadata?:{name?:string;uid?:string;resourceVersion?:string;deletionTimestamp?:string;creationTimestamp?:string;annotations?:Record<string,string>;labels?:Record<string,string>;ownerReferences?:{kind:string;uid:string}[]};spec?:unknown;status?:unknown};
 export async function owned(id:string,account:string){
  if(!/^vm-[a-f0-9]{32}$/.test(id))throw new ApiError(404,"Computer not found");
  const vm=await kube("GET",vmPath(id)) as Resource;

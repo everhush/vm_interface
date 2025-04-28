@@ -10,6 +10,7 @@ import {runningDisplay} from "./screenshot";
 import {ApiError} from "./kube";
 import {withInputAuthority} from "./input-lease";
 import {HeldInput} from "./input-state";
+import {handleNetworkUpgrade,isExposurePath} from "./network-gateway";
 
 const MAX_SESSIONS=4, MAX_VIEWERS=4, MAX_PIXELS=1920*1200;
 const MAX_BUFFER=12*1024*1024;
@@ -239,6 +240,7 @@ export function startGateway(){
  const wss=new WebSocketServer({noServer:true,maxPayload:64*1024,perMessageDeflate:false,handleProtocols:p=>p.has("binary")?"binary":false});
  server.on("upgrade",(req,socket,head)=>{
   socket.on("error",()=>socket.destroy());
+  if(isExposurePath(req.url??"")){void handleNetworkUpgrade(req,socket,head,wss);return}
   void (async()=>{
    let s:Session|undefined,grantId:string|undefined;
    try{

@@ -10,7 +10,7 @@ export type GuestObservation={
   interfaces:Array<{name:string|null;interfaceName:string|null;ipAddress:string|null;mac:string|null}>;
   volumes:Array<{name:string|null;phase:string|null;target:string|null;reason:string|null}>;
   evidenceLevel:"kubevirt-status-only";
-  console:{supported:false;reason:string};
+  console:{supported:boolean;reason:string};
   observedAt:string;
 };
 
@@ -57,7 +57,7 @@ export function guestObservation(id:string,vmi:Resource|null,observedAt=new Date
     interfaces,
     volumes,
     evidenceLevel:"kubevirt-status-only",
-    console:{supported:false,reason:"Interactive console is not yet implemented; status evidence is read-only."},
+    console:field(status??{},"phase")==="Running"?{supported:true,reason:"Console access requires a separate authorized ticket; status alone does not establish guest readiness."}:{supported:false,reason:"A running VMI is required for console access."},
     observedAt
   };
 }
