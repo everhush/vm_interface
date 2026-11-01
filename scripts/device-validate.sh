@@ -81,6 +81,7 @@ bash scripts/watch-launcher-ci.sh & diag_pid=$!
 if [ "$profile" = core ]; then
   python3 scripts/e2e-smoke.py
   python3 scripts/e2e-persistent.py
+  python3 scripts/e2e-data-disks.py
   node --import tsx scripts/e2e-vnc.ts
   python3 scripts/e2e-api-control-proof.py
   node --import tsx scripts/e2e-input.ts

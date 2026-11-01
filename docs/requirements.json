@@ -99,7 +99,8 @@
         "product VirtioFS, bounded file exchange, authorized direct/resumable CDI imports, conditional Windows/Android exchange profiles",
         "independent auxiliary disk import, quota and transfer status",
         "independent auxiliary installer driver ISO with read-only SATA and quota",
-        "Read-only auxiliary Windows driver ISO with independent verified media transfer and safe boot order"
+        "Read-only auxiliary Windows driver ISO with independent verified media transfer and safe boot order",
+        "Cold creation, attachment and retained detachment of up to four bounded blank CDI DataVolumes, quota and ownership checks, durable observation, real API test prepared; import/export/expansion remain outstanding"
       ]
     },
     {

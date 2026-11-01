@@ -1,0 +1,81 @@
+"""Real API-only cold data disk lifecycle, retention and isolation.
+Checks PVC identity and effective attachment, not guest-written byte integrity."""
+import json, os, time, urllib.request, urllib.error, uuid
+from pathlib import Path
+base=os.environ.get("API_URL","http://127.0.0.1:3000/api/v1")
+a,b=os.environ["TOKEN_A"],os.environ["TOKEN_B"]
+def key(): return uuid.uuid4().hex
+def call(method,path,data=None,token=a,idem=None,expected=200):
+    h={"Authorization":"Bearer "+token}
+    if data is not None: h["Content-Type"]="application/json"
+    if idem: h["Idempotency-Key"]=idem
+    req=urllib.request.Request(base+path,data=json.dumps(data).encode() if data is not None else None,headers=h,method=method)
+    try:
+        with urllib.request.urlopen(req,timeout=30) as res: status,result=res.status,json.load(res)
+    except urllib.error.HTTPError as exc: status,result=exc.code,json.load(exc)
+    assert status==expected,(method,path,status,result)
+    return result
+def wait(fn,seconds=420):
+    end=time.monotonic()+seconds
+    while time.monotonic()<end:
+        value=fn()
+        if value: return value
+        time.sleep(3)
+    raise AssertionError("Data disk convergence timed out")
+spec=dict(version=1,name="ci-data-disk",architecture="amd64",cpu=1,memoryMiB=512,image="cirros-smoke",storage={"systemGiB":2,"exchangeGiB":1})
+baseline=call("GET","/account/quota")["usage"]["storageGiB"]
+vm=call("POST","/computers",spec,idem=key(),expected=202)["result"]["id"]
+path="/computers/"+vm
+def state(): return call("GET",path)
+def disk():
+    return next((x for x in call("GET",path+"/storage")["volumes"] if x["kind"]=="data" and x["diskName"]=="work"),None)
+def req(action,**kw): return dict(action=action,name="work",expectedResourceVersion=state()["resourceVersion"],**kw)
+def change(action,**kw):
+    body=req(action,**kw)
+    call("POST",path+"/disks/plan",body)
+    # Controllers may update resourceVersion after dry-run; acquire a fresh view.
+    body=req(action,**kw)
+    k=key();result=call("POST",path+"/disks",body,idem=k,expected=202)
+    assert call("POST",path+"/disks",body,idem=k,expected=202)==result
+    return result
+def stopped():
+    s=state()
+    return s if not s["instance"] and not (s.get("status") or {}).get("stateChangeRequests") and not (s.get("status") or {}).get("created") and not (s.get("status") or {}).get("ready") else None
+def running(attached):
+    s=state();i=s.get("instance") or {}
+    if i.get("status",{}).get("phase")!="Running": return None
+    v=[x for x in i.get("spec",{}).get("volumes",[]) if x["name"]=="data-work"]
+    if attached:
+        if len(v)!=1 or v[0].get("dataVolume",{}).get("name")!=vm+"-data-work": return None
+    elif v: return None
+    d=disk()
+    return d if d and d["attached"]==attached and d["dataVolumePhase"]=="Succeeded" and d["pvcUid"] else None
+try:
+    wait(stopped)
+    call("POST",path+"/disks",req("create",sizeGiB=1),token=b,idem=key(),expected=404)
+    change("create",sizeGiB=1)
+    created=wait(lambda: (d if (d:=disk()) and d.get("dataVolumeUid") and not d["attached"] else None))
+    assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+4
+    change("attach")
+    call("POST",path+"/start",{},idem=key(),expected=202)
+    initial=wait(lambda:running(True))
+    assert initial["dataVolumeUid"]==created["dataVolumeUid"]
+    call("POST",path+"/disks",req("detach"),idem=key(),expected=409)
+    call("POST",path+"/stop",{},idem=key(),expected=202);wait(stopped)
+    change("detach")
+    detached=disk();assert detached and not detached["attached"] and detached["pvcUid"]==initial["pvcUid"]
+    assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+4
+    call("POST",path+"/start",{},idem=key(),expected=202);wait(lambda:running(False))
+    call("POST",path+"/stop",{},idem=key(),expected=202);wait(stopped)
+    change("attach");call("POST",path+"/start",{},idem=key(),expected=202)
+    final=wait(lambda:running(True))
+    assert final["pvcUid"]==initial["pvcUid"] and final["dataVolumeUid"]==initial["dataVolumeUid"]
+    call("DELETE",path,idem=key(),expected=409)
+    Path("evidence").mkdir(exist_ok=True)
+    Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"guestByteProof":False},indent=2))
+finally:
+    deletion=call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
+    assert vm+"-data-work" in deletion["result"]["affectedDisks"]
+wait(lambda:call("GET","/operations/"+deletion["operationId"]).get("observation",{}).get("state")=="converged")
+assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline
+print("Real cold data disk lifecycle and stable PVC identities passed; guest data verification remains separate.")

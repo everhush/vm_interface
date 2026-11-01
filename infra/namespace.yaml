@@ -23,7 +23,7 @@ rules:
   verbs: ["get"]
 - apiGroups: ["cdi.kubevirt.io"]
   resources: ["datavolumes"]
-  verbs: ["get"]
+  verbs: ["get","create"]
 - apiGroups: ["upload.cdi.kubevirt.io"]
   resources: ["uploadtokenrequests"]
   verbs: ["create"]
