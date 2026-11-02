@@ -67,10 +67,9 @@ export function vmManifest(id:string,account:string,s:ComputerSpec){
  ]:[];
  const volumes=persistent?[{name:"boot",dataVolume:{name:names.boot}},...(s.auxiliaryDisk?[{name:"auxiliary",dataVolume:{name:id+"-auxiliary"}}]:[]),shared?{name:"exchange",persistentVolumeClaim:{claimName:names.exchange}}:{name:"exchange",dataVolume:{name:names.exchange}}]:
   [{name:"boot",containerDisk:{image}}];
- const disks=persistent?[{name:"boot",disk:{bus:s.bootBus??"virtio"},bootOrder:1},...(s.auxiliaryDisk?[s.auxiliaryDisk.media.format==="iso"?{name:"auxiliary",cdrom:{bus:"sata",readonly:true,tray:"closed"}}:{name:"auxiliary",disk:{bus:"virtio"},bootOrder:2}]:[]),...(!shared?[{name:"exchange",disk:{bus:s.bootBus??"virtio"}}]:[])]:[{name:"boot",disk:{bus:"virtio"}}];
+ const disks=persistent?[{name:"boot",disk:{bus:s.bootBus??"virtio"},bootOrder:installer?2:1},...(s.auxiliaryDisk?[s.auxiliaryDisk.media.format==="iso"?{name:"auxiliary",cdrom:{bus:"sata",readonly:true,tray:"closed"}}:{name:"auxiliary",disk:{bus:"virtio"},bootOrder:2}]:[]),...(!shared?[{name:"exchange",disk:{bus:s.bootBus??"virtio"}}]:[])]:[{name:"boot",disk:{bus:"virtio"}}];
  const mediaVolumes=installer?[{name:"installer",dataVolume:{name:mediaName}}]:[];
  const mediaDisks=installer?[{name:"installer",cdrom:{bus:"sata",readonly:true,tray:"closed"},bootOrder:1}]:[];
- if(installer&&disks[0])disks[0].bootOrder=2;
  const cloud=s.cloudInit?[{name:"cloudinit",cloudInitNoCloud:{userData:s.cloudInit}}]:[];
  const cloudDisks=s.cloudInit?[{name:"cloudinit",disk:{bus:"virtio"}}]:[];
  return {apiVersion:"kubevirt.io/v1",kind:"VirtualMachine",metadata:{name:id,labels:{"vm-interface.io/account":account},...(s.idleStopSeconds?{annotations:{"vm-interface.io/idle-stop-seconds":String(s.idleStopSeconds)}}:{})},spec:{

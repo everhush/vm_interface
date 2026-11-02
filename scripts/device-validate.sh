@@ -7,7 +7,10 @@ if [ "$profile" = checks ]; then
   command -v ffmpeg >/dev/null
   command -v tesseract >/dev/null
   npm install --no-audit --no-fund
-  npm run typecheck && npm run lint && npm test && npm run build
+  npm run typecheck
+  npm run lint
+  npm test
+  npm run build
   python3 -m compileall -q scripts
   python3 -m unittest discover -s scripts -p 'test_*.py'
   python3 -m unittest discover -s showcases/windows -p 'test_*.py'
