@@ -38,6 +38,7 @@ if [ "$profile" = core ]; then
 else
   sudo python3 scripts/device-preflight.py --architecture "$architecture" --large-media | tee evidence/device-preflight.json
   test "$#" -gt 0
+  python3 scripts/showcase-native.py "$profile" "$@" --preflight-only | tee evidence/showcase-input-preflight.json
 fi
 bash scripts/device-validate.sh checks
 export VM_DISPOSABLE_DEVICE=true

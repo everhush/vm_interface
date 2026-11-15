@@ -136,7 +136,8 @@ def presentation(raw, title="REAL API CONTROL PROOF"):
     output = OUT/"api-control-presentation.mp4"
     # Text file is generated from fixed labels and numerical response codes.
     # Raw platform MP4 remains unchanged and independently verifiable.
-    filt = ("pad=1920:720:0:0:color=0x15202b,"
+    filt = ("scale=1280:720:force_original_aspect_ratio=decrease:force_divisible_by=2,"
+            "pad=1920:720:0:0:color=0x15202b,"
             "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:"
             f"textfile={panel}:x=1300:y=35:fontsize=16:fontcolor=white:line_spacing=4")
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw),
