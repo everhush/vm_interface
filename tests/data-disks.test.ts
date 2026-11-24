@@ -46,3 +46,17 @@ test("blank CDI disk manifest has fixed namespace-independent name, owner, stora
  assert.equal(m.metadata.name,id+"-data-work");assert.equal(m.metadata.ownerReferences[0].uid,uid);
  assert.deepEqual(m.spec.source,{blank:{}});assert.equal(m.spec.storage.resources.requests.storage,"2Gi");
 });
+
+test("clone is cold, source-scoped, capacity-accounted and never self-referential",()=>{
+ const v=vm(),create=coldDataDiskPatch(v,null,id,{action:"create",name:"work",sizeGiB:2,expectedResourceVersion:rv});apply(v,create);
+ const clone={action:"clone" as const,name:"copy",source:"work",sizeGiB:2,expectedResourceVersion:rv};
+ assert.throws(()=>coldDataDiskPatch(v,null,id,{...clone,sizeGiB:1}),/at least/);
+ assert.throws(()=>coldDataDiskPatch(v,null,id,{...clone,source:"other"}),/not found/);
+ assert.throws(()=>coldDataDiskPatch(v,{},id,clone),/Stop the VM/);
+ assert.equal(dataDiskSpec.safeParse({...clone,source:"../other"}).success,false);
+ apply(v,coldDataDiskPatch(v,null,id,clone));
+ assert.equal(desiredUsage(v.spec).storageGiB,7);
+ const d=readDataDisks(v,id)[1];assert.equal(d.source,"work");assert.equal(d.attached,false);
+ const m=dataDiskManifest(id,"alpha",uid,d);assert.equal(m.spec.source.pvc?.name,dataDiskClaim(id,"work"));assert.equal(m.metadata.name,dataDiskClaim(id,"copy"));
+ assert.equal(m.metadata.annotations?.["cdi.kubevirt.io/storage.bind.immediate.requested"],"true");
+});

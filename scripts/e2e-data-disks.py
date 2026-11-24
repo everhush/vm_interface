@@ -27,8 +27,8 @@ baseline=call("GET","/account/quota")["usage"]["storageGiB"]
 vm=call("POST","/computers",spec,idem=key(),expected=202)["result"]["id"]
 path="/computers/"+vm
 def state(): return call("GET",path)
-def disk():
-    return next((x for x in call("GET",path+"/storage")["volumes"] if x["kind"]=="data" and x["diskName"]=="work"),None)
+def disk(name="work"):
+    return next((x for x in call("GET",path+"/storage")["volumes"] if x["kind"]=="data" and x["diskName"]==name),None)
 def req(action,**kw): return dict(action=action,name="work",expectedResourceVersion=state()["resourceVersion"],**kw)
 def change(action,**kw):
     body=req(action,**kw)
@@ -70,12 +70,22 @@ try:
     change("attach");call("POST",path+"/start",{},idem=key(),expected=202)
     final=wait(lambda:running(True))
     assert final["pvcUid"]==initial["pvcUid"] and final["dataVolumeUid"]==initial["dataVolumeUid"]
+    call("POST",path+"/stop",{},idem=key(),expected=202);wait(stopped)
+    body=dict(action="clone",name="copy",source="work",sizeGiB=1,expectedResourceVersion=state()["resourceVersion"])
+    call("POST",path+"/disks/plan",body)
+    body["expectedResourceVersion"]=state()["resourceVersion"]
+    cloned=call("POST",path+"/disks",body,idem=key(),expected=202)
+    copy=wait(lambda: (d if (d:=disk("copy")) and d.get("dataVolumePhase")=="Succeeded" and d.get("pvcPhase")=="Bound" and d.get("pvcUid") else None))
+    assert copy["pvcUid"]!=final["pvcUid"] and copy["source"]=="work" and not copy["attached"]
+    wait(lambda:call("GET","/operations/"+cloned["operationId"]).get("observation",{}).get("state")=="converged")
+    assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+5
     call("DELETE",path,idem=key(),expected=409)
     Path("evidence").mkdir(exist_ok=True)
-    Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"guestByteProof":False},indent=2))
+    Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"guestByteProof":False},indent=2))
 finally:
     deletion=call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
     assert vm+"-data-work" in deletion["result"]["affectedDisks"]
+    if "copy" in locals() and copy: assert vm+"-data-copy" in deletion["result"]["affectedDisks"]
 wait(lambda:call("GET","/operations/"+deletion["operationId"]).get("observation",{}).get("state")=="converged")
 assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline
 print("Real cold data disk lifecycle and stable PVC identities passed; guest data verification remains separate.")

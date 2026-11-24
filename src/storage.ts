@@ -2,12 +2,12 @@ import {ApiError,kube,owned,dvPath,pvcPath,type Resource} from "./kube";
 import {diskNames} from "./spec";
 import {readDataDisks,dataDiskClaim} from "./data-disk-layout";
 
-type DiskRef={kind:"boot"|"exchange"|"installer"|"auxiliary"|"data";name:string;mode?:"virtiofs";diskName?:string;attached?:boolean;sizeGiB?:number};
+type DiskRef={kind:"boot"|"exchange"|"installer"|"auxiliary"|"data";name:string;mode?:"virtiofs";diskName?:string;attached?:boolean;sizeGiB?:number;source?:string};
 type Template={metadata?:{name?:string}};
 export function managedDisks(vm:Resource,id:string):DiskRef[]{
  const s=vm.spec as {dataVolumeTemplates?:Template[];template?:{metadata?:{annotations?:Record<string,string>};spec?:{volumes?:{name?:string;persistentVolumeClaim?:{claimName?:string}}[]}}}|undefined;
  const templates=s?.dataVolumeTemplates??[];
- const additional=readDataDisks(vm,id).map(d=>({kind:"data" as const,name:dataDiskClaim(id,d.name),diskName:d.name,attached:d.attached,sizeGiB:d.sizeGiB}));
+ const additional=readDataDisks(vm,id).map(d=>({kind:"data" as const,name:dataDiskClaim(id,d.name),diskName:d.name,attached:d.attached,sizeGiB:d.sizeGiB,...(d.source?{source:d.source}:{})}));
  if(!templates.length)return [];
  const names=diskNames(id);
  const shared=s?.template?.metadata?.annotations?.["vm-interface.io/exchange-gib"];
