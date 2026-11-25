@@ -1,11 +1,12 @@
 name: Pinned showcase media qualification (no KVM)
 on:
   push:
-    branches: ['prep/media-qualification', 'prep/windows-media', 'prep/windows-catalog']
+    branches: ['prep/media-qualification', 'prep/windows-media', 'prep/windows-catalog', 'prep/windows-driver-iso']
   workflow_dispatch:
 permissions:
   contents: read
   attestations: read
+  actions: read
 concurrency:
   group: vm-interface-media-qualification-${{ github.ref }}
   cancel-in-progress: true
@@ -29,7 +30,7 @@ jobs:
           path: qualification/android/
           retention-days: 7
   windows-packages:
-    if: github.repository == 'xad3play/vm_interface' && github.ref_name != 'prep/windows-catalog'
+    if: github.repository == 'xad3play/vm_interface' && (github.ref_name == 'prep/media-qualification' || github.ref_name == 'prep/windows-media')
     runs-on: windows-2025
     timeout-minutes: 10
     steps:
@@ -84,8 +85,7 @@ jobs:
           path: qualification/catalog/
           retention-days: 7
   catalog-iso:
-    needs: windows-catalog
-    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/windows-catalog'
+    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/windows-driver-iso'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -94,6 +94,8 @@ jobs:
         with:
           name: windows-catalog-qualification
           path: qualification/catalog
+          run-id: 45624621225
+          github-token: ${{ github.token }}
       - name: Install ISO tooling
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends xorriso
       - name: Package only pinned signed files and verify ISO readback
