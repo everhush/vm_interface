@@ -1,0 +1,172 @@
+{
+  "version": 1,
+  "baselineReadme": "main@3d663024bf2f89827754b85009169bfab5075971",
+  "comprehensiveConsecutivePasses": 0,
+  "requiredPasses": 3,
+  "requirements": [
+    {
+      "issue": 1,
+      "scope": "Native KVM, K3s, KubeVirt, CDI, CNPG, CI",
+      "verified": [
+        "x86 KVM and disposable cluster",
+        "actual guest kernel boot screen"
+      ],
+      "pending": [
+        "ARM64 eligible runner",
+        "immutable dependency and operator verification"
+      ],
+      "evidence": [
+        45542879476,
+        45543634216,
+        45543719409
+      ],
+      "status": "partial-blocked-arm64"
+    },
+    {
+      "issue": 2,
+      "scope": "API, identity, keys, quotas, durable operations",
+      "verified": [
+        "ComputerSpec and OpenAPI",
+        "account isolation",
+        "desired-resource quotas",
+        "idempotency replay",
+        "hashed account keys and scoped permissions"
+      ],
+      "pending": [
+        "desired state reconciliation and cancellation",
+        "audit and rate limits"
+      ],
+      "evidence": [
+        45542879476,
+        45544070366
+      ],
+      "status": "partial"
+    },
+    {
+      "issue": 3,
+      "scope": "Lifecycle, hardware, desired/effective state",
+      "verified": [
+        "create/start/stop/restart/delete",
+        "cold CPU/RAM",
+        "guest status"
+      ],
+      "pending": [
+        "guest login",
+        "reset",
+        "firmware/advanced configuration",
+        "live hardware certification"
+      ],
+      "evidence": [
+        45542879476
+      ],
+      "status": "partial"
+    },
+    {
+      "issue": 4,
+      "scope": "Media, storage and file exchange",
+      "verified": [
+        "CDI import and stable PVC identities",
+        "digest-pinned CDI import",
+        "Fedora VirtioFS infrastructure mount/read/write",
+        "virtio-mem guest driver present (not live resize)"
+      ],
+      "pending": [
+        "product file bytes",
+        "arbitrary authorized media",
+        "growth/export/recovery",
+        "real product VirtioFS API roundtrip (static checks 45549409150 passed)"
+      ],
+      "evidence": [
+        45542879476,
+        45544070366
+      ],
+      "status": "partial"
+    },
+    {
+      "issue": 5,
+      "scope": "Console, shared input ownership, capture and video",
+      "verified": [
+        "authenticated real guest PNG",
+        "RBAC denial",
+        "shared read-only RFB frames and ticket revocation",
+        "guest-visible WSS human takeover and HTTP batch markers observed in failed-run artifact; regression revalidation required"
+      ],
+      "pending": [
+        "input lease/priority and real input",
+        "opt-in recording/playable retrieval"
+      ],
+      "evidence": [
+        45542879476,
+        45544070366,
+        45548980997
+      ],
+      "status": "partial"
+    },
+    {
+      "issue": 6,
+      "scope": "Network, security, recovery",
+      "verified": [
+        "tenant denial",
+        "quota",
+        "narrow role",
+        "key and ticket isolation and revocation"
+      ],
+      "pending": [
+        "private networking/exposure",
+        "idle stop",
+        "failure reconciliation",
+        "request limits/audit"
+      ],
+      "evidence": [
+        45542879476,
+        45544070366
+      ],
+      "status": "partial"
+    },
+    {
+      "issue": 7,
+      "scope": "Windows x64 API-only demonstration",
+      "verified": [],
+      "pending": [
+        "authorized media",
+        "install boot input file software recording"
+      ],
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "issue": 8,
+      "scope": "Native Android ARM64 API-only demonstration",
+      "verified": [
+        "free ARM host probe only"
+      ],
+      "pending": [
+        "eligible native KVM runner",
+        "compatible image",
+        "APK actual bytes and functional check",
+        "recording"
+      ],
+      "evidence": [
+        45543634216,
+        45543719409
+      ],
+      "status": "blocked-hardware"
+    },
+    {
+      "issue": 9,
+      "scope": "Complete acceptance and three reviews",
+      "verified": [
+        "partial smoke pipelines"
+      ],
+      "pending": [
+        "all scope and both showcases",
+        "three consecutive comprehensive passes"
+      ],
+      "evidence": [
+        45542879476,
+        45543854617
+      ],
+      "status": "open"
+    }
+  ]
+}

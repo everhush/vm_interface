@@ -1,0 +1,40 @@
+import {ApiError,kube,owned,dvPath,pvcPath,type Resource} from "./kube";
+import {diskNames} from "./spec";
+
+type DiskRef={kind:"boot"|"exchange";name:string;mode?:"virtiofs"};
+type Template={metadata?:{name?:string}};
+export function managedDisks(vm:Resource,id:string):DiskRef[]{
+ const s=vm.spec as {dataVolumeTemplates?:Template[];template?:{metadata?:{annotations?:Record<string,string>};spec?:{volumes?:{name?:string;persistentVolumeClaim?:{claimName?:string}}[]}}}|undefined;
+ const templates=s?.dataVolumeTemplates??[];
+ if(!templates.length)return [];
+ const names=diskNames(id);
+ const shared=s?.template?.metadata?.annotations?.["vm-interface.io/exchange-gib"];
+ if(shared!==undefined){
+  if(!/^[1-4]$/.test(shared)||templates.length!==1||templates[0].metadata?.name!==names.boot||!s?.template?.spec?.volumes?.some(v=>v.name==="exchange"&&v.persistentVolumeClaim?.claimName===names.exchange))throw new ApiError(409,"Unrecognized VirtioFS layout");
+  return [{kind:"boot",name:names.boot},{kind:"exchange",name:names.exchange,mode:"virtiofs"}];
+ }
+ if(templates.length!==2 || !Object.values(names).every(name=>templates.some(t=>t.metadata?.name===name)))throw new ApiError(409,"Unrecognized VM storage layout");
+ return [{kind:"boot",name:names.boot},{kind:"exchange",name:names.exchange}];
+}
+export function hasOwner(resource:Resource,kind:string,uid:string|undefined){
+ return !!uid && !!resource.metadata?.ownerReferences?.some(o=>o.kind===kind&&o.uid===uid);
+}
+export function requireDeleteConfirmation(disks:DiskRef[],confirmed:boolean){
+ if(disks.length&&!confirmed)throw new ApiError(409,"Persistent disks will be deleted; explicitly confirm with deleteDisks=true");
+}
+async function optionalResource(path:string){
+ try{return await kube("GET",path) as Resource;}catch(e){if(e instanceof ApiError&&e.status===404)return null;throw e;}
+}
+export async function inspectStorage(id:string,account:string){
+ const vm=await owned(id,account), disks=managedDisks(vm,id);
+ const volumes=await Promise.all(disks.map(async disk=>{
+  const dv=await optionalResource(dvPath(disk.name));
+  if(dv&&!hasOwner(dv,"VirtualMachine",vm.metadata?.uid))throw new ApiError(409,"DataVolume ownership not confirmed");
+  const pvc=await optionalResource(pvcPath(disk.name));
+  if(pvc&&!hasOwner(pvc,"DataVolume",dv?.metadata?.uid)&&!hasOwner(pvc,"VirtualMachine",vm.metadata?.uid))throw new ApiError(409,"PVC ownership not confirmed");
+  const ds=dv?.status as {phase?:string;progress?:string}|undefined;
+  const ps=pvc?.status as {phase?:string;capacity?:{storage?:string}}|undefined;
+  return {...disk,dataVolumePhase:ds?.phase??null,progress:ds?.progress??null,pvcPhase:ps?.phase??null,pvcUid:pvc?.metadata?.uid??null,capacity:ps?.capacity?.storage??null};
+ }));
+ return {id,mode:disks.length?"persistent":"ephemeral",volumes,deletePolicy:disks.length?"explicit-confirmation-required":"no-persistent-disks"};
+}

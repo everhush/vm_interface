@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vm-interface
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vm-api
+  namespace: vm-interface
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vm-api
+  namespace: vm-interface
+rules:
+- apiGroups: ["kubevirt.io"]
+  resources: ["virtualmachines"]
+  verbs: ["get","list","create","delete","patch"]
+- apiGroups: ["kubevirt.io"]
+  resources: ["virtualmachineinstances"]
+  verbs: ["get"]
+- apiGroups: ["cdi.kubevirt.io"]
+  resources: ["datavolumes"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get","create"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get","create"]
+- apiGroups: ["subresources.kubevirt.io"]
+  # Kubernetes front-door authorizes the first subresource segment; virt-api
+  # additionally authorizes the full vnc/screenshot path. No public VNC route.
+  resources: ["virtualmachineinstances/vnc","virtualmachineinstances/vnc/screenshot"]
+  verbs: ["get"]
+- apiGroups: ["subresources.kubevirt.io"]
+  resources: ["virtualmachines/start","virtualmachines/stop","virtualmachines/restart"]
+  verbs: ["update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vm-api
+  namespace: vm-interface
+subjects:
+- kind: ServiceAccount
+  name: vm-api
+  namespace: vm-interface
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vm-api
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: vm-db
+  namespace: vm-interface
+spec:
+  instances: 1
+  storage:
+    size: 2Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vm-recordings
+  namespace: vm-interface
+spec:
+  storageClassName: local-path
+  accessModes: ["ReadWriteOnce"]
+  volumeMode: Filesystem
+  resources:
+    requests: {storage: 1Gi}

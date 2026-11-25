@@ -1,0 +1,89 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: vm-exchange-broker
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE"]
+      resources: ["pods"]
+  matchConditions:
+  - name: api-service-account
+    expression: "request.userInfo.username == 'system:serviceaccount:vm-interface:vm-api'"
+  validations:
+  - expression: "request.namespace == 'vm-interface' && object.metadata.name.matches('^vm-[a-f0-9]{32}-files$') && has(object.metadata.labels) && object.metadata.labels['vm-interface.io/exchange-broker'] == 'true' && object.metadata.labels['vm-interface.io/computer'] + '-files' == object.metadata.name"
+    message: "Only generated exchange brokers are permitted"
+  - expression: "has(object.metadata.ownerReferences) && size(object.metadata.ownerReferences) == 1 && object.metadata.ownerReferences[0].kind == 'VirtualMachine' && object.metadata.ownerReferences[0].apiVersion == 'kubevirt.io/v1' && object.metadata.ownerReferences[0].name + '-files' == object.metadata.name"
+    message: "Exchange broker must reference its VM owner"
+  - expression: "has(object.spec.automountServiceAccountToken) && !object.spec.automountServiceAccountToken && (!has(object.spec.hostNetwork) || !object.spec.hostNetwork) && (!has(object.spec.hostPID) || !object.spec.hostPID) && (!has(object.spec.hostIPC) || !object.spec.hostIPC) && (!has(object.spec.nodeName) || object.spec.nodeName == '') && (!has(object.spec.initContainers) || size(object.spec.initContainers) == 0) && (!has(object.spec.ephemeralContainers) || size(object.spec.ephemeralContainers) == 0)"
+    message: "No host namespaces, node placement override, extra containers or service account token"
+  - expression: "has(object.spec.securityContext) && object.spec.securityContext.runAsNonRoot && object.spec.securityContext.runAsUser == 107 && object.spec.securityContext.runAsGroup == 107 && object.spec.securityContext.fsGroup == 107 && object.spec.securityContext.seccompProfile.type == 'RuntimeDefault'"
+    message: "Fixed nonroot broker identity required"
+  - expression: "size(object.spec.volumes) == 1 && object.spec.volumes[0].name == 'exchange' && has(object.spec.volumes[0].persistentVolumeClaim) && object.spec.volumes[0].persistentVolumeClaim.claimName == object.metadata.labels['vm-interface.io/computer'] + '-exchange'"
+    message: "Only the VM exchange PVC may be mounted"
+  - expression: "size(object.spec.containers) == 1 && object.spec.containers[0].name == 'files' && object.spec.containers[0].image == 'vm-interface:ci' && object.spec.containers[0].imagePullPolicy == 'Never' && object.spec.containers[0].command == ['node','--import','tsx','src/run-exchange-broker.ts'] && (!has(object.spec.containers[0].args) || size(object.spec.containers[0].args) == 0)"
+    message: "Fixed trusted broker image and command only"
+  - expression: "object.spec.containers.all(c, has(c.securityContext) && !c.securityContext.allowPrivilegeEscalation && c.securityContext.readOnlyRootFilesystem && (!has(c.securityContext.privileged) || !c.securityContext.privileged) && (!has(c.securityContext.runAsUser) || c.securityContext.runAsUser == 107) && (!has(c.securityContext.runAsGroup) || c.securityContext.runAsGroup == 107) && has(c.securityContext.capabilities) && c.securityContext.capabilities.drop == ['ALL'] && (!has(c.securityContext.capabilities.add) || size(c.securityContext.capabilities.add) == 0) && size(c.volumeMounts) == 1 && c.volumeMounts[0].name == 'exchange' && c.volumeMounts[0].mountPath == '/exchange' && !has(c.volumeMounts[0].subPath) && !has(c.volumeMounts[0].subPathExpr) && (!has(c.volumeMounts[0].mountPropagation) || c.volumeMounts[0].mountPropagation == 'None') && (!has(c.ports) || c.ports.all(p, !has(p.hostPort) || p.hostPort == 0)))"
+    message: "Only restricted broker security context and fixed PVC mount"
+  - expression: "object.spec.containers.all(c, size(c.env) == 2 && c.env[0].name == 'EXCHANGE_TOKEN' && has(c.env[0].value) && c.env[0].value.matches('^[A-Za-z0-9_-]{43}$') && !has(c.env[0].valueFrom) && c.env[1].name == 'TSX_DISABLE_CACHE' && c.env[1].value == '1' && (!has(c.envFrom) || size(c.envFrom) == 0) && !has(c.lifecycle) && (!has(c.livenessProbe) || !has(c.livenessProbe.exec)) && (!has(c.readinessProbe) || !has(c.readinessProbe.exec)) && (!has(c.startupProbe) || !has(c.startupProbe.exec)))"
+    message: "No additional environment, secret references or exec hooks"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: vm-exchange-broker
+spec:
+  policyName: vm-exchange-broker
+  validationActions: [Deny]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: vm-exchange-pvc
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE"]
+      resources: ["persistentvolumeclaims"]
+  matchConditions:
+  - name: api-service-account
+    expression: "request.userInfo.username == 'system:serviceaccount:vm-interface:vm-api'"
+  validations:
+  - expression: "request.namespace == 'vm-interface' && object.metadata.name.matches('^vm-[a-f0-9]{32}-exchange$') && object.metadata.labels['vm-interface.io/exchange'] == 'true' && object.metadata.labels['vm-interface.io/computer'] + '-exchange' == object.metadata.name && size(object.metadata.ownerReferences) == 1 && object.metadata.ownerReferences[0].kind == 'VirtualMachine' && object.metadata.ownerReferences[0].name + '-exchange' == object.metadata.name"
+    message: "Only owner-bound exchange PVCs are permitted"
+  - expression: "object.spec.storageClassName == 'local-path' && object.spec.accessModes == ['ReadWriteOnce'] && object.spec.volumeMode == 'Filesystem' && object.spec.resources.requests['storage'] in ['1Gi','2Gi','3Gi','4Gi'] && (!has(object.spec.volumeName) || object.spec.volumeName == '') && !has(object.spec.dataSource) && !has(object.spec.dataSourceRef) && !has(object.spec.selector)"
+    message: "Only bounded fresh filesystem PVCs are permitted"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: vm-exchange-pvc
+spec:
+  policyName: vm-exchange-pvc
+  validationActions: [Deny]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: exchange-broker
+  namespace: vm-interface
+spec:
+  podSelector:
+    matchLabels:
+      vm-interface.io/exchange-broker: "true"
+  policyTypes: [Ingress,Egress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: vm-api
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress: []
