@@ -104,3 +104,33 @@ spec:
   policyTypes: [Ingress,Egress]
   ingress: []
   egress: []
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: vm-data-disk
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["cdi.kubevirt.io"]
+      apiVersions: ["v1beta1"]
+      operations: ["CREATE"]
+      resources: ["datavolumes"]
+  matchConditions:
+  - name: api-service-account
+    expression: "request.userInfo.username == 'system:serviceaccount:vm-interface:vm-api'"
+  validations:
+  - expression: "request.namespace == 'vm-interface' && object.metadata.name.matches('^vm-[a-f0-9]{32}-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$') && has(object.metadata.labels) && object.metadata.labels['vm-interface.io/data-disk'] == 'true' && object.metadata.name.startsWith(object.metadata.labels['vm-interface.io/computer'] + '-data-') && has(object.metadata.ownerReferences) && size(object.metadata.ownerReferences) == 1 && object.metadata.ownerReferences[0].kind == 'VirtualMachine' && object.metadata.ownerReferences[0].apiVersion == 'kubevirt.io/v1' && object.metadata.ownerReferences[0].name == object.metadata.labels['vm-interface.io/computer']"
+    message: "Only generated owner-bound VM data disks may be created"
+  - expression: "has(object.spec.source) && has(object.spec.source.blank) && !has(object.spec.sourceRef) && !has(object.spec.pvc) && has(object.spec.storage) && object.spec.storage.storageClassName == 'local-path' && object.spec.storage.accessModes == ['ReadWriteOnce'] && object.spec.storage.volumeMode == 'Filesystem' && object.spec.storage.resources.requests['storage'] in ['1Gi','2Gi','3Gi','4Gi','5Gi','6Gi','7Gi','8Gi'] && (!has(object.spec.storage.volumeName) || object.spec.storage.volumeName == '') && !has(object.spec.storage.dataSource) && !has(object.spec.storage.dataSourceRef) && !has(object.spec.storage.selector)"
+    message: "Only bounded blank local-path DataVolumes may be created"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: vm-data-disk
+spec:
+  policyName: vm-data-disk
+  validationActions: [Deny]

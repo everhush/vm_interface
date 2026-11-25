@@ -5,7 +5,7 @@ import {mediaStatus,type Slot} from "./media";
 import {bootPreference,installerTray} from "./boot";
 import {inspectStorage} from "./storage";
 type Row=typeof operations.$inferSelect;
-type Intent={action?:string;computerId?:string|null;cpu?:number;memoryMiB?:number;slot?:string;first?:string;installerTray?:string};
+type Intent={action?:string;computerId?:string|null;cpu?:number;memoryMiB?:number;slot?:string;first?:string;installerTray?:string;diskName?:string};
 type Target={vmUid?:string;previousInstanceUid?:string|null;disks?:string[]};
 type Observation={state:"converged"|"waiting"|"uncertain"|"not-applicable";reason:string;instanceUid?:string|null};
 async function optional(path:string){
@@ -39,13 +39,13 @@ async function inspect(row:Row):Promise<Observation>{
  if(!id||!/^vm-[a-f0-9]{32}$/.test(id)||!action)return observation("not-applicable","No safely reconcilable intent");
  if(row.status==="rejected")return observation("not-applicable","Submission rejected");
  if(row.status==="pending")return observation("waiting","Submission still active");
- if(!["create","start","stop","restart","delete","hardware","boot","media-upload","media-commit"].includes(action))return observation("not-applicable","Operation requires its feature-specific status endpoint");
+ if(!["create","start","stop","restart","delete","hardware","boot","media-upload","media-commit","disk-create","disk-attach","disk-detach"].includes(action))return observation("not-applicable","Operation requires its feature-specific status endpoint");
  const vm=await optional(vmPath(id));
  if(vm&&vm.metadata?.labels?.["vm-interface.io/account"]!==row.account)return observation("uncertain","Computer ownership cannot be established");
  if(action!=="create"&&!target.vmUid&&!["media-upload","media-commit"].includes(action))return observation("uncertain","No pre-mutation target identity recorded");
  if(action==="delete"&&!vm){
   for(const disk of target.disks??[]){
-   if(![id+"-boot",id+"-exchange",id+"-installer",id+"-auxiliary"].includes(disk))return observation("uncertain","Unrecognized cleanup target");
+   if(![id+"-boot",id+"-exchange",id+"-installer",id+"-auxiliary"].includes(disk)&&!(disk.startsWith(id+"-data-")&&/^[a-z0-9](?:[a-z0-9-]{0,14}[a-z0-9])?$/.test(disk.slice(id.length+6))))return observation("uncertain","Unrecognized cleanup target");
    if(await optional(dvPath(disk))||await optional(pvcPath(disk)))return observation("waiting","Managed storage cleanup pending");
   }
   return observation("converged","Owned VM target and recorded managed storage absent");
@@ -54,6 +54,10 @@ async function inspect(row:Row):Promise<Observation>{
  if(["media-upload","media-commit"].includes(action)){
   const m=await mediaStatus(id,row.account,["boot","installer","auxiliary"].includes(intent.slot??"")?intent.slot as Slot:undefined);
   return m?.ready?observation("converged","Declared input verified and CDI import succeeded"):observation("waiting","CDI media import not yet verified");
+ }
+ if(["disk-create","disk-attach","disk-detach"].includes(action)){
+  const s=await inspectStorage(id,row.account),disk=s.volumes.find(v=>v.kind==="data"&&v.diskName===intent.diskName);
+  return disk?.dataVolumeUid&&disk.attached===(action==="disk-attach")?observation("converged","Owned data disk and requested attachment state observed; guest readiness not implied"):observation("waiting","Data disk or desired attachment state not yet confirmed");
  }
  const vmi=await optional(vmiPath(id));
  if(action==="boot")return bootPreference(vm)===intent.first&&(!intent.installerTray||installerTray(vm)===intent.installerTray)?observation("converged","Desired boot order and requested tray state observed; guest boot not implied",vmi?.metadata?.uid??null):observation("waiting","Desired boot order differs from request");

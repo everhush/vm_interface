@@ -7,6 +7,7 @@ import {batchSpec} from "./input-batch";
 import {exposureSpec} from "./network";
 import {bootSpec} from "./boot";
 import {hardwareSchema} from "./hardware";
+import {dataDiskSpec} from "./data-disks";
 
 const object = {type:"object"} as const;
 const ref = (name:string) => ({"$ref":"#/components/schemas/"+name});
@@ -30,6 +31,7 @@ const idem = {name:"Idempotency-Key",in:"header",required:true,schema:{type:"str
 const deleteDisks={name:"deleteDisks",in:"query",required:false,schema:{type:"boolean"},description:"Must explicitly be true when deleting a VM with persistent disks; all its managed disks are affected"};
 const bootBody={required:true,content:json(ref("BootSpec"))};
 const hardwareBody={required:true,content:json(ref("HardwareSpec"))};
+const diskBody={required:true,content:json(ref("DataDiskSpec"))};
 const body = {required:true,content:json({oneOf:[ref("ComputerSpec"),ref("AdvancedComputerSpec")]})};
 const read = (summary:string,schema:unknown=object,parameters:unknown[]=[])=>({summary,parameters,responses:{"200":response("Success",schema),...errors}});
 const write = (summary:string,parameters:unknown[],requestBody?:unknown)=>({summary,parameters,...(requestBody?{requestBody}:{}),responses:{"202":response("Mutation recorded; submission is not completion. Replaying rejected submissions returns the recorded HTTP rejection.",ref("Submission")),...errors}});
@@ -39,6 +41,7 @@ export function openApiDocument(){
  const advanced={...advancedSchema};delete advanced.$schema;
  const boot=z.toJSONSchema(bootSpec);delete boot.$schema;
  const hardware={...hardwareSchema};delete hardware.$schema;
+ const disk=z.toJSONSchema(dataDiskSpec);delete disk.$schema;
  const keySchema=z.toJSONSchema(keySpec);delete keySchema.$schema;
  const recordingSchema=z.toJSONSchema(recordingSpec);delete recordingSchema.$schema;
  const exposureSchema=z.toJSONSchema(exposureSpec);delete exposureSchema.$schema;
@@ -79,7 +82,9 @@ export function openApiDocument(){
    "/computers/{id}/media/{slot}":{get:read("Inspect one declared media slot",object,[id,{name:"slot",in:"path",required:true,schema:{enum:["boot","installer","auxiliary"]}}]),put:write("Upload declared authorized media bytes to CDI; verify digest before transmission",[id,idem,{name:"slot",in:"path",required:true,schema:{enum:["boot","installer","auxiliary"]}}],{required:true,content:{"application/octet-stream":{schema:{type:"string",format:"binary",maxLength:67108864}}}})},
    "/computers/{id}/files":{get:read("List fully published guest output files",{type:"array",items:ref("ExchangeFile")},[id])},
    "/computers/{id}/files/{name}":{get:{summary:"Download verified guest output bytes",parameters:[id,{name:"name",in:"path",required:true,schema:{type:"string"}}],responses:{"200":{description:"Verified output",content:{"application/octet-stream":{schema:{type:"string",format:"binary"}}}},...errors}},put:write("Upload actual bytes atomically into the exchange volume",[id,idem,{name:"name",in:"path",required:true,schema:{type:"string"}},{name:"X-Content-SHA256",in:"header",required:true,schema:{type:"string",pattern:"^[0-9a-f]{64}$"}}],{required:true,content:{"application/octet-stream":{schema:{type:"string",format:"binary",maxLength:8388608}}}})},
-   "/computers/{id}/storage":{get:read("Inspect account-owned managed DataVolumes and PVCs",object,[id])},
+   "/computers/{id}/storage":{get:read("Inspect account-owned managed DataVolumes and PVCs including retained detached data disks",object,[id])},
+   "/computers/{id}/disks":{post:write("Create a reserved blank data disk, attach or detach while stopped; detached disks retain data and quota",[id,idem],diskBody)},
+   "/computers/{id}/disks/plan":{post:{...read("Dry-run cold data disk operation and quota",object,[id]),requestBody:diskBody}},
    "/computers/{id}/console-tickets":{get:read("List active-window owned display ticket metadata",{type:"array",items:ref("DisplayTicket")},[id]),post:{summary:"Issue one short-lived screenshot-only, observer or control VNC ticket; secret returned once",parameters:[id],requestBody:{required:false,content:json({type:"object",additionalProperties:false,required:["scope"],properties:{scope:{enum:["screenshot-only","observe-vnc","control-vnc"]}}})},responses:{"201":response("New display ticket",ref("DisplayTicketSecret")),...errors}}},
    "/computers/{id}/console-tickets/{ticketId}":{delete:read("Revoke an owned display ticket",[ref("DisplayTicket")][0],[id,{name:"ticketId",in:"path",required:true,schema:{type:"string",format:"uuid"}}])},
    "/computers/{id}/recordings":{get:read("List account-owned recording metadata",{type:"array",items:ref("Recording")},[id]),post:write("Queue opt-in display recording",[id,idem],{required:true,content:json(ref("RecordingSpec"))})},
@@ -118,6 +123,7 @@ export function openApiDocument(){
     QuotaUsage:{type:"object",required:["computers","cpu","memoryMiB","storageGiB"],properties:Object.fromEntries(["computers","cpu","memoryMiB","storageGiB"].map(k=>[k,{type:"integer",minimum:0}]))},
     BootSpec:boot,
     HardwareSpec:hardware,
+    DataDiskSpec:disk,
     Error:{type:"object",required:["error"],properties:{error:{type:"string"},issues:{type:"array",items:object}}},
     Submission:{type:"object",required:["operationId","status","result"],properties:{operationId:{type:"string",format:"uuid"},status:{type:"string",enum:["pending","submitted","rejected","unknown"]},result:{}}},
     Operation:{type:"object",required:["id","status","result","createdAt"],properties:{id:{type:"string",format:"uuid"},status:{type:"string",enum:["pending","submitted","rejected","unknown"]},result:{},intent:{anyOf:[object,{type:"null"}]},observation:{anyOf:[object,{type:"null"}]},observedAt:{type:["string","null"],format:"date-time"},createdAt:{type:"string",format:"date-time"},updatedAt:{type:"string",format:"date-time"}}},

@@ -1,4 +1,5 @@
 import {z} from "zod";
+import {readDataDisks,dataDiskDevice} from "./data-disk-layout";
 import {ApiError,kube,owned,vmPath,vmiPath,type Resource} from "./kube";
 export const bootSpec=z.strictObject({first:z.enum(["system","installer"]),installerTray:z.enum(["open","closed"]).optional(),expectedResourceVersion:z.string().min(1).max(128)}).refine(s=>s.first!=="installer"||s.installerTray!=="open",{message:"Installer-first boot requires inserted media",path:["installerTray"]});
 type BootSpec=z.infer<typeof bootSpec>;
@@ -36,7 +37,8 @@ export function coldBootPatch(vm:Resource,instance:Resource|null,s:BootSpec){
   let declaration:unknown;try{declaration=JSON.parse(auxiliary)}catch{throw new ApiError(409,"Invalid driver media declaration")}
   if((declaration as {format?:string}|null)?.format!=="iso"||!driver||driver.bootOrder!==undefined||driver.cdrom?.bus!=="sata"||driver.cdrom.readonly!==true||driver.cdrom.tray!=="closed"||!volumes?.some(v=>v.name==="auxiliary"&&v.dataVolume?.name===name+"-auxiliary"))throw new ApiError(409,"Unsupported driver CD-ROM layout");
  }else if(driver)throw new ApiError(409,"Undeclared auxiliary device");
- const disks=allDisks?.filter(d=>d.name!=="auxiliary");
+ const extra=new Set(readDataDisks(vm,name??"").filter(d=>d.attached).map(d=>dataDiskDevice(d.name)));
+ const disks=allDisks?.filter(d=>d.name!=="auxiliary"&&!extra.has(d.name));
  if(!name||!/^vm-[a-f0-9]{32}$/.test(name)||spec?.template?.metadata?.annotations?.["vm-interface.io/media-slot"]!=="installer"||!Array.isArray(allDisks)||!Array.isArray(disks)||new Set(allDisks.map(d=>d.name)).size!==allDisks.length||!Array.isArray(volumes)||![2,3].includes(disks.length)||new Set(disks.map(x=>x.name)).size!==disks.length||!bootPreference(vm)||!disks.some(x=>x.name==="boot"&&x.disk)||!disks.some(x=>x.name==="installer"&&x.cdrom)||(disks.length===3&&!disks.some(x=>x.name==="exchange"&&x.disk&&x.bootOrder===undefined))||!["boot","installer"].every(slot=>volumes.some(v=>v.name===slot&&v.dataVolume?.name===name+"-"+slot))||(disks.length===2?!volumes.some(v=>v.name==="exchange"&&(v as {persistentVolumeClaim?:{claimName?:string}}).persistentVolumeClaim?.claimName===name+"-exchange"):!volumes.some(v=>v.name==="exchange"&&v.dataVolume?.name===name+"-exchange")))throw new ApiError(409,"Unsupported installer disk layout");
  const tray=s.installerTray??installerTray(vm);
  if(!tray||s.first==="installer"&&tray!=="closed")throw new ApiError(422,"Installer-first boot requires inserted media");

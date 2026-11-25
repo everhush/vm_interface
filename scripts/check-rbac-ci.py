@@ -36,6 +36,9 @@ def main():
         ("", "pods", "", "delete", False),
         ("", "persistentvolumeclaims", "", "create", True),
         ("upload.cdi.kubevirt.io", "uploadtokenrequests", "", "create", True),
+        ("cdi.kubevirt.io", "datavolumes", "", "create", True),
+        ("cdi.kubevirt.io", "datavolumes", "", "delete", False),
+        ("cdi.kubevirt.io", "datavolumes", "", "patch", False),
     ]
     evidence = [check(*item) for item in checks]
     # Direct infrastructure negative admission check, not product API proof.
@@ -44,6 +47,10 @@ def main():
         denied=subprocess.run(["kubectl","--as=system:serviceaccount:vm-interface:vm-api","create","--dry-run=server","-f","-"],input=json.dumps(body),capture_output=True,text=True)
         assert denied.returncode!=0 and "vm-exchange" in denied.stderr, (kind,denied.stderr)
         evidence.append({"kind":kind,"unsafeCreateDeniedByAdmission":True})
+    dv={"apiVersion":"cdi.kubevirt.io/v1beta1","kind":"DataVolume","metadata":{"name":"forbidden-probe","namespace":"vm-interface"},"spec":{"source":{"blank":{}},"storage":{"storageClassName":"local-path","accessModes":["ReadWriteOnce"],"volumeMode":"Filesystem","resources":{"requests":{"storage":"1Gi"}}}}}
+    denied=subprocess.run(["kubectl","--as=system:serviceaccount:vm-interface:vm-api","create","--dry-run=server","-f","-"],input=json.dumps(dv),capture_output=True,text=True)
+    assert denied.returncode!=0 and "vm-data-disk" in denied.stderr,denied.stderr
+    evidence.append({"kind":"DataVolume","unsafeCreateDeniedByAdmission":True})
     Path("evidence").mkdir(exist_ok=True)
     Path("evidence/rbac-checks.json").write_text(json.dumps(evidence, indent=2))
     print("Exact screenshot RBAC and forbidden access checks passed")

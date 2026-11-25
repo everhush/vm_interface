@@ -9,6 +9,7 @@ import {openApiDocument} from "../../../../src/openapi";
 import {inspectStorage,managedDisks,requireDeleteConfirmation} from "../../../../src/storage";
 import {hardwareSpec,configureHardware,withVmLock} from "../../../../src/hardware";
 import {bootSpec,configureBoot} from "../../../../src/boot";
+import {dataDiskSpec,configureDataDisk,requireDataDisks} from "../../../../src/data-disks";
 import {guestObservation} from "../../../../src/guest";
 import {screenshot} from "../../../../src/screenshot";
 import {displayToken,issueDisplayTicket,lookupDisplayTicket,listDisplayTickets,revokeDisplayTicket} from "../../../../src/console-tickets";
@@ -26,7 +27,7 @@ import {boundedBody,boundedText} from "../../../../src/request-body";
 import {mediaMaxBytes,stageMaxBytes,systemMaxGiB,accountMaxStorageGiB} from "../../../../src/media-config";
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{"cache-control":"no-store"}});
 const imageResponse=(png:Buffer)=>new Response(Uint8Array.from(png),{headers:{"content-type":"image/png","cache-control":"no-store","x-content-type-options":"nosniff","content-disposition":"inline; filename=\"screenshot.png\""}});
-const capabilities={phase:"console and storage development",verified:["native amd64 KVM lifecycle, account isolation, cold CPU/RAM, CDI/PVC identities, desired-resource quotas, authenticated PNG display capture (CI 45542879476)","hashed account keys, scoped display tickets, pinned image CDI, shared read-only RFB (CI 45544070366)"],implementedUnverified:["durable input lease and server-side input gating","explicit-consent sampled MP4 recording and retrieval","bounded lease-fenced HTTP input batches","VirtioFS profile and bounded account-scoped file bytes","bounded authorized CDI disk/ISO media upload","private guest masquerade network and expiring TCP tunnel","durable operation intent and read-only convergence reconciliation","resumable offset- and digest-verified media staging (larger profiles operator-configured)","opt-in idle stop, audit, request rate and body limits","hard reset, cold boot preference"],conditional:["ARM64 uploaded UEFI virtio disk evaluation (operator opt-in; native KVM/guest validation required)","VirtioFS (native guest mount and byte roundtrip verified; product file API pending)","virtio-mem (driver present on Fedora; live resize not certified)"],unsupported:["Windows-sized media import certification","public network exposure","hotplug","snapshots","migration","GPU"]};
+const capabilities={phase:"console and storage development",verified:["native amd64 KVM lifecycle, account isolation, cold CPU/RAM, CDI/PVC identities, desired-resource quotas, authenticated PNG display capture (CI 45542879476)","hashed account keys, scoped display tickets, pinned image CDI, shared read-only RFB (CI 45544070366)"],implementedUnverified:["durable input lease and server-side input gating","explicit-consent sampled MP4 recording and retrieval","bounded lease-fenced HTTP input batches","VirtioFS profile and bounded account-scoped file bytes","bounded authorized CDI disk/ISO media upload","private guest masquerade network and expiring TCP tunnel","durable operation intent and read-only convergence reconciliation","resumable offset- and digest-verified media staging (larger profiles operator-configured)","opt-in idle stop, audit, request rate and body limits","hard reset, cold boot preference","cold creation, attachment and retention of blank data disks"],conditional:["ARM64 uploaded UEFI virtio disk evaluation (operator opt-in; native KVM/guest validation required)","VirtioFS (native guest mount and byte roundtrip verified; product file API pending)","virtio-mem (driver present on Fedora; live resize not certified)"],unsupported:["Windows-sized media import certification","public network exposure","hotplug","snapshots","migration","GPU"]};
 async function handleCore(req:Request,context:{audit?:AuditContext}){
  try{
   const p=new URL(req.url).pathname.split("/").filter(Boolean).slice(2), m=req.method;
@@ -112,6 +113,13 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
   await touchIdleActivity(id,account);
   if(m==="GET"&&p.length===2){const vm=await owned(id,account);let vmi:unknown=null;try{vmi=await kube("GET",vmiPath(id));}catch(e){if(!(e instanceof ApiError)||e.status!==404)throw e;}return json({id,resourceVersion:vm.metadata?.resourceVersion,desired:vm.spec,status:vm.status,instance:vmi});}
   if(m==="GET"&&p.length===3&&p[2]==="storage")return json(await inspectStorage(id,account));
+  if(m==="POST"&&p[2]==="disks"&&(p.length===3||p.length===4&&p[3]==="plan")){
+   await owned(id,account);
+   let input:unknown;try{input=JSON.parse(await boundedText(req,4096))}catch(e){if(e instanceof ApiError)throw e;throw new ApiError(400,"Invalid JSON")}
+   const parsed=dataDiskSpec.safeParse(input);if(!parsed.success)return json({error:"Invalid data disk request",issues:parsed.error.issues},422);
+   if(p.length===4)return json(await withAccountLock(account,()=>configureDataDisk(account,id,parsed.data,true),id));
+   return json(await mutate(account,key,{action:"disk-"+parsed.data.action,id,spec:parsed.data},opId=>withAccountLock(account,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid});return configureDataDisk(account,id,parsed.data)},id)),202);
+  }
   if(p[2]==="exposures"){
    if(m==="GET"&&p.length===3)return json(await listExposures(account,id));
    if(m==="POST"&&p.length===3){
@@ -259,7 +267,7 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
     return {id,instanceUid,warning:"Hard reset submitted; guest reboot requires independent observation"};
    })),202);
   }
-  if(m==="POST"&&p.length===3&&["start","stop","restart"].includes(p[2]))return json(await mutate(account,key,{action:p[2],id},opId=>withVmLock(id,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");let previousInstanceUid:string|null=null;try{previousInstanceUid=(await kube("GET",vmiPath(id)) as Resource).metadata?.uid??null}catch(e){if(!(e instanceof ApiError)||e.status!==404)throw e}await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid,previousInstanceUid});if(p[2]==="start"){await requireMediaReady(id,account);if(exchangeConfigured(vm))await ensureExchange(id,account,vm)}await kube("PUT",actionPath(id,p[2]),{});return {id};})),202);
+  if(m==="POST"&&p.length===3&&["start","stop","restart"].includes(p[2]))return json(await mutate(account,key,{action:p[2],id},opId=>withVmLock(id,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");let previousInstanceUid:string|null=null;try{previousInstanceUid=(await kube("GET",vmiPath(id)) as Resource).metadata?.uid??null}catch(e){if(!(e instanceof ApiError)||e.status!==404)throw e}await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid,previousInstanceUid});if(p[2]==="start"){await requireDataDisks(id,account,vm);await requireMediaReady(id,account);if(exchangeConfigured(vm))await ensureExchange(id,account,vm)}await kube("PUT",actionPath(id,p[2]),{});return {id};})),202);
   throw new ApiError(404,"Endpoint not implemented");
  }catch(e){return json({error:e instanceof ApiError?e.message:"Internal service error"},e instanceof ApiError?e.status:500);}
 }

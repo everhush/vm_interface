@@ -2,6 +2,7 @@ import {sql} from "drizzle-orm";
 import {database} from "./db";
 import {ApiError,list} from "./kube";
 import type {ComputerSpec} from "./spec";
+import {dataDiskDeclarations,DATA_DISKS_ANNOTATION} from "./data-disk-layout";
 import {accountMaxStorageGiB,installerGiB} from "./media-config";
 
 export const limits={computers:4,cpu:8,memoryMiB:8192,storageGiB:accountMaxStorageGiB} as const;
@@ -29,7 +30,8 @@ export function desiredUsage(value:unknown):Usage{
  const memoryMiB=quantity(domain?.resources?.requests?.memory,1024**2);
  const shared=d?.template?.metadata?.annotations?.["vm-interface.io/exchange-gib"];
  if(shared!==undefined&&!/^[1-4]$/.test(shared))throw new ApiError(409,"Unrecognized exchange reservation");
- const storageGiB=Number(shared??0)+(d?.dataVolumeTemplates??[]).reduce((n,v)=>n+quantity(v.spec?.storage?.resources?.requests?.storage,1024**3),0);
+ const extra=dataDiskDeclarations(d?.template?.metadata?.annotations?.[DATA_DISKS_ANNOTATION]).reduce((n,v)=>n+v.sizeGiB,0);
+ const storageGiB=extra+Number(shared??0)+(d?.dataVolumeTemplates??[]).reduce((n,v)=>n+quantity(v.spec?.storage?.resources?.requests?.storage,1024**3),0);
  return {computers:1,cpu:cpu.cores,memoryMiB,storageGiB};
 }
 export function specUsage(s:ComputerSpec):Usage{
