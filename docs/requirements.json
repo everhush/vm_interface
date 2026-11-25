@@ -231,7 +231,15 @@
       "Windows driver-media packaging: 2 unit tests with synthetic MSI header fixtures",
       "Evidence frame verifier: 2 unit tests with actual synthetic test-video decode/OCR and tampered frame rejection"
     ],
-    "latestCodeReviewed": "6dad51eb4bdf0f236acb295096662053ed91ece4"
+    "latestCodeReviewed": "6dad51eb4bdf0f236acb295096662053ed91ece4",
+    "latestForkCheck": {
+      "run": 45621413756,
+      "commit": "c119199f1dc6e3f390ce21b26219805266e58f4e",
+      "reported": "success",
+      "effective": "failed",
+      "reason": "TS2339 in src/spec.ts masked by && chain in device-validate.sh; do not count this check or KVM run as complete acceptance",
+      "fixedInNextCandidate": true
+    }
   },
   "ciRepository": "xad3play/vm_interface",
   "ciRouting": {
