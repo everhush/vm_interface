@@ -44,8 +44,11 @@ try {
     if (-not ($Files.Extension -contains '.inf') -or -not ($Files.Extension -contains '.sys') -or -not ($Files.Name -contains 'virtiofs.exe')) { throw 'Required driver or service absent' }
     foreach ($File in $Files) {
       $Policy=if ($File.Extension -eq '.sys') {'/kp'} else {'/pa'}
-      & $Tool.FullName verify $Policy /c $Cat.FullName $File.FullName
-      $Verified=($LASTEXITCODE -eq 0)
+      $Verified=$false
+      if ($File.Extension -in @('.inf','.sys')) {
+        & $Tool.FullName verify $Policy /c $Cat.FullName $File.FullName
+        $Verified=($LASTEXITCODE -eq 0)
+      }
       $Report.files += [ordered]@{name=$File.Name;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $File.FullName).Hash.ToLowerInvariant();bytes=$File.Length;catalogVerified=$Verified;policy=$Policy}
       if (-not $Verified -and $File.Extension -in @('.exe','.dll')) {
         # A user-mode binary can carry its own trusted embedded signature.
@@ -68,3 +71,6 @@ try {
   Save-Report
   Remove-Item -Recurse -Force $Work
 }
+
+if (-not $Report.signatureVerificationPassed) { throw 'Qualification did not complete' }
+exit 0
