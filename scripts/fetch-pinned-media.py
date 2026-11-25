@@ -33,7 +33,7 @@ def fetch(key, directory):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", choices=["android", "winfsp", "virtio", "software"])
+    parser.add_argument("source", choices=["android", "winfsp", "virtio", "software", "virtioISO"])
     parser.add_argument("directory", type=Path)
     args = parser.parse_args()
     print(fetch(args.source, args.directory))

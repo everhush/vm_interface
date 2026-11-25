@@ -83,3 +83,24 @@ jobs:
           name: windows-catalog-qualification
           path: qualification/catalog/
           retention-days: 7
+  catalog-iso:
+    needs: windows-catalog
+    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/windows-catalog'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-catalog-qualification
+          path: qualification/catalog
+      - name: Install ISO tooling
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends xorriso
+      - name: Package only pinned signed files and verify ISO readback
+        run: bash scripts/qualify-catalog-iso.sh qualification/catalog/driver-catalog-report.json qualification/iso
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-catalog-iso-qualification
+          path: qualification/iso/
+          retention-days: 7
