@@ -16,7 +16,7 @@ test("cold installer boot switch preserves disk devices",()=>{
  const original=m.spec.template.spec.domain.devices.disks;
  assert.equal(disks.find(d=>d.name==="boot")?.bootOrder,1);
  assert.equal(disks.find(d=>d.name==="installer")?.bootOrder,2);
- assert.deepEqual(disks.map(({bootOrder,...d})=>d),original.map(d=>{const copy={...d};delete (copy as {bootOrder?:number}).bootOrder;return copy}));
+ assert.deepEqual(disks.map(d=>{const copy={...d};delete copy.bootOrder;return copy}),original.map(d=>{const copy={...d};delete (copy as {bootOrder?:number}).bootOrder;return copy}));
  assert.equal(bootPreference(vm),"installer");
 });
 test("boot switch rejects arbitrary input, stale state, running and non-installer VMs",()=>{

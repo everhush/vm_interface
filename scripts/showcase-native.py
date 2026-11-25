@@ -4,6 +4,7 @@ are client-owned JSON, not backend workflows. Fail closed on missing evidence.
 """
 import argparse, hashlib, json, os, re, runpy, secrets, subprocess, time, uuid, zipfile
 from pathlib import Path
+from showcase_inputs import load_scenario
 
 P = argparse.ArgumentParser()
 P.add_argument("profile", choices=["windows", "android"])
@@ -23,11 +24,10 @@ P.add_argument("--authorize-media", action="store_true", required=True)
 P.add_argument("--record-consent", action="store_true", required=True)
 P.add_argument("--retain", action="store_true")
 P.add_argument("--exchange-drive", default="X:", help="Windows mounted guest exchange drive")
+P.add_argument("--preflight-only", action="store_true", help="Validate local inputs without provisioning or API credentials")
 args = P.parse_args()
-os.environ["PROOF_OUTPUT_DIR"] = "evidence/showcase-" + args.profile
-h = runpy.run_path(str(Path(__file__).with_name("e2e-api-control-proof.py")), run_name="proof_helpers")
-call, wait, screen, batch, sha = (h[x] for x in ("call","wait","screen","batch","sha"))
-OUT, A, B = h["OUT"], h["A"], h["B"]
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
 def digest(path):
     with path.open("rb") as f:
         return hashlib.file_digest(f, "sha256").hexdigest()
@@ -39,7 +39,7 @@ def norm(s):
 def iid():
     return str(uuid.uuid4())
 
-scenario = json.loads(args.scenario.read_text())
+scenario = load_scenario(args.scenario, args.profile)
 assert set(scenario) == {"setup", "application", "beforeMarker", "afterMarker", "resultName", "expectedResultSha256"}
 assert isinstance(scenario["setup"], list) and isinstance(scenario["application"], list)
 assert norm(scenario["beforeMarker"]) and norm(scenario["afterMarker"]) and norm(scenario["beforeMarker"]) != norm(scenario["afterMarker"])
@@ -69,6 +69,13 @@ else:
     assert args.auxiliary_sha256 is None and args.auxiliary_gib is None
     assert args.profile!="windows", "Windows driver bootstrap requires a separately verified auxiliary ISO"
 
+if args.preflight_only:
+    print(json.dumps({"profile":args.profile,"localInputsVerified":True,"guestCompatibilityVerified":False,"mediaSha256":args.media_sha256,"softwareSha256":args.software_sha256,"scenarioSha256":digest(args.scenario)}))
+    raise SystemExit(0)
+os.environ["PROOF_OUTPUT_DIR"] = "evidence/showcase-" + args.profile
+h = runpy.run_path(str(Path(__file__).with_name("e2e-api-control-proof.py")), run_name="proof_helpers")
+call, wait, screen, batch, sha = (h[x] for x in ("call","wait","screen","batch","sha"))
+OUT, A, B = h["OUT"], h["A"], h["B"]
 path = rec = key_id = ticket = None
 lease = False
 ticket_expiry = 0
