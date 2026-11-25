@@ -7,13 +7,13 @@ This candidate consolidates prepared features. **It is not a certified release.*
 On a machine with network access, Node.js 24 and Python 3.11+:
 
 ```sh
-git clone https://github.com/rtu0/test_vm.git
-cd test_vm
-git checkout prep/device-validation
+git clone https://github.com/imxade/vm_interface.git
+cd vm_interface
+git checkout implementation/virtualization-backend
 bash scripts/device-validate.sh checks
 ```
 
-This does not require KVM. It runs typecheck/lint/unit/build, Python syntax/unit checks and shell syntax. The separate static CI workflow also runs these checks; it never uses a hardware runner. Do not interpret its success as guest conformance.
+This does not require KVM. It runs typecheck/lint/unit/build, Python syntax/unit checks and shell syntax. The CI-only fork `xad3play/vm_interface` executes these checks against exact synchronized upstream commits. The separate static CI workflow is reserved for the preparation branch; the implementation branch runs static and KVM checks in one workflow. Upstream job execution is disabled by repository guard. Do not interpret its success as guest conformance.
 
 ## 2. Dedicated device
 

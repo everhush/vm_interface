@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baselineReadme": "main@3d663024bf2f89827754b85009169bfab5075971",
+  "baselineReadme": "main@96f6d7c188c9b75267b49cd356d37fa57c3b4fb1",
   "comprehensiveConsecutivePasses": 0,
   "requiredPasses": 3,
   "requirements": [
@@ -206,7 +206,7 @@
       ]
     }
   ],
-  "candidateBranch": "prep/device-validation",
+  "candidateBranch": "implementation/virtualization-backend",
   "candidateStatus": "not-ready-for-validation-only-handoff",
   "nonKvmLocalEvidence": {
     "scope": "isolated local tests on Node 22 transpiled with TypeScript 5.8 and Python; not full Node 24 build",
@@ -231,5 +231,13 @@
       "Evidence frame verifier: 2 unit tests with actual synthetic test-video decode/OCR and tampered frame rejection"
     ],
     "latestCodeReviewed": "6dad51eb4bdf0f236acb295096662053ed91ece4"
+  },
+  "ciRepository": "xad3play/vm_interface",
+  "ciRouting": {
+    "upstream": "imxade/vm_interface",
+    "mode": "exact-upstream-ref-sync-only",
+    "duplicatePolicy": "cancel superseded same-ref runs",
+    "status": "pending-fork-validation",
+    "historicalCandidate": "e5693ab4bdb8dcbea4f4454203c7d8cabb49b930"
   }
 }
