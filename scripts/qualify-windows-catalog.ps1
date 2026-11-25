@@ -23,6 +23,7 @@ try {
   $Report.isoSha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $Iso).Hash.ToLowerInvariant()
   $Report.isoBytes=(Get-Item -LiteralPath $Iso).Length
   Save-Report
+  if ($Report.isoSha256 -ne "303f7ae40dad495d6ae474fdc571df58958a4dbc5c37a522d80f9a203867949d" -or $Report.isoBytes -ne 877373440) { throw "Driver ISO differs from inspected version" }
   $Mount = Mount-DiskImage -ImagePath $Iso -Access ReadOnly -PassThru
   try {
     $Volume = $Mount | Get-Volume
@@ -46,8 +47,17 @@ try {
       & $Tool.FullName verify $Policy /c $Cat.FullName $File.FullName
       $Verified=($LASTEXITCODE -eq 0)
       $Report.files += [ordered]@{name=$File.Name;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $File.FullName).Hash.ToLowerInvariant();bytes=$File.Length;catalogVerified=$Verified;policy=$Policy}
+      if (-not $Verified -and $File.Extension -in @('.exe','.dll')) {
+        # A user-mode binary can carry its own trusted embedded signature.
+        # Kernel driver and INF still require catalog membership.
+        $Embedded = Get-AuthenticodeSignature -LiteralPath $File.FullName
+        $Verified = ($Embedded.Status -eq 'Valid' -and $null -ne $Embedded.SignerCertificate)
+        $Report.files[-1].embeddedSignatureStatus = [string]$Embedded.Status
+        $Report.files[-1].embeddedSignerThumbprint = $Embedded.SignerCertificate.Thumbprint
+        $Report.files[-1].embeddedSignerSubject = $Embedded.SignerCertificate.Subject
+      }
       Save-Report
-      if (-not $Verified) { throw "Catalog membership/signature verification failed: $($File.Name)" }
+      if (-not $Verified) { throw "Trusted signature verification failed: $($File.Name)" }
     }
     $Report.signatureVerificationPassed=$true
     Save-Report
