@@ -1,7 +1,7 @@
 name: Pinned showcase media qualification (no KVM)
 on:
   push:
-    branches: ['prep/media-qualification', 'prep/windows-media']
+    branches: ['prep/media-qualification', 'prep/windows-media', 'prep/windows-catalog']
   workflow_dispatch:
 permissions:
   contents: read
@@ -29,7 +29,7 @@ jobs:
           path: qualification/android/
           retention-days: 7
   windows-packages:
-    if: github.repository == 'xad3play/vm_interface'
+    if: github.repository == 'xad3play/vm_interface' && github.ref_name != 'prep/windows-catalog'
     runs-on: windows-2025
     timeout-minutes: 10
     steps:
@@ -64,4 +64,22 @@ jobs:
         with:
           name: windows-driver-iso-qualification
           path: qualification/iso
+          retention-days: 7
+  windows-catalog:
+    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/windows-catalog'
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact driver catalog and covered files without installing them
+        shell: pwsh
+        run: ./scripts/qualify-windows-catalog.ps1 -Output qualification/catalog
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-catalog-qualification
+          path: qualification/catalog/
           retention-days: 7
