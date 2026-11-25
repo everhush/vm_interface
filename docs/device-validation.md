@@ -1,6 +1,6 @@
 # Device validation handoff
 
-This candidate consolidates prepared features. **It is not a certified release.** Do not use on production systems. KVM validation on an eligible device is essential, and image-specific Windows/Android qualification plus consolidated static checks remain necessary.
+This candidate consolidates prepared features. **It is not a certified release.** Do not use on production systems. KVM validation on an eligible device is essential, and image-specific Linux/Android qualification plus consolidated static checks remain necessary.
 
 ## 1. Non-virtualization checks
 
@@ -26,7 +26,7 @@ bash scripts/device-validate.sh core --confirm-disposable
 
 The script provisions K3s and the pinned operator versions, deploys Vinext, generates ephemeral local test account secrets, port-forwards only to localhost, and exercises actual product API tests. It retains the cluster for operator inspection/disposal. Do not rerun over the same installation; use a clean disposable device per validation iteration. It does not register a persistent GitHub runner. KVM API creation alone does not establish actual native acceleration, particularly inside an emulated outer EL2 guest.
 
-## 3. Windows x64
+## 3. Historical optional Windows x64 (not a readiness gate)
 
 - Obtain authorized Windows Server 2022 Desktop Experience ISO from https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2022 (evaluation terms, registration/activation, expiry apply). Retain actual version, authorized source, digest, size and terms acknowledgement. Use publisher checksum where available; a locally computed digest is integrity, not authenticity. Do not bypass activation or supply a shared password.
 - Use client-owned authorized installer preparation, including signed virtio-win/WinFsp packages if needed, and qualified VirtioFS driver mount. Sources: https://kubevirt.io/user-guide/compute/windows_virtio_drivers/ and https://virtio-win.github.io/Knowledge-Base/Virtiofs-qs . Driver bootstrap and Windows guest compatibility are **not yet verified**. A 7-Zip x64 EXE from https://www.7-zip.org/download.html is the software fixture. Record its exact version and digest.
@@ -41,6 +41,17 @@ bash scripts/device-validate.sh windows --confirm-disposable \
   --scenario /path/to/windows-scenario.json --system-gib 40 \
   --authorize-media --record-consent
 ```
+
+## 3a. Mandatory Linux x86_64 showcase
+
+The owner replaced Windows with Linux on 2026-11-25. Use the digest-pinned Fedora KubeVirt image in the API catalog; CDI imports it into persistent storage. Run the native core device workflow, which now includes the full Linux application showcase:
+
+```sh
+bash scripts/device-validate.sh core --confirm-disposable
+python3 scripts/verify-evidence.py --root evidence --profile linux
+```
+
+The client generates an exact reproducible application ZIP, uploads it and a random challenge through the product file API, then sends a visible install/launch command through the leased input API. The guest verifies package digest, installs the application on its system disk, creates and tests an archive of actual challenge bytes, publishes output and checksum, and emits a visible marker during consented recording. The client retrieves original MP4, verifies marker frames, retrieves both result and archive, performs cold CPU/RAM resize and restart, checks new VMI identity and original PVC UIDs, installed app persistence and exact file bytes. The verifier checks software package, challenge, archive and trace independently. No Windows registration or driver files are required. Native runtime qualification pending.
 
 ## 4. Native Android ARM64
 
@@ -94,7 +105,7 @@ python3 showcases/windows/build-catalog-iso.py --authorized --iso /path/to/virti
 
 Retain the actual output digest, not a digest from a different build (ISO metadata can vary). Add --auxiliary-media /path/to/VMDRIVERS.iso --auxiliary-sha256 <actual-output-sha256> --auxiliary-gib 1 to the Windows command. The image contains bootstrap.ps1, which verifies exact component bytes and signer identities, uses normal signed driver installation and requires the actual API-uploaded challenge before VMDRIVERSREADY. The older MSI packager is retained for historical review only; it is not the qualified input path.
 
-Authorized Windows installation media and exact Windows/Android scenario qualification remain incomplete. Native acceptance is issue #12, which is not started or ready.
+Windows media and scenario are historical/optional. Linux and Android native qualification remains incomplete; issue #12 is not ready.
 
 ### Bundled scenario recipes (prepared, not runtime-qualified)
 Use `python3 scripts/write-showcase-scenario.py windows windows-scenario.json` or `python3 scripts/write-showcase-scenario.py android android-scenario.json` to create the concrete client recipe. Windows uses authorized installation and login checkpoints before recording, then actual 7-Zip GUI evidence. Android requires fixture APK version 2.0, adds a post-upload installation and authorized Storage Access Framework directory selection checkpoint, then clicks the exact unique visible Compute proof label using OCR from actual API screenshots. The APK computes and publishes its result/checksum using the user-granted directory. No fabricated click coordinates or recording of credentials. These prepared recipes still require guest qualification on the exact media; missing mount/provider or ambiguous OCR is an explicit failure, not a fallback. The new APK must be rebuilt and independently signature-checked; version 1.0 artifact is historical only.

@@ -93,20 +93,20 @@ Maintain a requirement-to-test coverage matrix. Each requirement must have corre
 
 Features that depend on specific hardware, guest operating systems or infrastructure must be validated on suitable infrastructure before being claimed as supported.
 
-## 6. Windows End-to-End Demonstration
+## 6. Linux x86_64 End-to-End Demonstration
 
-Develop a reproducible API-driven script that performs a complete Windows VM workflow.
+Develop a reproducible API-driven script that performs a complete Linux x86_64 VM workflow.
 
-Choose a suitable Windows version, architecture and installation image. The latest version is not required. Prioritize legally usable, reliably obtainable and reproducible installation media.
+Choose a suitable freely obtainable Linux distribution, version and installation or prepared disk image. Windows is conditional, not a mandatory demonstration. The latest version is not required. Prioritize legally usable, reliably obtainable and reproducible installation media.
 
 The script should:
 
-1. Download or obtain the selected Windows image from a reliable, authorized source.
-2. Import the installation media through the platform API.
+1. Download or obtain the selected Linux image from a reliable, authorized source.
+2. Import the installation or digest-pinned prepared disk media through the platform API and CDI.
 3. Submit a declarative VM configuration with compatible resources, firmware, storage and devices.
 4. Create and start the VM.
 5. Observe the actual virtual display through the supported console interface.
-6. Install and configure Windows using supported API-driven input and authorized installation mechanisms.
+6. Install or configure Linux using supported API-driven input and authorized installation mechanisms.
 7. Upload a suitable software installer through the VM file API.
 8. Install, launch and operate the software.
 9. Verify the actual result using screenshots, guest-visible output or other supported evidence.
@@ -215,7 +215,7 @@ A single successful pipeline is not sufficient.
 Before considering the work complete, perform **at least three consecutive comprehensive validation and review iterations** in which:
 
 - All applicable end-to-end tests pass.
-- Both Windows and Android ARM64 demonstration workflows succeed on appropriate infrastructure.
+- Both Linux x86_64 and Android ARM64 demonstration workflows succeed on appropriate infrastructure.
 - The generated recordings and artifacts are valid and retrievable.
 - No unresolved defects, regressions or missing in-scope requirements are identified.
 - The requirement-to-test coverage matrix is complete.
@@ -237,7 +237,7 @@ The completed repository must contain:
 - Complete CI/CD workflows.
 - Documented REST/OpenAPI contracts and configuration schemas.
 - Reproducible guest image acquisition and preparation scripts.
-- Windows and Android ARM64 API-driven demonstration scripts.
+- Linux x86_64 and Android ARM64 API-driven demonstration scripts.
 - Comprehensive unit, integration and real end-to-end tests.
 - Requirement-to-test coverage and validation records.
 - Downloadable screenshots, recordings and other CI-generated evidence.
@@ -421,7 +421,7 @@ These illustrate platform capabilities, **not built-in automation workflows**:
 **API-driven showcase demonstrations (script or external agent):** Run both against an already deployed VM Interface using only its documented account APIs and authorized VM console/guest-access paths; no platform-deployment step, built-in agent, special SDK or mandatory prompt. A deterministic script and an external agent are equally valid clients.
 
 1. **Android ARM64 APK test:** On verified compatible ARM64 VM hardware and a supported Android/AOSP image, create and boot the VM, start opt-in console video recording, upload an APK's actual bytes through the VM file API, install and launch it via available VM console controls or authorized guest-native access (for example ADB where supported), run defined UI/functional checks and verify actual results. Stop recording and return the playable video file, VM reference and test evidence through the API; report any unsupported Android, installation or capture capability.
-2. **Windows software test:** On a verified compatible x86-64 Windows VM using licensed installation media, create and boot/install the guest as needed, start opt-in console video recording, upload a permitted software installer through the VM file API, install and open the application using supported VNC input or authorized guest-native mechanisms, and verify it visibly runs. Stop recording and return the playable video file, VM reference and observed results through the API; handle interactive licensing/login as a human-controlled step.
+2. **Linux software test:** On a verified compatible x86-64 Linux VM using authorized pinned media, create and boot/install the guest as needed, start opt-in console video recording, upload a permitted software installer through the VM file API, install and open the application using supported VNC input or authorized guest-native mechanisms, and verify it visibly runs. Stop recording and return the playable video file, VM reference and observed results through the API; handle any interactive login as a human-controlled step.
 
 Show real API calls, VM state, file transfer, inputs, verification and recordings in the demonstrations; do not substitute simulated actions or fabricated success. The interface exposes capabilities, while the script or external agent determines the automation steps.
 

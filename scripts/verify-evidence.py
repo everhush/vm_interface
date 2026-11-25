@@ -6,6 +6,7 @@ import json
 import subprocess
 from pathlib import Path
 from evidence_frames import verify_marker_frames
+from linux_showcase_fixture import package, verify_archive
 
 
 def file_hash(path):
@@ -56,7 +57,15 @@ def verify_folder(folder, profile):
         check(proof['guestComputedResult'] and proof['actualGuestVisibleResult'] and proof['stoppedOutputPersistent'], 'Missing guest result assertions')
         check(file_hash(trace) == proof['traceSha256'], 'Trace checksum mismatch')
         check(file_hash(folder/'guest-result.bin') == proof['outputSha256'], 'Output hash mismatch')
-        check({'upload file','download file','guest action'} <= phases, 'Missing functional API calls')
+        check({'upload file','download file','guest action','upload software','download archive','cold resize','restart after resize'} <= phases, 'Missing Linux application API calls')
+        check(proof['profile']=='linux' and proof['architecture']=='amd64' and proof['softwareInstalled'] and proof['coldResizeAndFilePersistence'], 'Missing Linux installation and persistence evidence')
+        check((folder/'software.zip').read_bytes()==package() and file_hash(folder/'software.zip')==proof['softwareSha256'], 'Software package mismatch')
+        challenge=(folder/'challenge.bin').read_bytes()
+        check(file_hash(folder/'challenge.bin')==proof['inputSha256'] and len(challenge)==proof['inputBytes'], 'Challenge mismatch')
+        check((folder/'guest-result.bin').read_bytes()==b'guest-result:'+hashlib.sha256(challenge).hexdigest().encode('ascii')+b'\n', 'Wrong guest result')
+        verify_archive((folder/'guest-archive.zip').read_bytes(),challenge)
+        check(file_hash(folder/'guest-archive.zip')==proof['archiveSha256'], 'Guest archive hash mismatch')
+        check(proof['instanceUid']!=proof['resizedInstanceUid'] and (folder/'reboot.png').is_file(), 'Missing reboot evidence')
     else:
         check(proof['profile'] == profile and proof['architecture'] == ('amd64' if profile == 'windows' else 'arm64'), 'Wrong showcase profile')
         check(proof['screenMarkersVerified'] and proof['coldResizeAndFilePersistence'], 'Missing showcase assertions')
@@ -72,11 +81,11 @@ def verify_folder(folder, profile):
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--root', type=Path, required=True)
-    p.add_argument('--profile', choices=['core','windows','android','all'], required=True)
+    p.add_argument('--profile', choices=['core','linux','windows','android','all'], required=True)
     a = p.parse_args()
     folders = {'control': 'api-control-proof', 'functional': 'api-functional-proof',
                'windows': 'showcase-windows', 'android': 'showcase-android'}
-    targets = ['control','functional'] if a.profile == 'core' else list(folders) if a.profile == 'all' else [a.profile]
+    targets = ['control','functional'] if a.profile == 'core' else ['functional'] if a.profile == 'linux' else ['control','functional','android'] if a.profile == 'all' else [a.profile]
     report = {'passed': [], 'failed': [], 'hardwareCertifiedByVerifier': False}
     for target in targets:
         try:
