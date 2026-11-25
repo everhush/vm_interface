@@ -9,17 +9,18 @@
       "scope": "Native KVM, K3s, KubeVirt, CDI, CNPG, CI",
       "verified": [
         "x86 KVM and disposable cluster",
-        "actual guest kernel boot screen"
+        "actual guest kernel boot screen",
+        "Consolidated candidate 0b98f08 static: 62 TS tests, 14 Python tests, lint, typecheck and build"
       ],
       "pending": [
-        "full consolidated static checks",
         "immutable npm dependency lock and publisher verification",
         "native device and operator compatibility"
       ],
       "evidence": [
         45542879476,
         45543634216,
-        45543719409
+        45543719409,
+        45625007493
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -100,7 +101,8 @@
         "independent auxiliary disk import, quota and transfer status",
         "independent auxiliary installer driver ISO with read-only SATA and quota",
         "Read-only auxiliary Windows driver ISO with independent verified media transfer and safe boot order",
-        "Cold creation, attachment and retained detachment of up to four bounded blank CDI DataVolumes, quota and ownership checks, durable observation, real API test prepared; import/export/expansion remain outstanding"
+        "Cold creation, attachment and retained detachment of up to four bounded blank CDI DataVolumes, quota and ownership checks, durable observation, real API test prepared; import/export/expansion remain outstanding",
+        "Cold same-VM CDI clone with ownership, capacity reservation and source write gate; guest byte proof pending"
       ]
     },
     {
@@ -152,12 +154,17 @@
     {
       "issue": 7,
       "scope": "Windows x64 API-only demonstration",
-      "verified": [],
+      "verified": [
+        "Actual signed WinFsp, VirtIO catalog and user-mode service signature checks; exact driver ISO construction and readback; pinned 7-Zip bytes"
+      ],
       "pending": [
-        "Acquire authorized actual Windows installer, 7-Zip and pinned signed MSIs; construct driver ISO and validate signer/package service compatibility",
+        "Acquire authorized actual Windows installer and qualify driver installation and mount in guest",
         "Qualify exact-version setup/application UI scenario and native guest workflow"
       ],
-      "evidence": [],
+      "evidence": [
+        45624621225,
+        45625087154
+      ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
         "Windows API-only native runner, 7-Zip fixture, authorized import and actual video/result assertions",
@@ -169,16 +176,17 @@
       "issue": 8,
       "scope": "Native Android ARM64 API-only demonstration",
       "verified": [
-        "free ARM host probe only"
+        "free ARM host probe only",
+        "Actual pinned ARM64 archive download, publisher attestation, QCOW2 inspection and signed proof APK build"
       ],
       "pending": [
-        "actual archive download, publisher attestation and qemu-img checks",
-        "native UEFI boot compatibility, guest exchange driver/SAF, exact-version UI scenario, APK build",
+        "Native UEFI boot compatibility, guest exchange driver/SAF and exact-version UI scenario",
         "native device validation"
       ],
       "evidence": [
         45543634216,
-        45543719409
+        45543719409,
+        45623125031
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -233,12 +241,12 @@
     ],
     "latestCodeReviewed": "6dad51eb4bdf0f236acb295096662053ed91ece4",
     "latestForkCheck": {
-      "run": 45621413756,
-      "commit": "c119199f1dc6e3f390ce21b26219805266e58f4e",
+      "run": 45625007493,
+      "commit": "0b98f08885423d355d69b3c8ad54b6116e543d4b",
       "reported": "success",
-      "effective": "failed",
-      "reason": "TS2339 in src/spec.ts masked by && chain in device-validate.sh; do not count this check or KVM run as complete acceptance",
-      "fixedInNextCandidate": true
+      "effective": "static-passed; KVM pending",
+      "typescriptTests": 62,
+      "pythonTests": 14
     }
   },
   "ciRepository": "xad3play/vm_interface",
@@ -246,7 +254,7 @@
     "upstream": "imxade/vm_interface",
     "mode": "exact-upstream-ref-sync-only",
     "duplicatePolicy": "cancel superseded same-ref runs",
-    "status": "pending-fork-validation",
+    "status": "fork-static-passed-core-in-progress",
     "historicalCandidate": "e5693ab4bdb8dcbea4f4454203c7d8cabb49b930"
   }
 }

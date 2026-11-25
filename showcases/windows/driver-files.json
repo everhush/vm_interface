@@ -1,0 +1,39 @@
+{
+  "iso": {
+    "name": "virtio-win-0.1.302.iso",
+    "url": "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.302-1/virtio-win.iso",
+    "sha256": "303f7ae40dad495d6ae474fdc571df58958a4dbc5c37a522d80f9a203867949d",
+    "bytes": 877373440
+  },
+  "catalog": {
+    "name": "viofs.cat",
+    "sha256": "22473b611996d6a1d13361a44f73eb00e415f5e9e16410278dd5b0bacf9091bd",
+    "signerThumbprint": "32BDB9711EB0F7BED79D69111F0067470BBE69F8"
+  },
+  "files": [
+    {
+      "name": "viofs.inf",
+      "sha256": "c9560f8f4ac42dce3e934d509853293caa67c9b3ab9ed208560c022b0ad73c8c",
+      "bytes": 2288,
+      "catalogVerified": true
+    },
+    {
+      "name": "viofs.sys",
+      "sha256": "bfa9013ad169007b89372572989a39c2fa7efe8d441cf119d98069c90f6a385d",
+      "bytes": 63128,
+      "catalogVerified": true
+    },
+    {
+      "name": "virtiofs.exe",
+      "sha256": "2afadafae97c383afefaa9a817f1ef423d8f6eb47f3910dab28a68c5c92b4545",
+      "bytes": 233624,
+      "embeddedSignerThumbprint": "32BDB9711EB0F7BED79D69111F0067470BBE69F8"
+    }
+  ],
+  "winfsp": {
+    "name": "winfsp.msi",
+    "sha256": "36ce01f9eedbbe6842b7fb4bedc79d7d4f71983e8aceb6877b46a07b331c7e19",
+    "bytes": 2220032,
+    "signerThumbprint": "75C6C88B0B6C4556F13FCE3B081FC9051EAE457E"
+  }
+}

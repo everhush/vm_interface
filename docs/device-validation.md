@@ -75,17 +75,23 @@ Core proof folders contain platform-recording.mp4, real screenshots, redacted HT
 
 To verify already downloaded evidence independently (no KVM needed): `python3 scripts/verify-evidence.py --root evidence --profile core` or `--profile all` for the four proof folders. This requires original recordings, hashes and reported assertions; it does not certify hardware or replace manual review of actual guest frames. Historical screenshot-only evidence must fail this gate.
 
-### Pinned two-disk Android candidate (not qualified)
-The selected upstream candidate is `jqssun/android-lineage-qemu` release `v2026.10.18`, LineageOS 23.2 arm64-only bundle. Release API gives SHA256 `171c0d215899d68f070fd45aea05ddb25737cf4ff16a25468e7cafbc65f4d8c9`, 1121501784 bytes. Obtain the named zip from https://github.com/jqssun/android-lineage-qemu/releases/tag/v2026.10.18, verify publisher attestation with `gh attestation verify <archive> -R jqssun/android-lineage-qemu`, review its licenses, then run `python3 scripts/prepare_android.py <archive> <new-output-dir> --authorized` on an unprivileged host with qemu-img. It checks the pinned archive digest, extracts just vda/vdb and creates disks.json with exact digests and storage capacities. Use vda as `--media`, vdb as `--auxiliary-media`, and corresponding digest/GiB args. UEFI fallback boot, actual VirtioFS mount and SAF access must be verified with this exact image before device acceptance. No bundled NVRAM or unsigned recovery is imported. Do not bypass signatures or SELinux.
+### Pinned two-disk Android media (offline qualified; native boot pending)
 
-Windows native runner now requires `--auxiliary-media /path/to/VMDRIVERS.iso --auxiliary-sha256 <verified-sha256> --auxiliary-gib <capacity>` in addition to the Windows installer. Prepare the separate signed-driver bootstrap media using `showcases/windows/build-driver-iso.py` (see its help). Setup ends at an authorized elevated PowerShell prompt; the runner invokes bootstrap.ps1 from the VMDRIVERS volume, then checks VMDRIVERSREADY. This is not a tested Windows installation.
+The LineageOS 23.2 ARM64 bundle from release v2026.10.18 passed publisher-attestation verification, exact archive SHA256 and QCOW2 checks on fork run 45623125031. The signed proof APK was built and checked in the same job. See its android-media-qualification artifact 15026182260 for exact disk manifests and APK digest. This does not certify boot or the exchange mount.
 
-Prepare the driver ISO with publisher-authorized WinFsp MSI and virtio-win x64 MSI (exact hashes and independently verified signer certificate thumbprints):
+Use an authorized SDK/image and run the acquisition workflow or reproduce its steps using scripts/fetch-pinned-media.py, scripts/qualify-android-media.sh and the pinned sources. Use vda as --media and vdb as --auxiliary-media with the matching hashes and capacities in the disk manifest (6 GiB and 18 GiB respectively). No bundled NVRAM or unsigned recovery is imported. Verify native boot and SAF exchange without bypassing signatures or SELinux.
+
+### Windows driver media (offline qualified; guest installation pending)
+
+The official virtio-win 0.1.302-1 ISO is pinned by exact SHA256. The two tested standalone VirtIO MSI files were unsigned and rejected. Do not use them. The signed Windows Server 2022 INF/SYS catalog, independently signed VirtioFS service, and signed WinFsp MSI were verified in fork run 45624621225. Driver ISO construction and full byte readback passed in run 45625087154, artifact 15028411663. These runs do not certify guest installation.
+
+Run scripts/qualify-windows-catalog.ps1 on Windows against the pinned media. Then, on a Linux host with xorriso, fetch the pinned virtioISO and winfsp using scripts/fetch-pinned-media.py and build the authorized driver ISO:
 
 ```sh
-python3 showcases/windows/build-driver-iso.py --authorized --output VMDRIVERS.iso \
-  --winfsp winfsp.msi --winfsp-sha256 SHA256 --winfsp-signer THUMBPRINT \
-  --virtio virtio-win-gt-x64.msi --virtio-sha256 SHA256 --virtio-signer THUMBPRINT
+python3 showcases/windows/build-catalog-iso.py --authorized --iso /path/to/virtio-win.iso \
+  --winfsp /path/to/winfsp.msi --report /path/to/driver-catalog-report.json --output VMDRIVERS.iso
 ```
 
-The host only packages files with xorriso; the guest verifies signatures and pinned signer identities before installation. If MSI needs reboot or the selected signed package lacks VirtioFsSvc, fail explicitly and qualify that package normally; no driver or policy bypass. The guest must read an actual random API-uploaded challenge from the mounted drive before VMDRIVERSREADY appears. Local stage-package unit tests use synthetic header bytes only, not genuine packages.
+Retain the actual output digest, not a digest from a different build (ISO metadata can vary). Add --auxiliary-media /path/to/VMDRIVERS.iso --auxiliary-sha256 <actual-output-sha256> --auxiliary-gib 1 to the Windows command. The image contains bootstrap.ps1, which verifies exact component bytes and signer identities, uses normal signed driver installation and requires the actual API-uploaded challenge before VMDRIVERSREADY. The older MSI packager is retained for historical review only; it is not the qualified input path.
+
+Authorized Windows installation media and exact Windows/Android scenario qualification remain incomplete. Native acceptance is issue #12, which is not started or ready.
