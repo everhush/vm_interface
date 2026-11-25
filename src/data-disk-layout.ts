@@ -4,8 +4,8 @@ export const DATA_DISKS_ANNOTATION="vm-interface.io/data-disks";
 export const MAX_DATA_DISKS=4;
 export const MAX_DATA_DISK_GIB=8;
 export const dataDiskNamePattern=/^[a-z0-9](?:[a-z0-9-]{0,14}[a-z0-9])?$/;
-export type DataDisk={name:string;sizeGiB:number;attached:boolean};
-export type DataDiskRequest={action:"create";name:string;sizeGiB:number;expectedResourceVersion:string}|{action:"attach"|"detach";name:string;expectedResourceVersion:string};
+export type DataDisk={name:string;sizeGiB:number;attached:boolean;source?:string};
+export type DataDiskRequest={action:"create";name:string;sizeGiB:number;expectedResourceVersion:string}|{action:"clone";name:string;source:string;sizeGiB:number;expectedResourceVersion:string}|{action:"attach"|"detach";name:string;expectedResourceVersion:string};
 type Named={name?:string;disk?:{bus?:string};bootOrder?:number;dataVolume?:{name?:string}};
 type Desired={runStrategy?:string;dataVolumeTemplates?:unknown[];template?:{metadata?:{annotations?:Record<string,string>};spec?:{domain?:{devices?:{disks?:Named[]}};volumes?:Named[]}}};
 export const dataDiskDevice=(name:string)=>"data-"+name;
@@ -19,10 +19,13 @@ export function dataDiskDeclarations(raw:unknown):DataDisk[]{
  const entries:DataDisk[]=value.map((d:unknown)=>{
   if(!d||typeof d!=="object"||Array.isArray(d))invalid();
   const v=d as Record<string,unknown>;
-  if(Object.keys(v).length!==3||typeof v.name!=="string"||!dataDiskNamePattern.test(v.name)||typeof v.sizeGiB!=="number"||!Number.isInteger(v.sizeGiB)||v.sizeGiB<1||v.sizeGiB>MAX_DATA_DISK_GIB||typeof v.attached!=="boolean")invalid();
-  return {name:v.name,sizeGiB:v.sizeGiB,attached:v.attached};
+  if(Object.keys(v).some(k=>!["name","sizeGiB","attached","source"].includes(k))||typeof v.name!=="string"||!dataDiskNamePattern.test(v.name)||typeof v.sizeGiB!=="number"||!Number.isInteger(v.sizeGiB)||v.sizeGiB<1||v.sizeGiB>MAX_DATA_DISK_GIB||typeof v.attached!=="boolean")invalid();
+  if(v.source!==undefined&&(typeof v.source!=="string"||!dataDiskNamePattern.test(v.source)))invalid();
+  return {name:v.name,sizeGiB:v.sizeGiB,attached:v.attached,...(typeof v.source==="string"?{source:v.source}:{})};
  });
  if(new Set(entries.map(d=>d.name)).size!==entries.length)invalid();
+ // A clone may reference only an earlier reservation, avoiding cycles and reuse.
+ if(entries.some((d,i)=>d.source!==undefined&&!entries.slice(0,i).some(s=>s.name===d.source&&s.sizeGiB<=d.sizeGiB)))invalid();
  return entries;
 }
 export function readDataDisks(vm:Resource,id:string):DataDisk[]{
@@ -49,10 +52,15 @@ export function coldDataDiskPatch(vm:Resource,instance:Resource|null,id:string,r
  const old=readDataDisks(vm,id),existing=old.find(d=>d.name===r.name);
  if(!dataDiskNamePattern.test(r.name))throw new ApiError(422,"Invalid data disk name");
  let entries:DataDisk[];
- if(r.action==="create"){
+ if(r.action==="create"||r.action==="clone"){
   if(existing||old.length>=MAX_DATA_DISKS)throw new ApiError(409,"Disk name exists or disk count limit reached");
   if(!Number.isInteger(r.sizeGiB)||r.sizeGiB<1||r.sizeGiB>MAX_DATA_DISK_GIB)throw new ApiError(422,"Invalid disk size");
-  entries=[...old,{name:r.name,sizeGiB:r.sizeGiB,attached:false}];
+  if(r.action==="clone"){
+   const source=old.find(d=>d.name===r.source);
+   if(!source)throw new ApiError(404,"Clone source disk not found");
+   if(r.sizeGiB<source.sizeGiB)throw new ApiError(422,"Clone must be at least as large as source");
+  }
+  entries=[...old,{name:r.name,sizeGiB:r.sizeGiB,attached:false,...(r.action==="clone"?{source:r.source}:{})}];
  }else{
   if(!existing)throw new ApiError(404,"Data disk not found");
   if(existing.attached===(r.action==="attach"))throw new ApiError(409,"Disk already in requested attachment state");

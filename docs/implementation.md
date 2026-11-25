@@ -263,3 +263,7 @@ Reviewed candidate through 6dad51e. Corrected auxiliary media capacity validatio
 ## Static CI repair and native input preparation
 - Fork run 45622045966: typecheck passed; lint rejected unused bootOrder destructuring in boot test. Preserve same disk equality check using explicit deletion on a copy. KVM skipped, as required on lint failure. Actual resolved lock artifact 15024188371 downloaded for review; not yet committed.
 - Pre-provision offline validation of both showcase manifests, fixed fixture digests, required boot transition and ARM64 checkpoints, bounded step types and recorded wait budget. No guest actions or credentials needed. Unit tests use structural fixtures only. Scale only derived video presentation to fit 1080p/portrait guest sources; raw MP4 remains unchanged. Exact authorized media, guest checkpoints and runtime evidence remain unqualified. No issue #12 execution.
+
+
+## Prepared cold same-VM CDI clone slice
+- Candidate 636aedf remains under core CI; this branch is intentionally not synchronized or run separately. Adds same-VM owner-checked CDI PVC clone with quota reservation, immutable source lineage, cold source validation, start gate until clone converges, narrowed admission and operation observation. Unit and API lifecycle evidence cover clone source scope, target capacity, distinct PVC and cleanup; guest byte preservation is not yet established. No cross-tenant, live, arbitrary PVC, cross-namespace, snapshot or export claim. Integrate only after current baseline KVM result and review.
