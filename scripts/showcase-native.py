@@ -5,6 +5,7 @@ are client-owned JSON, not backend workflows. Fail closed on missing evidence.
 import argparse, hashlib, json, os, re, runpy, secrets, subprocess, time, uuid, zipfile
 from pathlib import Path
 from showcase_inputs import load_scenario
+from screen_targets import locate_label
 
 P = argparse.ArgumentParser()
 P.add_argument("profile", choices=["windows", "android"])
@@ -40,7 +41,7 @@ def iid():
     return str(uuid.uuid4())
 
 scenario = load_scenario(args.scenario, args.profile)
-assert set(scenario) == {"setup", "application", "beforeMarker", "afterMarker", "resultName", "expectedResultSha256"}
+assert set(scenario) == {"setup", "softwareSetup", "application", "beforeMarker", "afterMarker", "resultName", "expectedResultSha256"}
 assert isinstance(scenario["setup"], list) and isinstance(scenario["application"], list)
 assert norm(scenario["beforeMarker"]) and norm(scenario["afterMarker"]) and norm(scenario["beforeMarker"]) != norm(scenario["afterMarker"])
 assert re.fullmatch("[A-Za-z0-9][A-Za-z0-9._-]{0,95}", scenario["resultName"])
@@ -138,6 +139,15 @@ def steps(items, recording=False):
         elif kind=="keys":
             assert isinstance(value,list) and 1<=len(value)<=8 and all(isinstance(k,int) and 0<=k<=0x1fffffff for k in value)
             send([{"type":"key","keysym":k,"down":True} for k in value]+[{"type":"key","keysym":k,"down":False} for k in reversed(value)])
+        elif kind=="click-label":
+            def target():
+                image=OUT/(("recorded" if recording else "setup")+f"-target-{i:03d}.png")
+                data,headers=call("GET",path+"/screenshot",binary=True)
+                assert headers.get("Content-Type")=="image/png"
+                image.write_bytes(data)
+                return locate_label(image,value["text"])
+            x,y=wait(target,value["seconds"],"Unique guest button not found")
+            send([{"type":"pointer","x":x,"y":y,"buttons":v} for v in (0,1,0)])
         elif kind=="click":
             assert isinstance(value,list) and len(value)==2 and 0<=value[0]<1920 and 0<=value[1]<1200
             x,y=value
@@ -221,6 +231,8 @@ try:
     if win:
         fixture=(Path(__file__).resolve().parents[1]/"showcases/windows/proof.ps1").read_bytes()
         call("PUT",path+"/files/proof.ps1",raw=fixture,expected=202,extra_headers={"Content-Type":"application/octet-stream","X-Content-SHA256":sha(fixture)})
+    # Install/authorize uploaded software only after the bytes exist in the exchange.
+    steps(scenario["softwareSetup"])
     visible(scenario["beforeMarker"],"before",120)
     assert not any(f["name"]==scenario["resultName"] for f in call("GET",path+"/files")), "Stale result"
     # Never record login/MFA or installation licensing screens.
@@ -234,6 +246,7 @@ try:
         steps([{"text":command},{"keys":[0xff0d]}],recording=True)
     steps(scenario["application"],recording=True)
     visible(scenario["afterMarker"],"after",45)
+    wait(lambda:any(f["name"]==scenario["resultName"] for f in call("GET",path+"/files")),20,"Guest output not published")
     result,headers=call("GET",path+"/files/"+scenario["resultName"],binary=True,phase="download file")
     assert sha(result)==scenario["expectedResultSha256"]==headers.get("X-Content-SHA256")
     (OUT/"guest-result.bin").write_bytes(result)
