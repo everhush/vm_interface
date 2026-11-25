@@ -33,5 +33,11 @@
     "bytes": 1659704,
     "digestSource": "https://github.com/ip7z/7zip/releases/tag/26.06",
     "licenseSource": "https://www.7-zip.org/license.txt"
+  },
+  "virtioISO": {
+    "name": "virtio-win-0.1.302.iso",
+    "url": "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.302-1/virtio-win.iso",
+    "sha256": "303f7ae40dad495d6ae474fdc571df58958a4dbc5c37a522d80f9a203867949d",
+    "bytes": 877373440
   }
 }
