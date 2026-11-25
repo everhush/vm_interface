@@ -10,6 +10,7 @@ import {inspectStorage,managedDisks,requireDeleteConfirmation} from "../../../..
 import {hardwareSpec,configureHardware,withVmLock} from "../../../../src/hardware";
 import {bootSpec,configureBoot} from "../../../../src/boot";
 import {dataDiskSpec,configureDataDisk,requireDataDisks} from "../../../../src/data-disks";
+import {createDiskExport,diskExportStatus,cancelDiskExport,downloadDiskExport,requireNoExports} from "../../../../src/disk-export";
 import {guestObservation} from "../../../../src/guest";
 import {screenshot} from "../../../../src/screenshot";
 import {displayToken,issueDisplayTicket,lookupDisplayTicket,listDisplayTickets,revokeDisplayTicket} from "../../../../src/console-tickets";
@@ -113,12 +114,18 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
   await touchIdleActivity(id,account);
   if(m==="GET"&&p.length===2){const vm=await owned(id,account);let vmi:unknown=null;try{vmi=await kube("GET",vmiPath(id));}catch(e){if(!(e instanceof ApiError)||e.status!==404)throw e;}return json({id,resourceVersion:vm.metadata?.resourceVersion,desired:vm.spec,status:vm.status,instance:vmi});}
   if(m==="GET"&&p.length===3&&p[2]==="storage")return json(await inspectStorage(id,account));
+  if(p[2]==="disk-exports"){
+   if(m==="POST"&&p.length===4)return json(await mutate(account,key,{action:"disk-export",id,disk:p[3]},opId=>withVmLock(id,()=>createDiskExport(id,account,p[3],opId))),202);
+   if(m==="GET"&&p.length===4)return json(await diskExportStatus(id,account,p[3]));
+   if(m==="GET"&&p.length===5&&p[4]==="file")return await downloadDiskExport(id,account,p[3],req.signal);
+   if(m==="DELETE"&&p.length===4)return json(await mutate(account,key,{action:"disk-export-delete",id,exportId:p[3]},()=>withVmLock(id,()=>cancelDiskExport(id,account,p[3]))),202);
+  }
   if(m==="POST"&&p[2]==="disks"&&(p.length===3||p.length===4&&p[3]==="plan")){
    await owned(id,account);
    let input:unknown;try{input=JSON.parse(await boundedText(req,4096))}catch(e){if(e instanceof ApiError)throw e;throw new ApiError(400,"Invalid JSON")}
    const parsed=dataDiskSpec.safeParse(input);if(!parsed.success)return json({error:"Invalid data disk request",issues:parsed.error.issues},422);
-   if(p.length===4)return json(await withAccountLock(account,()=>configureDataDisk(account,id,parsed.data,true),id));
-   return json(await mutate(account,key,{action:"disk-"+parsed.data.action,id,spec:parsed.data},opId=>withAccountLock(account,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid});return configureDataDisk(account,id,parsed.data)},id)),202);
+   if(p.length===4)return json(await withAccountLock(account,async()=>{await requireNoExports(id);return configureDataDisk(account,id,parsed.data,true)},id));
+   return json(await mutate(account,key,{action:"disk-"+parsed.data.action,id,spec:parsed.data},opId=>withAccountLock(account,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid});await requireNoExports(id);return configureDataDisk(account,id,parsed.data)},id)),202);
   }
   if(p[2]==="exposures"){
    if(m==="GET"&&p.length===3)return json(await listExposures(account,id));
@@ -244,6 +251,7 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
    const confirm=new URL(req.url).searchParams.get("deleteDisks")==="true";
    return json(await mutate(account,key,{action:"delete",id,deleteDisks:confirm},opId=>withVmLock(id,async()=>{
     const vm=await owned(id,account);
+    await requireNoExports(id);
     const disks=managedDisks(vm,id);
     requireDeleteConfirmation(disks,confirm);
     if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");
@@ -267,7 +275,7 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
     return {id,instanceUid,warning:"Hard reset submitted; guest reboot requires independent observation"};
    })),202);
   }
-  if(m==="POST"&&p.length===3&&["start","stop","restart"].includes(p[2]))return json(await mutate(account,key,{action:p[2],id},opId=>withVmLock(id,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");let previousInstanceUid:string|null=null;try{previousInstanceUid=(await kube("GET",vmiPath(id)) as Resource).metadata?.uid??null}catch(e){if(!(e instanceof ApiError)||e.status!==404)throw e}await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid,previousInstanceUid});if(p[2]==="start"){await requireDataDisks(id,account,vm);await requireMediaReady(id,account);if(exchangeConfigured(vm))await ensureExchange(id,account,vm)}await kube("PUT",actionPath(id,p[2]),{});return {id};})),202);
+  if(m==="POST"&&p.length===3&&["start","stop","restart"].includes(p[2]))return json(await mutate(account,key,{action:p[2],id},opId=>withVmLock(id,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");let previousInstanceUid:string|null=null;try{previousInstanceUid=(await kube("GET",vmiPath(id)) as Resource).metadata?.uid??null}catch(e){if(!(e instanceof ApiError)||e.status!==404)throw e}await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid,previousInstanceUid});if(p[2]!=="stop")await requireNoExports(id);if(p[2]==="start"){await requireDataDisks(id,account,vm);await requireMediaReady(id,account);if(exchangeConfigured(vm))await ensureExchange(id,account,vm)}await kube("PUT",actionPath(id,p[2]),{});return {id};})),202);
   throw new ApiError(404,"Endpoint not implemented");
  }catch(e){return json({error:e instanceof ApiError?e.message:"Internal service error"},e instanceof ApiError?e.status:500);}
 }

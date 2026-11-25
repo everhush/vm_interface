@@ -46,4 +46,5 @@ kubectl apply --server-side -f https://raw.githubusercontent.com/cloudnative-pg/
 kubectl -n cnpg-system rollout status deployment/cnpg-controller-manager --timeout=300s
 kubectl apply -f infra/namespace.yaml
 kubectl apply -f infra/exchange-policy.yaml
+kubectl apply -f infra/disk-export-policy.yaml
 kubectl -n vm-interface wait cluster vm-db --for=condition=Ready --timeout=600s

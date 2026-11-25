@@ -102,10 +102,30 @@ try:
     upload(payload,202)
     imported=wait(lambda: (s if (s:=call("GET",endpoint))["ready"] else None))
     assert imported["metadata"]["sha256"]==digest
+    export=call("POST",path+"/disk-exports/imported",idem=key(),expected=202)["result"]["exportId"]
+    ep=path+"/disk-exports/"+export
+    call("GET",ep,token=b,expected=404)
+    call("POST",path+"/start",{},idem=key(),expected=409)
+    wait(lambda:call("GET",ep)["ready"])
+    req=urllib.request.Request(base+ep+"/file",headers={"Authorization":"Bearer "+a})
+    with urllib.request.urlopen(req,timeout=180) as res:
+        length=int(res.headers["Content-Length"]); prefix=res.read(len(payload)); total=len(prefix); h=hashlib.sha256(prefix)
+        assert prefix==payload
+        while chunk:=res.read(1024*1024): total+=len(chunk); h.update(chunk)
+        assert total==length and length<=1024**3
+    exported={"bytes":total,"sha256":h.hexdigest(),"inputPrefixVerified":True}
+    call("DELETE",ep,idem=key(),expected=202)
+    def export_gone():
+        try: call("GET",ep)
+        except AssertionError as e:
+            if e.args and e.args[0][2]==404:return True
+            raise
+        return False
+    wait(export_gone)
     assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+7
     call("DELETE",path,idem=key(),expected=409)
     Path("evidence").mkdir(exist_ok=True)
-    Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"import":imported,"guestByteProof":False},indent=2))
+    Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"import":imported,"export":exported,"guestByteProof":False},indent=2))
 finally:
     deletion=call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
     assert vm+"-data-work" in deletion["result"]["affectedDisks"]

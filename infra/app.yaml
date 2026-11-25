@@ -30,6 +30,8 @@ spec:
         env:
         - name: DATABASE_URL
           valueFrom: {secretKeyRef: {name: vm-db-app, key: uri}}
+        - name: VM_EXPORT_TOKEN
+          valueFrom: {secretKeyRef: {name: vm-api-export, key: token}}
         - name: TEST_IDENTITIES
           valueFrom: {secretKeyRef: {name: vm-api-test, key: identities}}
         volumeMounts:
