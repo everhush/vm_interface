@@ -37,6 +37,10 @@ def validate_steps(items, profile, recording):
         elif kind == "keys":
             if not isinstance(value, list) or not 1 <= len(value) <= 8 or not all(type(k) is int and 0 <= k <= 0x1fffffff for k in value):
                 raise ValueError("Invalid keyboard keys")
+        elif kind == "click-label":
+            if not isinstance(value,dict) or set(value)!={"text","seconds"} or not 1 <= len(normalize(value["text"])) <= 60 or type(value["seconds"]) is not int or not 1 <= value["seconds"] <= 60:
+                raise ValueError("Invalid visible button target")
+            budget += value["seconds"]
         elif kind == "click":
             if not isinstance(value, list) or len(value) != 2 or any(type(v) is not int for v in value) or not 0 <= value[0] < 1920 or not 0 <= value[1] < 1200:
                 raise ValueError("Invalid pointer coordinates")
@@ -63,7 +67,7 @@ def load_scenario(path: Path, profile: str):
             result[key] = value
         return result
     scenario = json.loads(path.read_text(), object_pairs_hook=unique)
-    if not isinstance(scenario, dict) or set(scenario) != {"setup", "application", "beforeMarker", "afterMarker", "resultName", "expectedResultSha256"}:
+    if not isinstance(scenario, dict) or set(scenario) != {"setup", "softwareSetup", "application", "beforeMarker", "afterMarker", "resultName", "expectedResultSha256"}:
         raise ValueError("Invalid scenario fields")
     before, after = normalize(scenario["beforeMarker"]), normalize(scenario["afterMarker"])
     if not 1 <= len(before) <= 100 or not 1 <= len(after) <= 100 or before == after:
@@ -74,9 +78,15 @@ def load_scenario(path: Path, profile: str):
     if scenario["expectedResultSha256"] != hashlib.sha256(expected).hexdigest():
         raise ValueError("Unexpected fixture result digest")
     setup = validate_steps(scenario["setup"], profile, False)
+    if not isinstance(scenario["softwareSetup"],list):
+        raise ValueError("Invalid software preparation")
+    if scenario["softwareSetup"]:
+        validate_steps(scenario["softwareSetup"],profile,False)
+    if profile=="android" and not scenario["softwareSetup"]:
+        raise ValueError("Android needs post-upload authorized installation and directory selection")
     application = validate_steps(scenario["application"], profile, True)
     if profile == "windows" and ("system-boot" not in setup or not ("7zip" in after or "proof7z" in after)):
         raise ValueError("Windows requires installer-to-system boot and real 7-Zip checkpoint")
-    if profile == "android" and ("apkcompletearm64v8a" not in after or not application.intersection({"keys", "click", "text"})):
+    if profile == "android" and ("apkcompletearm64v8a" not in after or not application.intersection({"keys", "click", "click-label", "text"})):
         raise ValueError("Android requires native ABI checkpoint and actual application input")
     return scenario

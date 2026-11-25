@@ -15,6 +15,7 @@ class ShowcaseInputsTest(unittest.TestCase):
     def fixture(self, profile):
         result = b"VM Interface Windows 7-Zip functional proof\n" if profile == "windows" else b"VM Interface Android APK functional proof\n"
         return {"setup":[{"system-boot":True}] if profile=="windows" else [{"wait":{"text":"Ready","seconds":5}}],
+                "softwareSetup":[{"human":"Install uploaded fixture and select authorized exchange directory"}] if profile=="android" else [],
                 "application":[{"click":[12,34]},{"wait":{"text":"Done","seconds":10}}],
                 "beforeMarker":"Ready","afterMarker":"7-Zip" if profile=="windows" else "APK COMPLETE arm64-v8a",
                 "resultName":"result.txt","expectedResultSha256":hashlib.sha256(result).hexdigest()}

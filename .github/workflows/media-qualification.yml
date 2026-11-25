@@ -1,7 +1,7 @@
 name: Pinned showcase media qualification (no KVM)
 on:
   push:
-    branches: ['prep/media-qualification-v2']
+    branches: ['prep/media-qualification-v2', 'prep/showcase-scenarios-v2']
   workflow_dispatch:
 permissions:
   contents: read
@@ -68,3 +68,27 @@ jobs:
           name: windows-catalog-iso-qualification
           path: qualification/iso/
           retention-days: 7
+  android-apk:
+    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/showcase-scenarios-v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and inspect updated proof APK
+        run: |
+          set -euo pipefail
+          mkdir -p qualification/apk
+          bash showcases/android/build-apk.sh qualification/apk/proof.apk
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs qualification/apk/proof.apk > qualification/apk/signature.txt
+          "$ANDROID_HOME/build-tools/34.0.0/aapt2" dump badging qualification/apk/proof.apk > qualification/apk/badging.txt
+          grep -F "versionName='2.0'" qualification/apk/badging.txt
+          python3 scripts/write-showcase-scenario.py windows qualification/apk/windows-scenario.json
+          python3 scripts/write-showcase-scenario.py android qualification/apk/android-scenario.json
+          PYTHONPATH=scripts python3 -c 'from pathlib import Path; from showcase_inputs import load_scenario; [load_scenario(Path("qualification/apk/"+p+"-scenario.json"),p) for p in ("windows","android")]'
+          (cd qualification/apk; sha256sum proof.apk *-scenario.json > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: showcase-apk-and-scenarios
+          path: qualification/apk/
+          retention-days: 30
