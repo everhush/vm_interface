@@ -5,6 +5,7 @@ import {coldDataDiskPatch,readDataDisks,DATA_DISKS_ANNOTATION,dataDiskClaim} fro
 import {dataDiskSpec,dataDiskManifest} from "../src/data-disks";
 import {desiredUsage} from "../src/quota";
 import {managedDisks} from "../src/storage";
+import {mediaDeclaration,isMediaSlot} from "../src/media";
 import type {Resource} from "../src/kube";
 const id="vm-"+"a".repeat(32),uid="test-uid",rv="3";
 const spec:ComputerSpec={version:1,name:"disk-test",architecture:"amd64",cpu:1,memoryMiB:512,image:"cirros-smoke",storage:{systemGiB:2,exchangeGiB:1}};
@@ -59,4 +60,18 @@ test("clone is cold, source-scoped, capacity-accounted and never self-referentia
  const d=readDataDisks(v,id)[1];assert.equal(d.source,"work");assert.equal(d.attached,false);
  const m=dataDiskManifest(id,"alpha",uid,d);assert.equal(m.spec.source.pvc?.name,dataDiskClaim(id,"work"));assert.equal(m.metadata.name,dataDiskClaim(id,"copy"));
  assert.equal(m.metadata.annotations?.["cdi.kubevirt.io/storage.bind.immediate.requested"],"true");
+});
+
+test("declared data disk import has a fixed media slot, digest and capacity",()=>{
+ const v=vm(),media={format:"raw" as const,bytes:512,sha256:"0".repeat(64),source:"client fixture",os:"test",version:"1",authorizedByClient:true as const};
+ const request={action:"import" as const,name:"extra",sizeGiB:1,media,expectedResourceVersion:rv};
+ assert.throws(()=>coldDataDiskPatch(v,null,id,{...request,media:{...media,format:"iso"}}),/raw\/QCOW2/);
+ assert.equal(dataDiskSpec.safeParse({...request,media:{...media,authorizedByClient:false}}).success,false);
+ apply(v,coldDataDiskPatch(v,null,id,request));
+ const disk=readDataDisks(v,id)[0];assert.deepEqual(disk.media,media);
+ assert.deepEqual(dataDiskManifest(id,"alpha",uid,disk).spec.source,{upload:{}});
+ assert.equal(desiredUsage(v.spec).storageGiB,4);
+ assert.deepEqual(mediaDeclaration(v,id,"data-extra"),{slot:"data-extra",name:dataDiskClaim(id,"extra"),metadata:media});
+ assert.equal(mediaDeclaration(v,id,"data-unknown"),null);
+ assert.equal(isMediaSlot("data-../other"),false);
 });

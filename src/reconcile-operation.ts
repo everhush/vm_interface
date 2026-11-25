@@ -1,7 +1,7 @@
 import {and,eq} from "drizzle-orm";
 import {database,operations} from "./db";
 import {ApiError,kube,vmPath,vmiPath,dvPath,pvcPath,type Resource} from "./kube";
-import {mediaStatus,type Slot} from "./media";
+import {mediaStatus,isMediaSlot} from "./media";
 import {bootPreference,installerTray} from "./boot";
 import {inspectStorage} from "./storage";
 type Row=typeof operations.$inferSelect;
@@ -39,7 +39,7 @@ async function inspect(row:Row):Promise<Observation>{
  if(!id||!/^vm-[a-f0-9]{32}$/.test(id)||!action)return observation("not-applicable","No safely reconcilable intent");
  if(row.status==="rejected")return observation("not-applicable","Submission rejected");
  if(row.status==="pending")return observation("waiting","Submission still active");
- if(!["create","start","stop","restart","delete","hardware","boot","media-upload","media-commit","disk-create","disk-clone","disk-attach","disk-detach"].includes(action))return observation("not-applicable","Operation requires its feature-specific status endpoint");
+ if(!["create","start","stop","restart","delete","hardware","boot","media-upload","media-commit","disk-create","disk-clone","disk-import","disk-attach","disk-detach"].includes(action))return observation("not-applicable","Operation requires its feature-specific status endpoint");
  const vm=await optional(vmPath(id));
  if(vm&&vm.metadata?.labels?.["vm-interface.io/account"]!==row.account)return observation("uncertain","Computer ownership cannot be established");
  if(action!=="create"&&!target.vmUid&&!["media-upload","media-commit"].includes(action))return observation("uncertain","No pre-mutation target identity recorded");
@@ -52,10 +52,11 @@ async function inspect(row:Row):Promise<Observation>{
  }
  if(!vm||target.vmUid&&vm.metadata?.uid!==target.vmUid)return observation("uncertain","Computer identity unavailable or changed");
  if(["media-upload","media-commit"].includes(action)){
-  const m=await mediaStatus(id,row.account,["boot","installer","auxiliary"].includes(intent.slot??"")?intent.slot as Slot:undefined);
+  if(!isMediaSlot(intent.slot))return observation("uncertain","Missing valid media slot");
+  const m=await mediaStatus(id,row.account,intent.slot);
   return m?.ready?observation("converged","Declared input verified and CDI import succeeded"):observation("waiting","CDI media import not yet verified");
  }
- if(["disk-create","disk-clone","disk-attach","disk-detach"].includes(action)){
+ if(["disk-create","disk-clone","disk-import","disk-attach","disk-detach"].includes(action)){
   const s=await inspectStorage(id,row.account),disk=s.volumes.find(v=>v.kind==="data"&&v.diskName===intent.diskName);
   return disk?.dataVolumeUid&&disk.attached===(action==="disk-attach")&&(action!=="disk-clone"||(disk.dataVolumePhase==="Succeeded"&&disk.pvcPhase==="Bound"&&!!disk.pvcUid))?observation("converged","Owned data disk and requested attachment state observed; guest readiness not implied"):observation("waiting","Data disk or desired attachment state not yet confirmed");
  }

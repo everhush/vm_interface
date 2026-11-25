@@ -18,7 +18,7 @@ import {recordingSpec,startRecording,stopRecording,recordingStatus,listRecording
 import {quota,requireAccountCapacity,specUsage,withAccountLock} from "../../../../src/quota";
 import {batchSpec,dispatchBatch} from "../../../../src/input-batch";
 import {ensureExchange,exchangeRequest,exchangeFileName,exchangeConfigured} from "../../../../src/exchange";
-import {mediaStatus,uploadMedia,uploadMediaChunk,commitMediaStage,requireMediaReady,type Slot} from "../../../../src/media";
+import {mediaStatus,uploadMedia,uploadMediaChunk,commitMediaStage,requireMediaReady,isMediaSlot} from "../../../../src/media";
 import {chunkLength,readChunk,validateChunk,discardStage} from "../../../../src/media-resume";
 import {exposureSpec,issueExposure,listExposures,revokeExposure} from "../../../../src/network";
 import {auditContext,recordAudit,rateLimit,auditHistory,type AuditContext} from "../../../../src/audit";
@@ -27,7 +27,7 @@ import {boundedBody,boundedText} from "../../../../src/request-body";
 import {mediaMaxBytes,stageMaxBytes,systemMaxGiB,accountMaxStorageGiB} from "../../../../src/media-config";
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{"cache-control":"no-store"}});
 const imageResponse=(png:Buffer)=>new Response(Uint8Array.from(png),{headers:{"content-type":"image/png","cache-control":"no-store","x-content-type-options":"nosniff","content-disposition":"inline; filename=\"screenshot.png\""}});
-const capabilities={phase:"console and storage development",verified:["native amd64 KVM lifecycle, account isolation, cold CPU/RAM, CDI/PVC identities, desired-resource quotas, authenticated PNG display capture (CI 45542879476)","hashed account keys, scoped display tickets, pinned image CDI, shared read-only RFB (CI 45544070366)"],implementedUnverified:["durable input lease and server-side input gating","explicit-consent sampled MP4 recording and retrieval","bounded lease-fenced HTTP input batches","VirtioFS profile and bounded account-scoped file bytes","bounded authorized CDI disk/ISO media upload","private guest masquerade network and expiring TCP tunnel","durable operation intent and read-only convergence reconciliation","resumable offset- and digest-verified media staging (larger profiles operator-configured)","opt-in idle stop, audit, request rate and body limits","hard reset, cold boot preference","cold creation, attachment and retention of blank data disks"],conditional:["ARM64 uploaded UEFI virtio disk evaluation (operator opt-in; native KVM/guest validation required)","VirtioFS (native guest mount and byte roundtrip verified; product file API pending)","virtio-mem (driver present on Fedora; live resize not certified)"],unsupported:["Windows-sized media import certification","public network exposure","hotplug","snapshots","migration","GPU"]};
+const capabilities={phase:"console and storage development",verified:["native amd64 KVM lifecycle, account isolation, cold CPU/RAM, CDI/PVC identities, desired-resource quotas, authenticated PNG display capture (CI 45542879476)","hashed account keys, scoped display tickets, pinned image CDI, shared read-only RFB (CI 45544070366)"],implementedUnverified:["durable input lease and server-side input gating","explicit-consent sampled MP4 recording and retrieval","bounded lease-fenced HTTP input batches","VirtioFS profile and bounded account-scoped file bytes","bounded authorized CDI disk/ISO media upload","private guest masquerade network and expiring TCP tunnel","durable operation intent and read-only convergence reconciliation","resumable offset- and digest-verified media staging (larger profiles operator-configured)","opt-in idle stop, audit, request rate and body limits","hard reset, cold boot preference","cold creation, authorized media import, same-VM cloning, attachment and retention of data disks"],conditional:["ARM64 uploaded UEFI virtio disk evaluation (operator opt-in; native KVM/guest validation required)","VirtioFS (native guest mount and byte roundtrip verified; product file API pending)","virtio-mem (driver present on Fedora; live resize not certified)"],unsupported:["Windows-sized media import certification","public network exposure","hotplug","snapshots","migration","GPU"]};
 async function handleCore(req:Request,context:{audit?:AuditContext}){
  try{
   const p=new URL(req.url).pathname.split("/").filter(Boolean).slice(2), m=req.method;
@@ -132,8 +132,8 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
   }
   if(p[2]==="media"){
    if(m==="GET"&&p.length===3)return json(await mediaStatus(id,account));
-   if(!["boot","installer","auxiliary"].includes(p[3]??""))throw new ApiError(404,"Media slot not found");
-   const slot=p[3] as Slot;
+   if(!isMediaSlot(p[3]))throw new ApiError(404,"Media slot not found");
+   const slot=p[3];
    if(m==="GET"&&p.length===4){const state=await mediaStatus(id,account,slot);if(!state)throw new ApiError(404,"Media slot not found");return json(state)}
    if(p.length===5&&["chunks","commit"].includes(p[4])){
     const state=await mediaStatus(id,account,slot);
