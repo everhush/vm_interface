@@ -32,7 +32,7 @@ async function verifiedDisk(id:string,account:string,vm:Resource,d:DataDisk){
 export async function requireDataDisks(id:string,account:string,vm:Resource){
  for(const d of readDataDisks(vm,id))if(d.attached||d.source){
   const {dv,pvc}=await verifiedDisk(id,account,vm,d);
-  if(d.media&&!(await mediaStatus(id,account,"data-"+d.name))?.ready)throw new ApiError(409,"Attached data disk media has not been verified and imported");
+  if(d.media&&!(await mediaStatus(id,account,`data-${d.name}`))?.ready)throw new ApiError(409,"Attached data disk media has not been verified and imported");
   if(d.source&&((dv.status as {phase?:string}|undefined)?.phase!=="Succeeded"||(pvc?.status as {phase?:string}|undefined)?.phase!=="Bound"))throw new ApiError(409,"Offline clone has not converged; start blocked to prevent writes to the source");
  }
 }
@@ -45,14 +45,14 @@ export async function configureDataDisk(account:string,id:string,r:DataDiskReque
   if(r.action==="clone"){
    const source=entries.find(x=>x.name===r.source)!;
    const {dv,pvc}=await verifiedDisk(id,account,vm,source);
-   if(source.media&&!(await mediaStatus(id,account,"data-"+source.name))?.ready)throw new ApiError(409,"Clone source media not verified");
+   if(source.media&&!(await mediaStatus(id,account,`data-${source.name}`))?.ready)throw new ApiError(409,"Clone source media not verified");
    if((dv.status as {phase?:string}|undefined)?.phase!=="Succeeded"||(pvc?.status as {phase?:string}|undefined)?.phase!=="Bound")throw new ApiError(409,"Clone requires an imported bound source disk");
   }
   if(await optional(dvPath(claim))||await optional(pvcPath(claim)))throw new ApiError(409,"Disk resource name already exists");
   await kube("POST",dvPath("").replace(/\/$/,"")+"?dryRun=All",dataDiskManifest(id,account,vm.metadata!.uid!,d));
  }else {
   await verifiedDisk(id,account,vm,d);
-  if(r.action==="attach"&&d.media&&!(await mediaStatus(id,account,"data-"+d.name))?.ready)throw new ApiError(409,"Import data disk media before attaching");
+  if(r.action==="attach"&&d.media&&!(await mediaStatus(id,account,`data-${d.name}`))?.ready)throw new ApiError(409,"Import data disk media before attaching");
  }
  const updated=await kube("PATCH",vmPath(id)+(dryRun?"?dryRun=All":""),patch,"application/merge-patch+json") as Resource;
  if((r.action==="create"||r.action==="clone"||r.action==="import")&&!dryRun){

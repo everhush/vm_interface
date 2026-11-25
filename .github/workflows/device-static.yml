@@ -5,7 +5,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 defaults:
   run:
     shell: bash
@@ -23,29 +22,6 @@ jobs:
         with:
           node-version: '24'
       - run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg tesseract-ocr fonts-dejavu-core
-      - name: Retrieve previously reviewed dependency lock
-        if: github.ref_name == 'prep/issue-12-consolidated'
-        uses: actions/download-artifact@v4
-        with:
-          name: resolved-npm-lock
-          run-id: 45622045966
-          github-token: ${{ github.token }}
-      - name: Verify lock and emit exact non-secret bytes for upstream commit
-        if: github.ref_name == 'prep/issue-12-consolidated'
-        run: |
-          python3 - <<'PY'
-          import base64, hashlib, json
-          from pathlib import Path
-          p=Path("package-lock.json").read_bytes()
-          assert hashlib.sha256(p).hexdigest()=="b9ac869b0a9c0cf4f049638a7de49b19ad2b46e6ec69c91629f5840749e623de"
-          root=json.loads(p)["packages"][""]
-          manifest=json.loads(Path("package.json").read_bytes())
-          for field in ("dependencies","devDependencies"):
-              assert root[field]==manifest[field]
-          encoded=base64.b64encode(p).decode()
-          for i in range(0,len(encoded),4096):
-              print(f"LOCK_BYTES_{i//4096:03d}:{encoded[i:i+4096]}")
-          PY
       - run: bash scripts/device-validate.sh checks
       - name: Retain resolved dependency lock for reproducibility review
         if: always() && hashFiles('package-lock.json') != ''

@@ -71,14 +71,15 @@ try:
     final=wait(lambda:running(True))
     assert final["pvcUid"]==initial["pvcUid"] and final["dataVolumeUid"]==initial["dataVolumeUid"]
     call("POST",path+"/stop",{},idem=key(),expected=202);wait(stopped)
-    body=dict(action="clone",name="copy",source="work",sizeGiB=1,expectedResourceVersion=state()["resourceVersion"])
+    body=dict(action="clone",name="copy",source="work",sizeGiB=2,expectedResourceVersion=state()["resourceVersion"])
     call("POST",path+"/disks/plan",body)
     body["expectedResourceVersion"]=state()["resourceVersion"]
     cloned=call("POST",path+"/disks",body,idem=key(),expected=202)
     copy=wait(lambda: (d if (d:=disk("copy")) and d.get("dataVolumePhase")=="Succeeded" and d.get("pvcPhase")=="Bound" and d.get("pvcUid") else None))
-    assert copy["pvcUid"]!=final["pvcUid"] and copy["source"]=="work" and not copy["attached"]
+    assert copy["pvcUid"]!=final["pvcUid"] and copy["source"]=="work" and not copy["attached"] and copy["sizeGiB"]==2
+    assert disk()["pvcUid"]==final["pvcUid"] and disk()["sizeGiB"]==1
     wait(lambda:call("GET","/operations/"+cloned["operationId"]).get("observation",{}).get("state")=="converged")
-    assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+5
+    assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+6
     # Imported independent raw disk; prove server-side declared hash, CDI identity and ownership.
     payload=b"VM interface imported disk fixture"+b"\x00"*(1024*1024-34)
     digest=hashlib.sha256(payload).hexdigest()
@@ -101,7 +102,7 @@ try:
     upload(payload,202)
     imported=wait(lambda: (s if (s:=call("GET",endpoint))["ready"] else None))
     assert imported["metadata"]["sha256"]==digest
-    assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+6
+    assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+7
     call("DELETE",path,idem=key(),expected=409)
     Path("evidence").mkdir(exist_ok=True)
     Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"import":imported,"guestByteProof":False},indent=2))
