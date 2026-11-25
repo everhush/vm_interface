@@ -54,6 +54,10 @@ def main():
     denied=subprocess.run(["kubectl","--as=system:serviceaccount:vm-interface:vm-api","create","--dry-run=server","-f","-"],input=json.dumps(dv),capture_output=True,text=True)
     assert denied.returncode!=0 and "vm-data-disk" in denied.stderr,denied.stderr
     evidence.append({"kind":"DataVolume","unsafeCreateDeniedByAdmission":True})
+    exp={"apiVersion":"export.kubevirt.io/v1","kind":"VirtualMachineExport","metadata":{"name":"forbidden-probe","namespace":"vm-interface"},"spec":{"source":{"kind":"PersistentVolumeClaim","name":"foreign-pvc"},"tokenSecretRef":"vm-api-export","ttlDuration":"15m0s"}}
+    denied=subprocess.run(["kubectl","--as=system:serviceaccount:vm-interface:vm-api","create","--dry-run=server","-f","-"],input=json.dumps(exp),capture_output=True,text=True)
+    assert denied.returncode!=0 and "vm-disk-export" in denied.stderr,denied.stderr
+    evidence.append({"kind":"VirtualMachineExport","unsafeCreateDeniedByAdmission":True})
     Path("evidence").mkdir(exist_ok=True)
     Path("evidence/rbac-checks.json").write_text(json.dumps(evidence, indent=2))
     print("Exact screenshot RBAC and forbidden access checks passed")

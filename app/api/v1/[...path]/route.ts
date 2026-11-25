@@ -155,9 +155,9 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
      if(contentLength!==null&&Number(contentLength)!==length)throw new ApiError(422,"Chunk content length differs from expected length");
      const bytes=await readChunk(req.body,length);
      validateChunk(state.metadata.bytes,offset,bytes,sha256);
-     return json(await mutate(account,key,{action:"media-chunk",id,slot:state.slot,offset,length,sha256,mediaSha256:state.metadata.sha256},()=>withVmLock(id,()=>uploadMediaChunk(id,account,state.slot,offset,bytes,sha256))),202);
+     return json(await mutate(account,key,{action:"media-chunk",id,slot:state.slot,offset,length,sha256,mediaSha256:state.metadata.sha256},()=>withVmLock(id,async()=>{await requireNoExports(id);return uploadMediaChunk(id,account,state.slot,offset,bytes,sha256)})),202);
     }
-    if(m==="POST"&&p[4]==="commit")return json(await mutate(account,key,{action:"media-commit",id,slot:state.slot,sha256:state.metadata.sha256,bytes:state.metadata.bytes},opId=>withVmLock(id,()=>commitMediaStage(id,account,state.slot,opId))),202);
+    if(m==="POST"&&p[4]==="commit")return json(await mutate(account,key,{action:"media-commit",id,slot:state.slot,sha256:state.metadata.sha256,bytes:state.metadata.bytes},opId=>withVmLock(id,async()=>{await requireNoExports(id);return commitMediaStage(id,account,state.slot,opId)})),202);
     if(m==="DELETE"&&p[4]==="chunks")return json(await mutate(account,key,{action:"media-discard",id,slot:state.slot},()=>withVmLock(id,()=>discardStage(id,account,state.slot))),202);
    }
    if(m==="PUT"&&p.length===4){
@@ -167,7 +167,7 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
     if(length!==null&&Number(length)!==state.metadata.bytes)throw new ApiError(422,"Media length differs from declaration");
     if(!req.body)throw new ApiError(400,"Missing media bytes");
     const body=req.body;
-    return json(await mutate(account,key,{action:"media-upload",id,slot:state.slot,sha256:state.metadata.sha256,bytes:state.metadata.bytes},opId=>withVmLock(id,()=>uploadMedia(id,account,state.slot,body,opId))),202);
+    return json(await mutate(account,key,{action:"media-upload",id,slot:state.slot,sha256:state.metadata.sha256,bytes:state.metadata.bytes},opId=>withVmLock(id,async()=>{await requireNoExports(id);return uploadMedia(id,account,state.slot,body,opId)})),202);
    }
   }
   if(p[2]==="files"){
