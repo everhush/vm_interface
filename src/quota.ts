@@ -2,8 +2,9 @@ import {sql} from "drizzle-orm";
 import {database} from "./db";
 import {ApiError,list} from "./kube";
 import type {ComputerSpec} from "./spec";
+import {accountMaxStorageGiB,installerGiB} from "./media-config";
 
-export const limits={computers:4,cpu:8,memoryMiB:8192,storageGiB:16} as const;
+export const limits={computers:4,cpu:8,memoryMiB:8192,storageGiB:accountMaxStorageGiB} as const;
 export type Usage={computers:number;cpu:number;memoryMiB:number;storageGiB:number};
 export const emptyUsage=():Usage=>({computers:0,cpu:0,memoryMiB:0,storageGiB:0});
 export function addUsage(a:Usage,b:Usage):Usage{
@@ -32,7 +33,7 @@ export function desiredUsage(value:unknown):Usage{
  return {computers:1,cpu:cpu.cores,memoryMiB,storageGiB};
 }
 export function specUsage(s:ComputerSpec):Usage{
- return {computers:1,cpu:s.cpu,memoryMiB:s.memoryMiB,storageGiB:s.storage?s.storage.systemGiB+s.storage.exchangeGiB:0};
+ return {computers:1,cpu:s.cpu,memoryMiB:s.memoryMiB,storageGiB:s.storage?s.storage.systemGiB+s.storage.exchangeGiB+(s.auxiliaryDisk?.sizeGiB??0)+(s.image==="uploaded-installer"?installerGiB(s.media!.bytes):0):0};
 }
 export function requireCapacity(usage:Usage){
  for(const k of Object.keys(limits) as (keyof Usage)[]){

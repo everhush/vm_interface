@@ -24,6 +24,9 @@ rules:
 - apiGroups: ["cdi.kubevirt.io"]
   resources: ["datavolumes"]
   verbs: ["get"]
+- apiGroups: ["upload.cdi.kubevirt.io"]
+  resources: ["uploadtokenrequests"]
+  verbs: ["create"]
 - apiGroups: [""]
   resources: ["persistentvolumeclaims"]
   verbs: ["get","create"]
@@ -33,10 +36,10 @@ rules:
 - apiGroups: ["subresources.kubevirt.io"]
   # Kubernetes front-door authorizes the first subresource segment; virt-api
   # additionally authorizes the full vnc/screenshot path. No public VNC route.
-  resources: ["virtualmachineinstances/vnc","virtualmachineinstances/vnc/screenshot"]
+  resources: ["virtualmachineinstances/vnc","virtualmachineinstances/vnc/screenshot","virtualmachineinstances/portforward"]
   verbs: ["get"]
 - apiGroups: ["subresources.kubevirt.io"]
-  resources: ["virtualmachines/start","virtualmachines/stop","virtualmachines/restart"]
+  resources: ["virtualmachines/start","virtualmachines/stop","virtualmachines/restart","virtualmachineinstances/reset"]
   verbs: ["update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -75,3 +78,40 @@ spec:
   volumeMode: Filesystem
   resources:
     requests: {storage: 1Gi}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vm-api-cdi-ca
+  namespace: cdi
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["cdi-uploadproxy-signer-bundle"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vm-api-cdi-ca
+  namespace: cdi
+subjects:
+- kind: ServiceAccount
+  name: vm-api
+  namespace: vm-interface
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vm-api-cdi-ca
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vm-media-stage
+  namespace: vm-interface
+spec:
+  storageClassName: local-path
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests: {storage: 512Mi}

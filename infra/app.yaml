@@ -5,6 +5,7 @@ metadata:
   namespace: vm-interface
 spec:
   replicas: 1
+  strategy: {type: Recreate}
   selector:
     matchLabels: {app: vm-api}
   template:
@@ -18,6 +19,8 @@ spec:
         secret: {secretName: vm-console-tls}
       - name: recordings
         persistentVolumeClaim: {claimName: vm-recordings}
+      - name: media-stage
+        persistentVolumeClaim: {claimName: vm-media-stage}
       containers:
       - name: api
         image: vm-interface:ci
@@ -32,6 +35,8 @@ spec:
         volumeMounts:
         - name: recordings
           mountPath: /var/lib/vm-recordings
+        - name: media-stage
+          mountPath: /var/lib/vm-media-stage
         readinessProbe:
           httpGet: {path: /api/v1/health, port: 3000}
           initialDelaySeconds: 5
@@ -82,6 +87,24 @@ spec:
         resources:
           requests: {cpu: 100m, memory: 128Mi}
           limits: {cpu: "1", memory: 512Mi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities: {drop: ["ALL"]}
+      - name: reconcile
+        image: vm-interface:ci
+        imagePullPolicy: Never
+        command: ["node","--import","tsx","src/run-operation-reconciler.ts"]
+        env:
+        - name: DATABASE_URL
+          valueFrom: {secretKeyRef: {name: vm-db-app, key: uri}}
+        volumeMounts:
+        - name: media-stage
+          mountPath: /var/lib/vm-media-stage
+        resources:
+          requests: {cpu: 25m, memory: 64Mi}
+          limits: {cpu: "250m", memory: 256Mi}
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true

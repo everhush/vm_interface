@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # Disposable hosted runner only; never run against an existing cluster.
-test "${GITHUB_ACTIONS:-}" = true
-test "$(uname -m)" = x86_64
+if [ "${GITHUB_ACTIONS:-}" != true ] && [ "${VM_DISPOSABLE_DEVICE:-}" != true ]; then echo "Disposable CI/device required" >&2; exit 1; fi
+case "$(uname -m)" in x86_64|aarch64) ;; *) exit 1;; esac
+if [ -e /etc/rancher/k3s/k3s.yaml ] || [ -e "$HOME/.kube/config" ]; then echo "Refusing to modify an existing cluster/configuration" >&2; exit 1; fi
 sudo test -c /dev/kvm
 sudo modprobe kvm || true
 export INSTALL_K3S_VERSION='v1.34.13+k3s1'

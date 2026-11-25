@@ -87,6 +87,10 @@ call("GET","/openapi.json",token="invalid",expected=401)
 call("POST","/computers/plan",data={**spec,"hostPath":"/"},expected=422)
 call("POST","/computers/plan",data={**spec,"architecture":"arm64"},expected=422)
 call("POST","/computers/plan",data=spec)
+advanced=dict(version=1,name=spec["name"],image=spec["image"],kubevirt={"architecture":"amd64","domain":{"cpu":{"cores":1},"resources":{"requests":{"memory":"512Mi"}}}})
+assert call("POST","/computers/plan",data=advanced)["validated"]==spec
+call("POST","/computers/plan",data={**advanced,"kubevirt":{**advanced["kubevirt"],"volumes":[{"hostDisk":{"path":"/"}}]}},expected=422)
+call("GET","/schema/advanced")
 call("POST","/computers",data=spec,expected=400)
 # Desired reservations count halted VMs and are isolated by account.
 assert call("GET","/account/quota")["usage"]==dict(computers=0,cpu=0,memoryMiB=0,storageGiB=0)
@@ -116,6 +120,7 @@ created=call("POST","/computers",data=spec,key=k,expected=202)
 vm=created["result"]["id"]
 try:
     assert call("POST","/computers",data=spec,key=k,expected=202)==created
+    assert call("POST","/computers",data=advanced,key=k,expected=202)==created
     call("POST","/computers",data={**spec,"cpu":2},key=k,expected=409)
     assert call("GET","/operations/"+created["operationId"])["status"]=="submitted"
     # Keys are account-scoped, never VM-specific; secrets appear only at issuance.

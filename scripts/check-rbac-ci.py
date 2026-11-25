@@ -25,12 +25,17 @@ def main():
         ("subresources.kubevirt.io", "virtualmachineinstances", "vnc/screenshot", "get", True),
         ("subresources.kubevirt.io", "virtualmachineinstances", "console", "get", False),
         ("subresources.kubevirt.io", "virtualmachineinstances", "vnc", "update", False),
+        ("subresources.kubevirt.io", "virtualmachineinstances", "reset", "update", True),
+        ("subresources.kubevirt.io", "virtualmachineinstances", "reset", "get", False),
+        ("subresources.kubevirt.io", "virtualmachineinstances", "portforward", "get", True),
+        ("subresources.kubevirt.io", "virtualmachineinstances", "portforward", "update", False),
         ("", "secrets", "", "get", False),
         ("", "pods", "exec", "create", False),
         ("", "pods", "proxy", "get", False),
         ("", "pods", "", "create", True),
         ("", "pods", "", "delete", False),
         ("", "persistentvolumeclaims", "", "create", True),
+        ("upload.cdi.kubevirt.io", "uploadtokenrequests", "", "create", True),
     ]
     evidence = [check(*item) for item in checks]
     # Direct infrastructure negative admission check, not product API proof.

@@ -1,8 +1,11 @@
 import { schema } from "./spec";
+import {advancedSchema} from "./advanced-spec";
 import {z} from "zod";
 import {keySpec} from "./account-keys";
 import {recordingSpec} from "./recordings";
 import {batchSpec} from "./input-batch";
+import {exposureSpec} from "./network";
+import {bootSpec} from "./boot";
 import {hardwareSchema} from "./hardware";
 
 const object = {type:"object"} as const;
@@ -17,6 +20,7 @@ const errors = {
  "409":response("Conflict or idempotency mismatch",ref("Error")),
  "413":response("Request exceeds size limit",ref("Error")),
  "422":response("Invalid or unsupported configuration",ref("Error")),
+ "429":response("Authenticated account request rate exceeded",ref("Error")),
  "500":response("Internal service error",ref("Error")),
  "502":response("Upstream Kubernetes error",ref("Error"))
 };
@@ -24,16 +28,20 @@ const id = {name:"id",in:"path",required:true,schema:{type:"string",pattern:"^vm
 const opId = {name:"id",in:"path",required:true,schema:{type:"string",format:"uuid"}};
 const idem = {name:"Idempotency-Key",in:"header",required:true,schema:{type:"string",minLength:8,maxLength:128,pattern:"^[A-Za-z0-9_.:-]+$"}};
 const deleteDisks={name:"deleteDisks",in:"query",required:false,schema:{type:"boolean"},description:"Must explicitly be true when deleting a VM with persistent disks; all its managed disks are affected"};
+const bootBody={required:true,content:json(ref("BootSpec"))};
 const hardwareBody={required:true,content:json(ref("HardwareSpec"))};
-const body = {required:true,content:json(ref("ComputerSpec"))};
+const body = {required:true,content:json({oneOf:[ref("ComputerSpec"),ref("AdvancedComputerSpec")]})};
 const read = (summary:string,schema:unknown=object,parameters:unknown[]=[])=>({summary,parameters,responses:{"200":response("Success",schema),...errors}});
 const write = (summary:string,parameters:unknown[],requestBody?:unknown)=>({summary,parameters,...(requestBody?{requestBody}:{}),responses:{"202":response("Mutation recorded; submission is not completion. Replaying rejected submissions returns the recorded HTTP rejection.",ref("Submission")),...errors}});
 const lifecycle = (name:string)=>({post:write(name+" computer; poll computer state to verify convergence",[id,idem])});
 export function openApiDocument(){
  const computer = {...schema}; delete computer.$schema;
+ const advanced={...advancedSchema};delete advanced.$schema;
+ const boot=z.toJSONSchema(bootSpec);delete boot.$schema;
  const hardware={...hardwareSchema};delete hardware.$schema;
  const keySchema=z.toJSONSchema(keySpec);delete keySchema.$schema;
  const recordingSchema=z.toJSONSchema(recordingSpec);delete recordingSchema.$schema;
+ const exposureSchema=z.toJSONSchema(exposureSpec);delete exposureSchema.$schema;
  const batchSchema=z.toJSONSchema(batchSpec);delete batchSchema.$schema;
  const recordingId={name:"recordingId",in:"path",required:true,schema:{type:"string",format:"uuid"}};
  const keyId={name:"keyId",in:"path",required:true,schema:{type:"string",format:"uuid"}};
@@ -48,16 +56,27 @@ export function openApiDocument(){
    "/keys":{get:read("List account key metadata; test account identity only",{type:"array",items:ref("AccountKey")}),post:{summary:"Create account key; secret shown once; test account identity only",requestBody:{required:true,content:json(ref("AccountKeySpec"))},responses:{"201":response("Created key",ref("AccountKeySecret")),...errors}}},
    "/keys/{keyId}":{delete:read("Revoke account key; test account identity only",ref("AccountKey"),[keyId])},
    "/keys/{keyId}/rotate":{post:{summary:"Atomically rotate active key, preserving expiry; test account identity only",parameters:[keyId],responses:{"201":response("Rotated key",ref("AccountKeySecret")),...errors}}},
+   "/audit":{get:read("Latest 100 redacted account API events; seven-day retention",{type:"array",items:object})},
    "/account/quota":{get:read("Owned computer desired-resource quota and current reservations",ref("Quota"))},
    "/schema":{get:read("ComputerSpec JSON Schema")},
+   "/schema/advanced":{get:read("Versioned allowlisted native KubeVirt field subset")},
    "/images":{get:read("Allowlisted image catalog with immutable OCI references and qualification status",{type:"array",items:ref("CatalogImage")})},
    "/capabilities":{get:read("Implemented, conditional and unsupported capabilities")},
    "/openapi.json":{get:read("OpenAPI document")},
    "/computers/plan":{post:{...read("Validate and server-side dry-run the configuration"),requestBody:body}},
    "/computers":{get:read("List owned computers",{type:"array",items:ref("ComputerSummary")}),post:write("Create a halted computer",[idem],body)},
    "/computers/{id}":{get:read("Inspect desired and current VM/VMI state",ref("ComputerDetail"),[id]),delete:write("Delete owned computer; explicit confirmation for persistent disks",[id,idem,deleteDisks])},
+   "/computers/{id}/boot":{patch:write("Change stopped installer VM boot priority and optional CD-ROM tray; preserve all disks",[id,idem],bootBody)},
+   "/computers/{id}/boot/plan":{post:{...read("Server-side dry-run of boot priority change",object,[id]),requestBody:bootBody}},
    "/computers/{id}/hardware":{patch:write("Change CPU and RAM on a fully stopped computer; optimistic resource version required",[id,idem],hardwareBody)},
    "/computers/{id}/hardware/plan":{post:{...read("Server-side dry-run of cold CPU/RAM change",object,[id]),requestBody:hardwareBody}},
+   "/computers/{id}/exposures":{get:read("List private guest TCP grants",{type:"array",items:object},[id]),post:{summary:"Issue expiring instance-bound private TCP tunnel grant",parameters:[id],requestBody:{required:true,content:json(ref("ExposureSpec"))},responses:{"201":response("Grant and secret shown once"),...errors}}},
+   "/computers/{id}/exposures/{grantId}":{delete:read("Revoke owned tunnel grant",object,[id,{name:"grantId",in:"path",required:true,schema:{type:"string",format:"uuid"}}])},
+   "/computers/{id}/exposures/{grantId}/connect":{get:{summary:"Authenticated binary WSS tunnel to declared guest TCP port",parameters:[id,{name:"grantId",in:"path",required:true,schema:{type:"string",format:"uuid"}}],security:[{NetworkGrant:[]}],servers:[{url:"https://{gatewayHost}:3443/api/v1",variables:{gatewayHost:{default:"localhost"}}}],"x-websocket":true,responses:{"101":{description:"Private TCP tunnel"},...errors}}},
+   "/computers/{id}/media":{get:read("Inspect declared media and CDI import verification",object,[id])},
+   "/computers/{id}/media/{slot}/chunks":{put:write("Upload one aligned verified chunk; GET media exposes committed offset",[id,idem,{name:"slot",in:"path",required:true,schema:{enum:["boot","installer","auxiliary"]}},{name:"Upload-Offset",in:"header",required:true,schema:{type:"integer",minimum:0}},{name:"X-Content-SHA256",in:"header",required:true,schema:{type:"string",pattern:"^[a-f0-9]{64}$"}}],{required:true,content:{"application/octet-stream":{schema:{type:"string",format:"binary",maxLength:8388608}}}}),delete:write("Discard staged uncommitted media only; does not delete imported disk",[id,idem,{name:"slot",in:"path",required:true,schema:{enum:["boot","installer","auxiliary"]}}])},
+   "/computers/{id}/media/{slot}/commit":{post:write("Verify entire staged media digest and submit to CDI",[id,idem,{name:"slot",in:"path",required:true,schema:{enum:["boot","installer","auxiliary"]}}])},
+   "/computers/{id}/media/{slot}":{get:read("Inspect one declared media slot",object,[id,{name:"slot",in:"path",required:true,schema:{enum:["boot","installer","auxiliary"]}}]),put:write("Upload declared authorized media bytes to CDI; verify digest before transmission",[id,idem,{name:"slot",in:"path",required:true,schema:{enum:["boot","installer","auxiliary"]}}],{required:true,content:{"application/octet-stream":{schema:{type:"string",format:"binary",maxLength:67108864}}}})},
    "/computers/{id}/files":{get:read("List fully published guest output files",{type:"array",items:ref("ExchangeFile")},[id])},
    "/computers/{id}/files/{name}":{get:{summary:"Download verified guest output bytes",parameters:[id,{name:"name",in:"path",required:true,schema:{type:"string"}}],responses:{"200":{description:"Verified output",content:{"application/octet-stream":{schema:{type:"string",format:"binary"}}}},...errors}},put:write("Upload actual bytes atomically into the exchange volume",[id,idem,{name:"name",in:"path",required:true,schema:{type:"string"}},{name:"X-Content-SHA256",in:"header",required:true,schema:{type:"string",pattern:"^[0-9a-f]{64}$"}}],{required:true,content:{"application/octet-stream":{schema:{type:"string",format:"binary",maxLength:8388608}}}})},
    "/computers/{id}/storage":{get:read("Inspect account-owned managed DataVolumes and PVCs",object,[id])},
@@ -75,10 +94,12 @@ export function openApiDocument(){
    "/computers/{id}/start":lifecycle("Start"),
    "/computers/{id}/stop":lifecycle("Stop"),
    "/computers/{id}/restart":lifecycle("Restart"),
-   "/operations/{id}":{get:read("Read durable operation submission record",ref("Operation"),[opId])}
+   "/computers/{id}/reset":{post:write("Hard reset current VMI; unsaved guest data can be lost; verify guest boot separately",[id,idem],{required:true,content:json({type:"object",additionalProperties:false,required:["confirmHardReset","instanceUid"],properties:{confirmHardReset:{const:true},instanceUid:{type:"string",format:"uuid"}}})})},
+   "/operations":{get:read("Latest 100 account-owned operation records",{type:"array",items:ref("Operation")})},
+   "/operations/{id}":{get:read("Read durable submission and observed convergence independently; no automatic mutation replay",ref("Operation"),[opId])}
   },
   components:{
-   securitySchemes:{DisplayTicket:{type:"apiKey",in:"header",name:"Authorization",description:"Console <ticket>; VM-scoped screenshot/observer/control grant, no account authority"},TestBearer:{type:"http",scheme:"bearer",description:"Isolated test identity or scoped account API key; not production authentication"}},
+   securitySchemes:{NetworkGrant:{type:"apiKey",in:"header",name:"Authorization",description:"Network <grant>; private VM-scoped TCP tunnel only"},DisplayTicket:{type:"apiKey",in:"header",name:"Authorization",description:"Console <ticket>; VM-scoped screenshot/observer/control grant, no account authority"},TestBearer:{type:"http",scheme:"bearer",description:"Isolated test identity or scoped account API key; not production authentication"}},
    schemas:{
     DisplayTicket:{type:"object",required:["id","computerId","scope","actor","instanceUid","createdAt","expiresAt","revokedAt"],properties:{id:{type:"string",format:"uuid"},computerId:{type:"string"},scope:{enum:["screenshot-only","observe-vnc","control-vnc"]},actor:{enum:["observer","human","automation"]},instanceUid:{type:"string"},createdAt:{type:"string",format:"date-time"},expiresAt:{type:"string",format:"date-time"},revokedAt:{type:["string","null"],format:"date-time"}}},
     DisplayTicketSecret:{allOf:[ref("DisplayTicket"),{type:"object",required:["token","authorizationScheme"],properties:{token:{type:"string"},authorizationScheme:{const:"Console"}}}]},
@@ -86,17 +107,20 @@ export function openApiDocument(){
     AccountKey:{type:"object",required:["id","label","permission","createdAt","expiresAt","revokedAt","lastUsedAt"],properties:{id:{type:"string",format:"uuid"},label:{type:"string"},permission:{enum:["read","manage"]},createdAt:{type:"string",format:"date-time"},expiresAt:{type:"string",format:"date-time"},revokedAt:{type:["string","null"],format:"date-time"},lastUsedAt:{type:["string","null"],format:"date-time"}}},
     AccountKeySecret:{allOf:[ref("AccountKey"),{type:"object",required:["token"],properties:{token:{type:"string",writeOnly:true}}}]},
     CatalogImage:{type:"object",required:["id","os","version","architecture","format","source","image","digest","integrity","licensing","support","evidence"],properties:{id:{type:"string"},os:{type:"string"},version:{type:["string","null"]},architecture:{enum:["amd64","arm64"]},format:{type:"string"},source:{type:"string",format:"uri"},image:{type:"string"},digest:{type:"string",pattern:"^sha256:[0-9a-f]{64}$"},integrity:{type:"string"},licensing:object,support:{type:"string"},evidence:object}},
+    ExposureSpec:exposureSchema,
     InputBatch:batchSchema,
     RecordingSpec:recordingSchema,
     Recording:{type:"object",required:["id","computerId","instanceUid","status","consentAt","maxSeconds","createdAt"],properties:{id:{type:"string",format:"uuid"},computerId:{type:"string"},instanceUid:{type:"string"},status:{enum:["queued","recording","stopping","completed","failed","deleted"]},consentAt:{type:"string",format:"date-time"},createdAt:{type:"string",format:"date-time"},maxSeconds:{type:"integer"},durationMs:{type:["integer","null"]},bytes:{type:["integer","null"]},sha256:{type:["string","null"]},contentType:{type:["string","null"]},error:{type:["string","null"]}}},
     ExchangeFile:{type:"object",required:["name","size","sha256","direction"],properties:{name:{type:"string"},size:{type:"integer",minimum:0,maximum:8388608},sha256:{type:"string",pattern:"^[0-9a-f]{64}$"},direction:{enum:["upload","download"]},guestReference:{type:"string"}}},
     ComputerSpec:computer,
+    AdvancedComputerSpec:advanced,
     Quota:{type:"object",required:["limits","usage"],properties:{limits:ref("QuotaUsage"),usage:ref("QuotaUsage")}},
     QuotaUsage:{type:"object",required:["computers","cpu","memoryMiB","storageGiB"],properties:Object.fromEntries(["computers","cpu","memoryMiB","storageGiB"].map(k=>[k,{type:"integer",minimum:0}]))},
+    BootSpec:boot,
     HardwareSpec:hardware,
     Error:{type:"object",required:["error"],properties:{error:{type:"string"},issues:{type:"array",items:object}}},
     Submission:{type:"object",required:["operationId","status","result"],properties:{operationId:{type:"string",format:"uuid"},status:{type:"string",enum:["pending","submitted","rejected","unknown"]},result:{}}},
-    Operation:{type:"object",required:["id","status","result","createdAt"],properties:{id:{type:"string",format:"uuid"},status:{type:"string",enum:["pending","submitted","rejected","unknown"]},result:{},createdAt:{type:"string",format:"date-time"}}},
+    Operation:{type:"object",required:["id","status","result","createdAt"],properties:{id:{type:"string",format:"uuid"},status:{type:"string",enum:["pending","submitted","rejected","unknown"]},result:{},intent:{anyOf:[object,{type:"null"}]},observation:{anyOf:[object,{type:"null"}]},observedAt:{type:["string","null"],format:"date-time"},createdAt:{type:"string",format:"date-time"},updatedAt:{type:"string",format:"date-time"}}},
     ComputerSummary:{type:"object",required:["id","desired"],properties:{id:{type:"string"},desired:object,status:object}},
     ComputerDetail:{type:"object",required:["id","resourceVersion","desired","instance"],properties:{id:{type:"string"},resourceVersion:{type:"string"},desired:object,status:object,instance:{anyOf:[object,{type:"null"}]}}},
     GuestObservation:{type:"object",required:["id","available","phase","ready","conditions","guestOS","interfaces","volumes","evidenceLevel","console","observedAt"],properties:{id:{type:"string"},available:{type:"boolean"},phase:{type:["string","null"]},ready:{type:"boolean"},conditions:{type:"array",items:object},guestOS:{anyOf:[object,{type:"null"}]},interfaces:{type:"array",items:object},volumes:{type:"array",items:object},evidenceLevel:{type:"string",enum:["kubevirt-status-only"]},console:object,observedAt:{type:"string",format:"date-time"}}}
