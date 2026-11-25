@@ -1,0 +1,37 @@
+{
+  "android": {
+    "name": "UTM-VM-lineage-23.2-20261019-jqssun-virtio_arm64only.zip",
+    "version": "v2026.10.18",
+    "url": "https://github.com/jqssun/android-lineage-qemu/releases/download/v2026.10.18/UTM-VM-lineage-23.2-20261019-jqssun-virtio_arm64only.zip",
+    "sha256": "171c0d215899d68f070fd45aea05ddb25737cf4ff16a25468e7cafbc65f4d8c9",
+    "bytes": 1121501784,
+    "licenseSource": "https://github.com/jqssun/android-lineage-qemu/blob/main/LICENSE",
+    "attestationRepository": "jqssun/android-lineage-qemu"
+  },
+  "winfsp": {
+    "name": "winfsp.msi",
+    "version": "2.2.26323",
+    "url": "https://github.com/winfsp/winfsp/releases/download/v2.2/winfsp-2.2.26323.msi",
+    "sha256": "36ce01f9eedbbe6842b7fb4bedc79d7d4f71983e8aceb6877b46a07b331c7e19",
+    "bytes": 2220032,
+    "digestSource": "https://github.com/winfsp/winfsp/releases/tag/v2.2",
+    "licenseSource": "https://github.com/winfsp/winfsp"
+  },
+  "virtio": {
+    "name": "virtio.msi",
+    "version": "0.1.285-1",
+    "url": "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.285-1/virtio-win-gt-x64.msi",
+    "sha256": "fafd93cb12b8a5df2668d3459d8b5589e7195a28424f9a40e16b50f462cf8fab",
+    "digestSource": "https://community.chocolatey.org/packages/qemu-virtio-driver/0.1.285",
+    "licenseSource": "https://github.com/virtio-win/virtio-win-pkg-scripts/blob/master/README.md"
+  },
+  "software": {
+    "name": "7z2606-x64.exe",
+    "version": "26.06",
+    "url": "https://github.com/ip7z/7zip/releases/download/26.06/7z2606-x64.exe",
+    "sha256": "9b697f65ecc2d9b0152f5ee96d72dde522a7827690349d9307935dacf40f42ec",
+    "bytes": 1659704,
+    "digestSource": "https://github.com/ip7z/7zip/releases/tag/26.06",
+    "licenseSource": "https://www.7-zip.org/license.txt"
+  }
+}

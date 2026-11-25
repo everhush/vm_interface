@@ -1,0 +1,67 @@
+name: Pinned showcase media qualification (no KVM)
+on:
+  push:
+    branches: ['prep/media-qualification']
+  workflow_dispatch:
+permissions:
+  contents: read
+  attestations: read
+concurrency:
+  group: vm-interface-media-qualification-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  android-media:
+    if: github.repository == 'xad3play/vm_interface'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install image inspection tool
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends qemu-utils
+      - name: Verify pinned image and build signed fixture APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/qualify-android-media.sh qualification/android
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-media-qualification
+          path: qualification/android/
+          retention-days: 7
+  windows-packages:
+    if: github.repository == 'xad3play/vm_interface'
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Inspect exact drivers and software
+        shell: pwsh
+        run: ./scripts/qualify-windows-packages.ps1 -Output qualification/windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-package-qualification
+          path: qualification/windows/windows-packages.json
+          retention-days: 7
+  driver-iso:
+    needs: windows-packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-package-qualification
+          path: qualification/windows
+      - name: Install ISO tooling
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends xorriso
+      - name: Build driver ISO and verify its byte contents
+        run: bash scripts/qualify-windows-iso.sh qualification/windows/windows-packages.json qualification/iso
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-driver-iso-qualification
+          path: qualification/iso
+          retention-days: 7
