@@ -51,6 +51,7 @@ docker build -t vm-interface:ci .
 docker save vm-interface:ci | sudo k3s ctr images import -
 export TOKEN_A="$(openssl rand -hex 32)" TOKEN_B="$(openssl rand -hex 32)"
 kubectl -n vm-interface create secret generic vm-api-test --from-literal=identities="{\"alpha\":\"$TOKEN_A\",\"beta\":\"$TOKEN_B\"}"
+kubectl -n vm-interface create secret generic vm-api-export --from-literal=token="$(openssl rand -hex 32)"
 tls=$(mktemp -d); port_pid=""; diag_pid=""
 cleanup() {
   if [ -n "$port_pid" ]; then kill "$port_pid" 2>/dev/null || true; fi

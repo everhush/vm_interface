@@ -60,6 +60,9 @@ jobs:
           echo "::add-mask::$A"; echo "::add-mask::$B"
           echo "TOKEN_A=$A" >> "$GITHUB_ENV"; echo "TOKEN_B=$B" >> "$GITHUB_ENV"
           kubectl -n vm-interface create secret generic vm-api-test --from-literal=identities="{\"alpha\":\"$A\",\"beta\":\"$B\"}"
+          EXPORT_TOKEN=$(openssl rand -hex 32); echo "::add-mask::$EXPORT_TOKEN"
+          kubectl -n vm-interface create secret generic vm-api-export --from-literal=token="$EXPORT_TOKEN"
+          unset EXPORT_TOKEN
           umask 077
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" -keyout /tmp/console-tls.key -out /tmp/console-tls.crt
           kubectl -n vm-interface create secret tls vm-console-tls --key=/tmp/console-tls.key --cert=/tmp/console-tls.crt

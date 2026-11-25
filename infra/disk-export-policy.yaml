@@ -1,0 +1,62 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: vm-disk-export
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["export.kubevirt.io"]
+      apiVersions: ["v1"]
+      operations: ["CREATE"]
+      resources: ["virtualmachineexports"]
+  matchConditions:
+  - name: api-service-account
+    expression: "request.userInfo.username == 'system:serviceaccount:vm-interface:vm-api'"
+  validations:
+  - expression: >-
+      request.namespace == 'vm-interface' &&
+      object.metadata.name.matches('^vx-[a-f0-9]{32}$') &&
+      object.metadata.labels['vm-interface.io/disk-export'] == 'true' &&
+      object.metadata.labels['vm-interface.io/computer'].matches('^vm-[a-f0-9]{32}$') &&
+      size(object.metadata.ownerReferences) == 1 &&
+      object.metadata.ownerReferences[0].kind == 'VirtualMachine' &&
+      object.metadata.ownerReferences[0].apiVersion == 'kubevirt.io/v1' &&
+      object.metadata.ownerReferences[0].name == object.metadata.labels['vm-interface.io/computer']
+    message: "Only generated VM-owned disk exports are permitted"
+  - expression: >-
+      object.spec.source.kind == 'PersistentVolumeClaim' &&
+      (!has(object.spec.source.apiGroup) || object.spec.source.apiGroup == '') &&
+      object.spec.source.name.startsWith(object.metadata.labels['vm-interface.io/computer'] + '-data-') &&
+      object.spec.source.name.matches('^vm-[a-f0-9]{32}-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$') &&
+      object.spec.tokenSecretRef == 'vm-api-export' &&
+      object.spec.ttlDuration == '15m0s'
+    message: "Only bounded offline data disk exports with the dedicated token are permitted"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: vm-disk-export
+spec:
+  policyName: vm-disk-export
+  validationActions: [Deny]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: private-disk-export
+  namespace: vm-interface
+spec:
+  podSelector:
+    matchLabels:
+      vm-interface.io/disk-export: "true"
+  policyTypes: [Ingress,Egress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: vm-api
+    ports:
+    - protocol: TCP
+      port: 8443
+  egress: []
