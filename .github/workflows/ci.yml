@@ -36,14 +36,26 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Recover space on fresh GitHub-hosted runner only
+        run: bash scripts/reclaim-hosted-runner-space.sh
       - name: Provision isolated K3s with actual KVM
-        run: bash scripts/provision-ci.sh
+        run: |
+          bash scripts/provision-ci.sh
+          python3 scripts/check-runner-space.py after-provision 12
       - name: Build and deploy
         shell: bash
         run: |
           set -euo pipefail
           docker build -t vm-interface:ci .
           docker save vm-interface:ci | sudo k3s ctr images import -
+          # The deployed image is now in K3s; run public-API clients on the Node 24 host.
+          docker image rm vm-interface:ci
+          docker builder prune --all --force
+          docker image prune --all --force
+          python3 scripts/check-runner-space.py after-build 10
           A=$(openssl rand -hex 32); B=$(openssl rand -hex 32)
           echo "::add-mask::$A"; echo "::add-mask::$B"
           echo "TOKEN_A=$A" >> "$GITHUB_ENV"; echo "TOKEN_B=$B" >> "$GITHUB_ENV"
@@ -68,14 +80,14 @@ jobs:
           python3 scripts/e2e-smoke.py
           python3 scripts/e2e-persistent.py
           python3 scripts/e2e-data-disks.py
-          docker run --rm --network host --user "$(id -u):$(id -g)" -e TOKEN_A -e TOKEN_B -v "$PWD/evidence:/app/evidence" -v /tmp/console-tls.crt:/tmp/console-ca.pem:ro vm-interface:ci node --import tsx scripts/e2e-vnc.ts
-          if ! command -v tesseract >/dev/null; then sudo apt-get update && sudo apt-get install -y tesseract-ocr; fi
           npm install --no-audit --no-fund
+          CONSOLE_CA_PATH=/tmp/console-tls.crt node --import tsx scripts/e2e-vnc.ts
+          if ! command -v tesseract >/dev/null; then sudo apt-get update && sudo apt-get install -y tesseract-ocr; fi
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null || [ ! -f /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf ]; then sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core; fi
           python3 scripts/e2e-api-control-proof.py
           CONSOLE_CA_PATH=/tmp/console-tls.crt node --import tsx scripts/e2e-input.ts
           CONSOLE_CA_PATH=/tmp/console-tls.crt node --import tsx scripts/e2e-network.ts
-          docker run --rm --network host --user "$(id -u):$(id -g)" -e TOKEN_A -e TOKEN_B -v "$PWD/evidence:/app/evidence" vm-interface:ci node --import tsx scripts/e2e-recording.ts
+          node --import tsx scripts/e2e-recording.ts
           python3 scripts/e2e-exchange.py
           python3 scripts/e2e-api-functional-proof.py
           python3 scripts/e2e-idle.py
