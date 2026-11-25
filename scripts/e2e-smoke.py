@@ -146,6 +146,8 @@ try:
     capture("/computers/"+vm+"/screenshot",token=b,expected=404)
     capture("/computers/"+vm+"/screenshot",token="invalid",expected=401)
     capture("/computers/"+vm+"/screenshot",expected=409)
+    halted_guest=call("GET","/computers/"+vm+"/guest")
+    assert halted_guest["available"] is False and halted_guest["console"]["supported"] is False
     assert call("GET","/computers/"+vm+"/storage")["mode"]=="ephemeral"
     call("GET","/computers/"+vm+"/storage",token=b,expected=404)
     assert all(x["id"]!=vm for x in call("GET","/computers",token=b))
@@ -182,7 +184,7 @@ try:
     guest=call("GET","/computers/"+vm+"/guest")
     assert guest["available"] and guest["phase"]=="Running" and guest["ready"] is True
     assert guest["evidenceLevel"]=="kubevirt-status-only"
-    assert guest["console"]["supported"] is False
+    assert guest["console"]["supported"] is True and "authorized ticket" in guest["console"]["reason"]
     with open("evidence/guest-observation.json","w") as f: json.dump(guest,f,indent=2)
     call("PATCH","/computers/"+vm+"/hardware",data={"cpu":2,"memoryMiB":768,"expectedResourceVersion":before["resourceVersion"]},key=key(),expected=409)
     assert before["instance"]["spec"]["volumes"][0]["containerDisk"]["image"]==images[0]["image"]
