@@ -6,7 +6,7 @@ if [ "$profile" = checks ]; then
   test "$(node -p 'process.versions.node.split(".")[0]')" = 24
   command -v ffmpeg >/dev/null
   command -v tesseract >/dev/null
-  if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+  npm ci --no-audit --no-fund
   npm run typecheck
   npm run lint
   npm test
