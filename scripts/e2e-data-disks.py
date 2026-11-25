@@ -50,6 +50,13 @@ def running(attached):
     elif v: return None
     d=disk()
     return d if d and d["attached"]==attached and d["dataVolumePhase"]=="Succeeded" and d["pvcUid"] else None
+export_path=None
+def export_gone(ep):
+    try: call("GET",ep)
+    except AssertionError as e:
+        if e.args and isinstance(e.args[0],tuple) and e.args[0][2]==404:return True
+        raise
+    return False
 try:
     wait(stopped)
     call("POST",path+"/disks",req("create",sizeGiB=1),token=b,idem=key(),expected=404)
@@ -104,6 +111,7 @@ try:
     assert imported["metadata"]["sha256"]==digest
     export=call("POST",path+"/disk-exports/imported",idem=key(),expected=202)["result"]["exportId"]
     ep=path+"/disk-exports/"+export
+    export_path=ep
     call("GET",ep,token=b,expected=404)
     call("POST",path+"/start",{},idem=key(),expected=409)
     wait(lambda:call("GET",ep)["ready"])
@@ -115,18 +123,16 @@ try:
         assert total==length and length<=1024**3
     exported={"bytes":total,"sha256":h.hexdigest(),"inputPrefixVerified":True}
     call("DELETE",ep,idem=key(),expected=202)
-    def export_gone():
-        try: call("GET",ep)
-        except AssertionError as e:
-            if e.args and e.args[0][2]==404:return True
-            raise
-        return False
-    wait(export_gone)
+    wait(lambda:export_gone(ep))
+    export_path=None
     assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+7
     call("DELETE",path,idem=key(),expected=409)
     Path("evidence").mkdir(exist_ok=True)
     Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"import":imported,"export":exported,"guestByteProof":False},indent=2))
 finally:
+    if export_path and not export_gone(export_path):
+        call("DELETE",export_path,idem=key(),expected=202)
+        wait(lambda:export_gone(export_path))
     deletion=call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
     assert vm+"-data-work" in deletion["result"]["affectedDisks"]
     if "copy" in locals() and copy: assert vm+"-data-copy" in deletion["result"]["affectedDisks"]

@@ -10,17 +10,19 @@
       "verified": [
         "x86 KVM and disposable cluster",
         "actual guest kernel boot screen",
-        "Consolidated candidate 0b98f08 static: 62 TS tests, 14 Python tests, lint, typecheck and build"
+        "Consolidated candidate 0b98f08 static: 62 TS tests, 14 Python tests, lint, typecheck and build",
+        "Committed npm lock from reviewed artifact: SHA256 b9ac869b0a9c0cf4f049638a7de49b19ad2b46e6ec69c91629f5840749e623de; locked static 63 TS and 19 Python tests, lint, typecheck, production build."
       ],
       "pending": [
-        "immutable npm dependency lock and publisher verification",
-        "native device and operator compatibility"
+        "native device and operator compatibility",
+        "Review dependency publishers and pinned operator/container supply chain; exact latest core CI."
       ],
       "evidence": [
         45542879476,
         45543634216,
         45543719409,
-        45625007493
+        45625007493,
+        45647020596
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -88,8 +90,8 @@
       ],
       "pending": [
         "Real file exchange and media import, Windows signed drivers and Android mount",
-        "Arbitrary disk attachment/detachment beyond declared slots, disk expansion/export remain implementation work",
-        "Snapshot/backup only where supported storage path passes conformance"
+        "Snapshot/backup only where supported storage path passes conformance",
+        "Native export, independent imports and larger cold clone require real API and byte verification; in-place PVC expansion needs expansion-capable storage and separate guest partition/filesystem growth. System/exchange export and separate retention support need qualified implementation."
       ],
       "evidence": [
         45542879476,
@@ -103,7 +105,8 @@
         "Read-only auxiliary Windows driver ISO with independent verified media transfer and safe boot order",
         "Cold creation, attachment and retained detachment of up to four bounded blank CDI DataVolumes, quota and ownership checks, durable observation, real API test prepared; import/export/expansion remain outstanding",
         "Cold same-VM CDI clone with ownership, capacity reservation and source write gate; guest byte proof pending",
-        "Independent authorized data disk direct/resumable import prepared; exact digest, quota and attachment readiness"
+        "Independent authorized data disk direct/resumable import prepared; exact digest, quota and attachment readiness",
+        "Restricted native KubeVirt export for halted owned independent data disks: fixed internal HTTPS source, dedicated operator secret, read-only bounded stream, VM mutation interlock, TTL and foreground cancellation. No additional secret RBAC. Prepared real import/export byte verification."
       ]
     },
     {
@@ -156,7 +159,8 @@
       "issue": 7,
       "scope": "Windows x64 API-only demonstration",
       "verified": [
-        "Actual signed WinFsp, VirtIO catalog and user-mode service signature checks; exact driver ISO construction and readback; pinned 7-Zip bytes"
+        "Actual signed WinFsp, VirtIO catalog and user-mode service signature checks; exact driver ISO construction and readback; pinned 7-Zip bytes",
+        "Exact Windows scenario recipe structurally validated alongside signed Android APK v2."
       ],
       "pending": [
         "Acquire authorized actual Windows installer and qualify driver installation and mount in guest",
@@ -164,7 +168,8 @@
       ],
       "evidence": [
         45624621225,
-        45625087154
+        45625087154,
+        45645803256
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -178,16 +183,18 @@
       "scope": "Native Android ARM64 API-only demonstration",
       "verified": [
         "free ARM host probe only",
-        "Actual pinned ARM64 archive download, publisher attestation, QCOW2 inspection and signed proof APK build"
+        "Actual pinned ARM64 archive download, publisher attestation, QCOW2 inspection and signed proof APK build",
+        "Signed APK v2 and concrete scenario structural validation passed; authorized first-run and SAF setup before recorded action."
       ],
       "pending": [
-        "Native UEFI boot compatibility, guest exchange driver/SAF and exact-version UI scenario",
+        "Native UEFI boot compatibility, guest exchange driver/SAF and real execution of the supplied exact-version UI scenario",
         "native device validation"
       ],
       "evidence": [
         45543634216,
         45543719409,
-        45623125031
+        45623125031,
+        45645803256
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -207,7 +214,9 @@
       ],
       "evidence": [
         45542879476,
-        45543854617
+        45543854617,
+        45645064773,
+        45647020596
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -242,12 +251,12 @@
     ],
     "latestCodeReviewed": "6dad51eb4bdf0f236acb295096662053ed91ece4",
     "latestForkCheck": {
-      "run": 45625007493,
-      "commit": "0b98f08885423d355d69b3c8ad54b6116e543d4b",
+      "run": 45647020596,
+      "commit": "c3f404e695891bc32cad96cbb458362ad2c69e9e",
       "reported": "success",
-      "effective": "static-passed; KVM failed provisioning admission policy",
-      "typescriptTests": 62,
-      "pythonTests": 14
+      "effective": "locked consolidated static passed; preceding KVM deployed and started guest, screenshot/ticket checks passed, stale console assertion failed; fixed in afc0f31",
+      "typescriptTests": 63,
+      "pythonTests": 19
     }
   },
   "ciRepository": "xad3play/vm_interface",
@@ -255,7 +264,7 @@
     "upstream": "imxade/vm_interface",
     "mode": "exact-upstream-ref-sync-only",
     "duplicatePolicy": "cancel superseded same-ref runs",
-    "status": "corrected-admission-candidate-pending",
+    "status": "locked-consolidated-core-running-export-prepared",
     "historicalCandidate": "e5693ab4bdb8dcbea4f4454203c7d8cabb49b930"
   }
 }
