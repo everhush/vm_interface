@@ -1,7 +1,7 @@
 name: Consolidated device candidate static checks
 on:
   push:
-    branches: ['prep/device-validation', 'prep/issue-12-consolidated']
+    branches: ['prep/device-validation', 'prep/issue-12-consolidated', 'prep/linux-showcase']
   workflow_dispatch:
 permissions:
   contents: read
