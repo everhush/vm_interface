@@ -1,7 +1,7 @@
 name: Pinned showcase media qualification (no KVM)
 on:
   push:
-    branches: ['prep/media-qualification']
+    branches: ['prep/media-qualification', 'prep/windows-media']
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   android-media:
-    if: github.repository == 'xad3play/vm_interface'
+    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/media-qualification'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
