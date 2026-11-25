@@ -244,7 +244,7 @@
       "run": 45625007493,
       "commit": "0b98f08885423d355d69b3c8ad54b6116e543d4b",
       "reported": "success",
-      "effective": "static-passed; KVM pending",
+      "effective": "static-passed; KVM failed provisioning admission policy",
       "typescriptTests": 62,
       "pythonTests": 14
     }
@@ -254,7 +254,7 @@
     "upstream": "imxade/vm_interface",
     "mode": "exact-upstream-ref-sync-only",
     "duplicatePolicy": "cancel superseded same-ref runs",
-    "status": "fork-static-passed-core-in-progress",
+    "status": "corrected-admission-candidate-pending",
     "historicalCandidate": "e5693ab4bdb8dcbea4f4454203c7d8cabb49b930"
   }
 }
