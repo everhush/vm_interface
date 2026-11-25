@@ -102,7 +102,8 @@
         "independent auxiliary installer driver ISO with read-only SATA and quota",
         "Read-only auxiliary Windows driver ISO with independent verified media transfer and safe boot order",
         "Cold creation, attachment and retained detachment of up to four bounded blank CDI DataVolumes, quota and ownership checks, durable observation, real API test prepared; import/export/expansion remain outstanding",
-        "Cold same-VM CDI clone with ownership, capacity reservation and source write gate; guest byte proof pending"
+        "Cold same-VM CDI clone with ownership, capacity reservation and source write gate; guest byte proof pending",
+        "Independent authorized data disk direct/resumable import prepared; exact digest, quota and attachment readiness"
       ]
     },
     {

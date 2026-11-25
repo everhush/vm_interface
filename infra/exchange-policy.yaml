@@ -126,13 +126,14 @@ spec:
     message: "Only generated owner-bound VM data disks may be created"
   - expression: >-
       has(object.spec.source) && !has(object.spec.sourceRef) &&
-      ((has(object.spec.source.blank) && !has(object.spec.source.pvc)) ||
-      (!has(object.spec.source.blank) && has(object.spec.source.pvc) &&
+      ((has(object.spec.source.blank) && !has(object.spec.source.pvc) && !has(object.spec.source.upload)) ||
+      (has(object.spec.source.upload) && !has(object.spec.source.blank) && !has(object.spec.source.pvc)) ||
+      (!has(object.spec.source.blank) && !has(object.spec.source.upload) && has(object.spec.source.pvc) &&
       object.spec.source.pvc.namespace == request.namespace &&
       object.spec.source.pvc.name.startsWith(object.metadata.labels['vm-interface.io/computer'] + '-data-') &&
       object.spec.source.pvc.name != object.metadata.name &&
       object.spec.source.pvc.name.matches('^vm-[a-f0-9]{32}-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$')))
-    message: "Only blank or same-VM PVC clone sources may be created"
+    message: "Only blank, upload or same-VM PVC clone sources may be created"
   - expression: >-
       !has(object.spec.pvc) && has(object.spec.storage) &&
       object.spec.storage.storageClassName == 'local-path' &&

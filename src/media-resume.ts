@@ -11,7 +11,7 @@ export const stageDir="/var/lib/vm-media-stage";
 export const directMaxBytes=64*MiB;
 export const stageExpiryMs=24*60*60*1000;
 type Row=typeof mediaStages.$inferSelect;
-export type StageTarget={computerId:string;account:string;slot:"boot"|"installer"|"auxiliary";dvUid:string;sha256:string;bytes:number};
+export type StageTarget={computerId:string;account:string;slot:"boot"|"installer"|"auxiliary"|`data-${string}`;dvUid:string;sha256:string;bytes:number};
 const digest=(bytes:Buffer)=>createHash("sha256").update(bytes).digest("hex");
 function stagePath(row:Row){
  if(!/^[0-9a-f-]{36}$/.test(row.stageId))throw new ApiError(409,"Invalid persisted stage identity");

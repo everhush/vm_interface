@@ -8,14 +8,21 @@ import {database,mediaTransfers} from "./db";
 import {ApiError,kube,owned,dvPath,pvcPath,vmiPath,type Resource} from "./kube";
 import {mediaSpec,diskNames} from "./spec";
 import {hasOwner,managedDisks} from "./storage";
+import {readDataDisks,dataDiskClaim} from "./data-disk-layout";
 import type {z} from "zod";
 type Metadata=z.infer<typeof mediaSpec>;
-export type Slot="boot"|"installer"|"auxiliary";
+export type Slot="boot"|"installer"|"auxiliary"|`data-${string}`;
+export function isMediaSlot(value:unknown):value is Slot{return typeof value==="string"&&(/^(boot|installer|auxiliary)$/.test(value)||/^data-[a-z0-9](?:[a-z0-9-]{0,14}[a-z0-9])?$/.test(value))}
 const ns=()=>process.env.VM_NAMESPACE||"vm-interface";
 import {stageDir,directMaxBytes,stageProgress,appendStage,verifiedStage,discardStage,type StageTarget} from "./media-resume";
 import {mediaChunkBytes,MiB} from "./media-config";
 let inFlight=0;
 export function mediaDeclaration(vm:Resource,id:string,requested?:Slot){
+ if(requested?.startsWith("data-")){
+  const disk=readDataDisks(vm,id).find(d=>d.name===requested.slice(5));
+  if(!disk?.media)return null;
+  return {slot:requested,name:dataDiskClaim(id,disk.name),metadata:disk.media};
+ }
  const annotations=(vm.spec as {template?:{metadata?:{annotations?:Record<string,string>}}})?.template?.metadata?.annotations;
  const primary=annotations?.["vm-interface.io/media-slot"];
  const slot=requested??primary;
@@ -117,6 +124,9 @@ async function uploadTarget(id:string,account:string,slot:Slot){
  if(t.ready)return t;
  if(t.phase!=="UploadReady"||!t.dv?.metadata?.uid||!t.pvc?.metadata?.uid)throw new ApiError(409,"CDI upload target is not ready");
  if(await optional(vmiPath(id)))throw new ApiError(409,"Stop VM before media upload");
+ const desired=t.vm.spec as {runStrategy?:string};
+ const status=t.vm.status as {ready?:boolean;created?:boolean;stateChangeRequests?:unknown[]}|undefined;
+ if(desired.runStrategy!=="Halted"||status?.ready||status?.created||status?.stateChangeRequests?.length)throw new ApiError(409,"Wait for stopped VM lifecycle before media upload");
  return t;
 }
 async function sendVerified(id:string,account:string,slot:Slot,t:Target,path:string,opId:string){

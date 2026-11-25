@@ -1,6 +1,6 @@
 """Real API-only cold data disk lifecycle, retention and isolation.
 Checks PVC identity and effective attachment, not guest-written byte integrity."""
-import json, os, time, urllib.request, urllib.error, uuid
+import hashlib, json, os, time, urllib.request, urllib.error, uuid
 from pathlib import Path
 base=os.environ.get("API_URL","http://127.0.0.1:3000/api/v1")
 a,b=os.environ["TOKEN_A"],os.environ["TOKEN_B"]
@@ -79,13 +79,37 @@ try:
     assert copy["pvcUid"]!=final["pvcUid"] and copy["source"]=="work" and not copy["attached"]
     wait(lambda:call("GET","/operations/"+cloned["operationId"]).get("observation",{}).get("state")=="converged")
     assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+5
+    # Imported independent raw disk; prove server-side declared hash, CDI identity and ownership.
+    payload=b"VM interface imported disk fixture"+b"\x00"*(1024*1024-34)
+    digest=hashlib.sha256(payload).hexdigest()
+    body=dict(action="import",name="imported",sizeGiB=1,expectedResourceVersion=state()["resourceVersion"],media=dict(format="raw",bytes=len(payload),sha256=digest,source="ci fixture",os="test",version="1",authorizedByClient=True))
+    call("POST",path+"/disks/plan",body)
+    body["expectedResourceVersion"]=state()["resourceVersion"]
+    call("POST",path+"/disks",body,idem=key(),expected=202)
+    endpoint=path+"/media/data-imported"
+    call("GET",endpoint,token=b,expected=404)
+    wait(lambda:call("GET",endpoint)["phase"]=="UploadReady")
+    attach=dict(action="attach",name="imported",expectedResourceVersion=state()["resourceVersion"])
+    call("POST",path+"/disks/plan",attach,expected=409)
+    def upload(data,expected):
+        req=urllib.request.Request(base+endpoint,data=data,headers={"Authorization":"Bearer "+a,"Idempotency-Key":key(),"Content-Type":"application/octet-stream"},method="PUT")
+        try:
+            with urllib.request.urlopen(req,timeout=180) as res: status,result=res.status,json.load(res)
+        except urllib.error.HTTPError as exc: status,result=exc.code,json.load(exc)
+        assert status==expected,(status,result)
+    upload(b"!"*len(payload),422)
+    upload(payload,202)
+    imported=wait(lambda: (s if (s:=call("GET",endpoint))["ready"] else None))
+    assert imported["metadata"]["sha256"]==digest
+    assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+6
     call("DELETE",path,idem=key(),expected=409)
     Path("evidence").mkdir(exist_ok=True)
-    Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"guestByteProof":False},indent=2))
+    Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"import":imported,"guestByteProof":False},indent=2))
 finally:
     deletion=call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
     assert vm+"-data-work" in deletion["result"]["affectedDisks"]
     if "copy" in locals() and copy: assert vm+"-data-copy" in deletion["result"]["affectedDisks"]
+    if "imported" in locals() and imported: assert vm+"-data-imported" in deletion["result"]["affectedDisks"]
 wait(lambda:call("GET","/operations/"+deletion["operationId"]).get("observation",{}).get("state")=="converged")
 assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline
 print("Real cold data disk lifecycle and stable PVC identities passed; guest data verification remains separate.")
