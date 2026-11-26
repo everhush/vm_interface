@@ -35,7 +35,19 @@ if [ "$registered" != true ]; then
   exit 1
 fi
 kubectl wait node --all --for=condition=Ready --timeout=180s
+# CRD creation is asynchronous. Establishment and actual discovery must
+# precede the first custom resource apply (fresh API servers can race).
+await_crd() {
+  kubectl wait --for=condition=Established "crd/$1" --timeout=180s
+  for attempt in $(seq 1 60); do
+    if kubectl get --raw "$2" --request-timeout=5s >/dev/null 2>&1; then return 0; fi
+    sleep 2
+  done
+  echo "CRD API discovery unavailable: $1 ($2)" >&2
+  return 1
+}
 kubectl apply -f "$sources/kubevirt-operator.yaml"
+await_crd kubevirts.kubevirt.io /apis/kubevirt.io/v1
 kubectl apply -f "$sources/kubevirt-cr.yaml"
 # KubeVirt 1.9 enables ImageVolume by default; K3s 1.34/containerd 2.2
 # cannot mount the helper image reliably. Retain the standard init-container
@@ -60,9 +72,11 @@ for attempt in $(seq 1 30); do
 done
 
 kubectl apply -f "$sources/cdi-operator.yaml"
+await_crd cdis.cdi.kubevirt.io /apis/cdi.kubevirt.io/v1beta1
 kubectl apply -f "$sources/cdi-cr.yaml"
 kubectl wait cdi cdi --for=condition=Available --timeout=600s
 kubectl apply --server-side -f "$sources/cnpg.yaml"
+await_crd clusters.postgresql.cnpg.io /apis/postgresql.cnpg.io/v1
 kubectl -n cnpg-system rollout status deployment/cnpg-controller-manager --timeout=300s
 python3 scripts/device_profile.py namespace "${VM_DEVICE_PROFILE:-core}" | kubectl apply -f -
 kubectl apply -f infra/exchange-policy.yaml
