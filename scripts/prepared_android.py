@@ -13,6 +13,8 @@ def arguments(root):
         f=root/"disks"/name
         assert f.is_file() and f.stat().st_size==p["bytes"] and digest(f)==p["sha256"],name
     apk=root/"proof.apk"
+    expected=(root/"apk.sha256").read_text().split()
+    assert expected==[digest(apk),"proof.apk"],"APK checksum mismatch"
     scenario=root/"android-scenario.json"
     load_scenario(scenario,"android")
     badging=(root/"apk-badging.txt").read_text()
