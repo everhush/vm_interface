@@ -15,3 +15,9 @@ class CirrosScreenTests(unittest.TestCase):
     def test_retained_99_second_control_interleave(self):
         self.assertIn("scriptstart",normalize("cirros login: scriptst£ 99.340024] random: nonblocking pool is initialized\nart_"))
         self.assertNotIn("scriptstart",normalize("cirros login: scriptst£ 99.340024] random: forbiddeninput pool is initialized\nart_"))
+    def test_retained_181_second_automation_interleave(self):
+        observed="cirros login: af 181.5210601 random: nonblocking pool is initialized\nutocitest_"
+        self.assertEqual(normalize(observed),"cirrosloginautocitest")
+        self.assertEqual(normalize(observed+"forbiddeninputobserverinput"),"cirrosloginautocitestforbiddeninputobserverinput")
+        self.assertNotIn("autocitest",normalize("af 181.5210601 random: forbiddeninput pool is initialized\nutocitest"))
+        self.assertNotIn("autocitest",normalize("af 181.5210601 random: nonblocking pool is initializedextra\nutocitest"))

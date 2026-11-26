@@ -2,7 +2,7 @@
  * no login/password entry; type visible markers at the guest's login prompt. */
 import assert from "node:assert/strict";
 import {readFileSync,writeFileSync} from "node:fs";
-import {randomUUID} from "node:crypto";
+import {createHash,randomUUID} from "node:crypto";
 import {execFileSync} from "node:child_process";
 import {WebSocket,createWebSocketStream} from "ws";
 import {connect,type RfbClient} from "rfb2";
@@ -40,11 +40,20 @@ async function screenshot(path:string,filename:string){
 }
 async function awaitScreen(path:string,file:string,predicate:(text:string)=>boolean,seconds=90){
  const end=Date.now()+seconds*1000;
+ let last="";
  while(Date.now()<end){
-  const text=await screenshot(path,file);
-  if(predicate(text))return text;
+  last=await screenshot(path,file);
+  if(predicate(last))return last;
   await delay(2000);
  }
+ // Retain only expected fixture marker counts and the actual screenshot hash,
+ // not raw OCR (the test guest displays public default login instructions).
+ const n=normalize(last);
+ writeFileSync(file.replace(/\.png$/,"-marker-diagnostic.json"),JSON.stringify({
+  screenshotSha256:createHash("sha256").update(readFileSync(file)).digest("hex"),
+  markers:Object.fromEntries(["autocitest","humancontrol","batchok","forbiddeninput","observerinput"].map(m=>[m,n.split(m).length-1])),
+  loginVisible:n.includes("cirroslogin")
+ },null,2));
  throw Error("Expected guest-visible text did not appear; inspect "+file);
 }
 type Viewer={ws:WebSocket;client:RfbClient};
@@ -86,7 +95,9 @@ try{
  const hv=await connectViewer(path,human.token);viewers.push(hv);
  const ov=await connectViewer(path,observer.token);viewers.push(ov);
  await typeText(av,"autocitest");
- await awaitScreen(path,"evidence/input-automation.png",s=>normalize(s).includes("autocitest"),15);
+ const automated=await awaitScreen(path,"evidence/input-automation.png",s=>normalize(s).includes("autocitest"),15);
+ assert.equal(normalize(automated).split("autocitest").length-1,1);
+ assert.ok(!normalize(automated).includes("forbiddeninput")&&!normalize(automated).includes("observerinput"));
  const taken=await call("POST",lease,human.token,{takeover:true},200,"Console");
  assert.ok(taken.active);assert.equal(taken.actor,"human");assert.ok(taken.generation>first.generation);
  await call("POST",lease,automation.token,{takeover:true},409,"Console");
@@ -94,6 +105,8 @@ try{
  await typeText(ov,"observerinput");
  await typeText(hv,"humancontrol");
  const final=await awaitScreen(path,"evidence/input-human.png",s=>normalize(s).includes("autocitest")&&normalize(s).includes("humancontrol"),15);
+ assert.equal(normalize(final).split("autocitest").length-1,1);
+ assert.equal(normalize(final).split("humancontrol").length-1,1);
  assert.ok(!normalize(final).includes("forbiddeninput"));
  assert.ok(!normalize(final).includes("observerinput"));
  assert.ok(!normalize(final).includes("batchok"));

@@ -17,3 +17,11 @@ test("real prompt with optional entropy or bounded quiet grace",()=>{
 });
 
 test("actual late 99-second control marker OCR bracket",()=>{assert.ok(cirrosNormalize("cirros login: scriptst£ 99.340024] random: nonblocking pool is initialized\nart_").includes("scriptstart"));assert.ok(!cirrosNormalize("scriptst£ 99.340024] random: forbiddeninput pool is initialized\nart_").includes("scriptstart"))});
+
+test("retained 181-second automation marker interleave with f/1 OCR delimiters",()=>{
+ const observed="cirros login: af 181.5210601 random: nonblocking pool is initialized\nutocitest_";
+ assert.equal(cirrosNormalize(observed),"cirrosloginautocitest");
+ assert.equal(cirrosNormalize(observed+"forbiddeninputobserverinput"),"cirrosloginautocitestforbiddeninputobserverinput");
+ assert.ok(!cirrosNormalize("af 181.5210601 random: forbiddeninput pool is initialized\nutocitest").includes("autocitest"));
+ assert.ok(!cirrosNormalize("af 181.5210601 random: nonblocking pool is initializedextra\nutocitest").includes("autocitest"));
+});
