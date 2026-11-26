@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
+from android_fixture import ANDROID_RESULT_MODE
 
 def normalize(text):
     if not isinstance(text, str):
@@ -74,8 +75,8 @@ def load_scenario(path: Path, profile: str):
         raise ValueError("Distinct visible before/after checkpoints required")
     if scenario["resultName"] != "result.txt":
         raise ValueError("Expected fixture output result.txt")
-    expected = b"VM Interface Windows 7-Zip functional proof\n" if profile == "windows" else b"VM Interface Android APK functional proof\n"
-    if scenario["expectedResultSha256"] != hashlib.sha256(expected).hexdigest():
+    expected = hashlib.sha256(b"VM Interface Windows 7-Zip functional proof\n").hexdigest() if profile == "windows" else ANDROID_RESULT_MODE
+    if scenario["expectedResultSha256"] != expected:
         raise ValueError("Unexpected fixture result digest")
     setup = validate_steps(scenario["setup"], profile, False)
     if not isinstance(scenario["softwareSetup"],list):

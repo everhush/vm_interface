@@ -5,6 +5,7 @@ are client-owned JSON, not backend workflows. Fail closed on missing evidence.
 import argparse, hashlib, json, os, re, runpy, secrets, subprocess, time, uuid, zipfile
 from pathlib import Path
 from showcase_inputs import load_scenario
+from android_fixture import ANDROID_RESULT_MODE,android_result
 from screen_targets import locate_label
 
 P = argparse.ArgumentParser()
@@ -45,7 +46,7 @@ assert set(scenario) == {"setup", "softwareSetup", "application", "beforeMarker"
 assert isinstance(scenario["setup"], list) and isinstance(scenario["application"], list)
 assert norm(scenario["beforeMarker"]) and norm(scenario["afterMarker"]) and norm(scenario["beforeMarker"]) != norm(scenario["afterMarker"])
 assert re.fullmatch("[A-Za-z0-9][A-Za-z0-9._-]{0,95}", scenario["resultName"])
-assert re.fullmatch("[a-f0-9]{64}", scenario["expectedResultSha256"])
+assert (re.fullmatch("[a-f0-9]{64}", scenario["expectedResultSha256"]) if args.profile=="windows" else scenario["expectedResultSha256"]==ANDROID_RESULT_MODE)
 # Credentials, activation, and licensing prompts are exclusively handled by
 # the authorized human in setup. Never screenshot or record that checkpoint.
 if args.profile == "windows":
@@ -60,7 +61,7 @@ else:
         assert "AndroidManifest.xml" in apk.namelist() and "classes.dex" in apk.namelist()
     assert "apkcompletearm64v8a" in norm(scenario["afterMarker"]), "Require actual APK completion and ARM64 ABI on screen"
     assert scenario["resultName"]=="result.txt"
-    assert scenario["expectedResultSha256"]==sha(b"VM Interface Android APK functional proof\n")
+    assert scenario["expectedResultSha256"]==ANDROID_RESULT_MODE
 verify_local(args.media,args.media_sha256,8*1024**3)
 verify_local(args.software,args.software_sha256,8*1024**2)
 if args.auxiliary_media:
@@ -231,6 +232,14 @@ try:
     if win:
         fixture=(Path(__file__).resolve().parents[1]/"showcases/windows/proof.ps1").read_bytes()
         call("PUT",path+"/files/proof.ps1",raw=fixture,expected=202,extra_headers={"Content-Type":"application/octet-stream","X-Content-SHA256":sha(fixture)})
+    else:
+        challenge=secrets.token_bytes(4096)
+        challenge_digest=sha(challenge)
+        uploaded=call("PUT",path+"/files/challenge.bin",raw=challenge,expected=202,extra_headers={"Content-Type":"application/octet-stream","X-Content-SHA256":challenge_digest},phase="upload challenge")
+        assert uploaded["result"]["sha256"]==challenge_digest
+        (OUT/"challenge.bin").write_bytes(challenge)
+        (OUT/"proof.apk").write_bytes(software)
+        (OUT/"scenario.json").write_bytes(args.scenario.read_bytes())
     # Install/authorize uploaded software only after the bytes exist in the exchange.
     steps(scenario["softwareSetup"])
     visible(scenario["beforeMarker"],"before",120)
@@ -248,7 +257,10 @@ try:
     visible(scenario["afterMarker"],"after",45)
     wait(lambda:any(f["name"]==scenario["resultName"] for f in call("GET",path+"/files")),20,"Guest output not published")
     result,headers=call("GET",path+"/files/"+scenario["resultName"],binary=True,phase="download file")
-    assert sha(result)==scenario["expectedResultSha256"]==headers.get("X-Content-SHA256")
+    if win:
+        assert sha(result)==scenario["expectedResultSha256"]==headers.get("X-Content-SHA256")
+    else:
+        assert result==android_result(challenge) and sha(result)==headers.get("X-Content-SHA256")
     (OUT/"guest-result.bin").write_bytes(result)
     call("GET",path+"/files/"+scenario["resultName"],B,expected=404,binary=True)
     time.sleep(4);release()
@@ -283,6 +295,7 @@ try:
            "mediaSha256":args.media_sha256,"auxiliarySha256":args.auxiliary_sha256,"softwareSha256":args.software_sha256,"outputSha256":sha(result),
            "scenarioSha256":digest(args.scenario),"traceSha256":sha(h["TRACE"].read_bytes()),"runId":os.environ.get("GITHUB_RUN_ID"),"commit":os.environ.get("GITHUB_SHA"),"screenMarkersVerified":True,"recording":{**decoded,"sha256":meta["sha256"]},
            "coldResizeAndFilePersistence":True,"retained":args.retain}
+    if not win:proof.update({"challengeSha256":challenge_digest,"challengeBytes":len(challenge),"resultMode":ANDROID_RESULT_MODE})
     proof["derivedPresentation"]=h["presentation"](raw,"REAL "+args.profile.upper()+" SHOWCASE")
     (OUT/"verification.json").write_text(json.dumps(proof,indent=2)+"\n")
 finally:

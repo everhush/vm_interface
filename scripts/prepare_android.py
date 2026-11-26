@@ -30,11 +30,14 @@ def qcow_capacity(header):
     version = struct.unpack_from('>I', header, 4)[0]
     backing, backing_len = struct.unpack_from('>QI', header, 8)
     size, crypt = struct.unpack_from('>QI', header, 24)
+    cluster_bits = struct.unpack_from('>I',header,20)[0]
     if version not in (2, 3) or backing or backing_len or crypt:
         raise ValueError('Unsupported backing chain, format or encryption')
-    if version == 3 and (len(header) < 104 or struct.unpack_from('>Q', header, 72)[0] & 4):
-        raise ValueError('Unsupported external data')
-    if not 512 <= size <= MAX_VIRTUAL_BYTES:
+    if not 9 <= cluster_bits <= 21:
+        raise ValueError('Invalid cluster bits')
+    if version == 3 and (len(header) < 104 or struct.unpack_from('>Q', header, 72)[0] & ~24 or not 104 <= struct.unpack_from('>I',header,100)[0] <= 2**cluster_bits):
+        raise ValueError('Unsupported QCOW2 v3 features or header length')
+    if not 512 <= size <= MAX_VIRTUAL_BYTES or size % 512:
         raise ValueError('Invalid virtual capacity')
     # CDI filesystem overhead and spare space are accounted for independently.
     capacity = math.ceil((size + 64*1024**2)/(0.9*GIB))

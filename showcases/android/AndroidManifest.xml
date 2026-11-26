@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.vminterface.proof" android:versionCode="2" android:versionName="2.0">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.vminterface.proof" android:versionCode="3" android:versionName="3.0">
  <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34"/>
  <application android:label="VM Interface Proof" android:theme="@android:style/Theme.Material.Light.NoActionBar">
   <activity android:name=".ProofActivity" android:exported="true">
