@@ -48,6 +48,11 @@ else:
         assert call("GET",path)["instance"]["metadata"]["uid"]==state["uid"]
         assert sum(x["id"]==state["created"]["result"]["id"] for x in call("GET","/computers"))==1
         assert observed(state["started"]["operationId"])
+        receipt=call("GET","/operations/by-key",idem=state["startkey"])
+        assert receipt["id"]==state["started"]["operationId"] and receipt["status"]=="submitted" and receipt["result"]==state["started"]["result"]
+        call("GET","/operations/by-key",token=b,idem=state["startkey"],expected=404)
+        call("GET","/operations/by-key",idem=key(),expected=404)
+        call("GET","/operations/by-key",expected=400)
         history=call("GET","/operations")
         assert any(x["id"]==state["started"]["operationId"] for x in history)
         call("GET","/operations/"+state["started"]["operationId"],token=b,expected=404)
@@ -55,7 +60,7 @@ else:
         wait(lambda:observed(stopped["operationId"]))
         deleted=call("DELETE",path,idem=key(),expected=202)
         wait(lambda:observed(deleted["operationId"]))
-        Path("evidence/recovery-verification.json").write_text(json.dumps({"apiDeploymentRestart":True,"sameInstanceUid":state["uid"],"idempotentCreateAndStart":True,"durableOperationHistory":True,"observedStopAndDelete":True,"crossAccountDenied":True},indent=2))
+        Path("evidence/recovery-verification.json").write_text(json.dumps({"apiDeploymentRestart":True,"sameInstanceUid":state["uid"],"idempotentCreateAndStart":True,"durableOperationHistory":True,"receiptByKeyAfterRestart":True,"observedStopAndDelete":True,"crossAccountDenied":True},indent=2))
         print("Real API restart preserved VM identity, idempotency and durable convergence evidence")
     finally:
         # If a prior assertion fails, attempt cleanup via the API only.

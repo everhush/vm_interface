@@ -1,6 +1,6 @@
 """Real API-only cold data disk lifecycle, retention and isolation.
 Checks PVC identity and effective attachment, not guest-written byte integrity."""
-import hashlib, json, os, time, urllib.request, urllib.error, uuid
+import hashlib, http.client, json, os, sys, time, urllib.request, urllib.error, uuid
 from pathlib import Path
 base=os.environ.get("API_URL","http://127.0.0.1:3000/api/v1")
 a,b=os.environ["TOKEN_A"],os.environ["TOKEN_B"]
@@ -12,15 +12,22 @@ class ResponseMismatch(AssertionError):
         self.result=result
 
 def call(method,path,data=None,token=a,idem=None,expected=200):
-    h={"Authorization":"Bearer "+token}
+    h={"Authorization":"Bearer "+token,"Connection":"close"}
     if data is not None: h["Content-Type"]="application/json"
     if idem: h["Idempotency-Key"]=idem
     req=urllib.request.Request(base+path,data=json.dumps(data).encode() if data is not None else None,headers=h,method=method)
-    try:
-        with urllib.request.urlopen(req,timeout=30) as res: status,result=res.status,json.load(res)
-    except urllib.error.HTTPError as exc: status,result=exc.code,json.load(exc)
-    if status!=expected: raise ResponseMismatch(method,path,status,result)
-    return result
+    for attempt in range(8):
+        try:
+            with urllib.request.urlopen(req,timeout=45) as res: status,result=res.status,json.load(res)
+        except urllib.error.HTTPError as exc: status,result=exc.code,json.load(exc)
+        except (urllib.error.URLError,ConnectionError,TimeoutError,http.client.HTTPException):
+            if method!="GET" or attempt==7:raise
+            time.sleep(2);continue
+        if method=="GET" and status in (502,503,504) and status!=expected and attempt<7:
+            time.sleep(2);continue
+        if status!=expected: raise ResponseMismatch(method,path,status,result)
+        return result
+    raise AssertionError("Read transport did not recover")
 def export_length(res,claim,capacity):
     value=res.headers["X-VM-Export-Bytes"]
     assert value and value.isascii() and value.isdecimal() and not value.startswith("0"),dict(res.headers)
@@ -95,12 +102,60 @@ def running(attached):
     d=disk()
     return d if d and d["attached"]==attached and d["dataVolumePhase"]=="Succeeded" and d["pvcUid"] else None
 export_path=None
+delete_keys={}
+trace=Path("evidence/data-disks-cleanup.jsonl")
+trace.parent.mkdir(exist_ok=True)
+trace.write_text("")
+def note(**entry):
+    with trace.open("a") as f:f.write(json.dumps(entry)+"\n")
+
 def export_gone(ep):
     try: call("GET",ep)
     except AssertionError as e:
         if e.args and isinstance(e.args[0],tuple) and e.args[0][2]==404:return True
         raise
     return False
+
+def receipt(k):
+    try:return call("GET","/operations/by-key",idem=k)
+    except ResponseMismatch as exc:
+        if exc.status==404:return None
+        raise
+
+def delete_known(ep,missing):
+    # Recovery is scoped to this exact DELETE and its original key. A read
+    # receipt is evidence of the actual prior submission, not a new success.
+    k=delete_keys.setdefault(ep,key())
+    prior=receipt(k)
+    if prior is not None:
+        if prior["status"]=="submitted":return {"operationId":prior["id"],"status":prior["status"],"result":prior["result"]}
+        raise AssertionError("Earlier DELETE is not confirmed; inspect operation receipt")
+    try:
+        result=call("DELETE",ep,idem=k,expected=202)
+        note(path=ep,source="http",status=result["status"],operationId=result["operationId"])
+        assert result["status"]=="submitted"
+        return result
+    except (urllib.error.URLError,ConnectionError,TimeoutError,http.client.HTTPException) as exc:
+        note(path=ep,source="transport",error=type(exc).__name__)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline:
+            prior=receipt(k)
+            if prior and prior["status"]=="submitted":
+                note(path=ep,source="durable-receipt",status=prior["status"],operationId=prior["id"])
+                return {"operationId":prior["id"],"status":prior["status"],"result":prior["result"]}
+            if prior and prior["status"] in ("rejected","unknown"):raise AssertionError("DELETE outcome not confirmed") from exc
+            time.sleep(2)
+        # Only resubmit the identical key once after an actual read confirms
+        # the target still exists and there is no recorded operation. The
+        # server idempotency fence prevents another execution if it arrives late.
+        if prior is None and not missing():
+            note(path=ep,source="observed-existing-target-no-receipt")
+            result=call("DELETE",ep,idem=k,expected=202)
+            note(path=ep,source="same-key-http",status=result["status"],operationId=result["operationId"])
+            assert result["status"]=="submitted"
+            return result
+        raise AssertionError("Unconfirmed DELETE after read-only reconciliation") from exc
+
 try:
     wait(stopped)
     growth={"disk":"system.disk","sizeGiB":3,"expectedResourceVersion":state()["resourceVersion"]}
@@ -167,7 +222,7 @@ try:
         while chunk:=res.read(1024*1024): total+=len(chunk); h.update(chunk)
         assert total==length and length<=1024**3
     exported={"bytes":total,"sha256":h.hexdigest(),"inputPrefixVerified":True}
-    call("DELETE",ep,idem=key(),expected=202)
+    delete_known(ep,lambda:export_gone(ep))
     wait(lambda:export_gone(ep))
     export_path=None
     assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+7
@@ -187,22 +242,29 @@ try:
             while chunk:=res.read(1024*1024): h.update(chunk);total+=len(chunk)
             assert total==length
         system_exports[selector]={"bytes":total,"sha256":h.hexdigest()}
-        call("DELETE",ep,idem=key(),expected=202)
+        delete_known(ep,lambda:export_gone(ep))
         wait(lambda:export_gone(ep))
         export_path=None
     call("DELETE",path,idem=key(),expected=409)
     Path("evidence").mkdir(exist_ok=True)
     Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"import":imported,"export":exported,"systemExports":system_exports,"guestByteProof":False},indent=2))
 finally:
-    if export_path and not export_gone(export_path):
-        call("DELETE",export_path,idem=key(),expected=202)
-        wait(lambda:export_gone(export_path))
-    # Do not obscure an earlier failure with assertions about disks never created.
-    reservations={vm+"-data-"+v["diskName"] for v in call("GET",path+"/storage")["volumes"] if v["kind"]=="data"}
-    deletion=call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
-    assert reservations<=set(deletion["result"]["affectedDisks"])
-    if "copy" in locals() and copy: assert vm+"-data-copy" in deletion["result"]["affectedDisks"]
-    if "imported" in locals() and imported: assert vm+"-data-imported" in deletion["result"]["affectedDisks"]
-wait(lambda:call("GET","/operations/"+deletion["operationId"]).get("observation",{}).get("state")=="converged")
-assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline
+    original=sys.exc_info()[0] is not None
+    try:
+        if export_path and not export_gone(export_path):
+            # Use the prior deletion key if present, not an unobserved fresh mutation.
+            delete_known(export_path,lambda:export_gone(export_path))
+            wait(lambda:export_gone(export_path))
+        reservations={vm+"-data-"+v["diskName"] for v in call("GET",path+"/storage")["volumes"] if v["kind"]=="data"}
+        deletion=delete_known(path+"?deleteDisks=true",lambda:export_gone(path))
+        assert reservations<=set(deletion["result"]["affectedDisks"])
+        if "copy" in locals() and copy: assert vm+"-data-copy" in deletion["result"]["affectedDisks"]
+        if "imported" in locals() and imported: assert vm+"-data-imported" in deletion["result"]["affectedDisks"]
+        wait(lambda:call("GET","/operations/"+deletion["operationId"]).get("observation",{}).get("state")=="converged")
+        assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline
+        note(path=path,source="cleanup-converged",quotaGiB=baseline)
+    except Exception as exc:
+        note(path=path,source="cleanup-failed",error=type(exc).__name__)
+        if not original:raise
+        print("Cleanup failed; retaining original error and cleanup trace",flush=True)
 print("Real cold data disk lifecycle and stable PVC identities passed; guest data verification remains separate.")

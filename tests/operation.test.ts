@@ -39,3 +39,6 @@ test("restart observation requires a distinct VMI and verified VM identity",()=>
  assert.equal(lifecycleObservation("stop",vm,null,target).state,"converged");
  assert.equal(lifecycleObservation("delete",null,null,target).state,"waiting");
 });
+
+import {requireIdempotencyKey} from "../src/operation";
+test("receipt lookup uses the same bounded key syntax as submission",()=>{assert.equal(requireIdempotencyKey("exact-key-123"),"exact-key-123");for(const k of [null,"short","bad key!!","a".repeat(129)])assert.throws(()=>requireIdempotencyKey(k),{status:400});});

@@ -98,7 +98,8 @@
         "45770716860: actual persistent system/exchange, independent blank/clone/import and raw disk export with verified imported byte prefix; system and block exchange raw export streamed and hashed. Guest-written clone proof and CSI growth still pending.",
         "45780959318: actual independent data-disk lifecycle, import/export, product VirtioFS roundtrip and halted published bundle.",
         "45784791470: native CSI policy sentinel and recording claim denied, exact PVC UIDs preserved; boot PVC to 8 GiB and exchange guest statvfs 1020702720 to 2077073408 bytes; actual challenge and bundle SHA256.",
-        "45837699861 direct/resumable/dual CDI and public acquisition/cache passed; registry create/valid upload succeeded; replay transport failed before reuse. Early screenshots did not establish login."
+        "45837699861 direct/resumable/dual CDI and public acquisition/cache passed; registry create/valid upload succeeded; replay transport failed before reuse. Early screenshots did not establish login.",
+        "a1d7861 run 45846381246: all four media modes actual CDI and guest login, 239 actual matching calls; registry immutable reuse across distinct PVC UIDs. CSI 45846834995 independently verified."
       ],
       "pending": [
         "Exact native media/registry reuse and guest-login evidence; boot virtual-disk/filesystem growth and conditional snapshots unverified.",
@@ -110,7 +111,9 @@
         45770716860,
         45780959318,
         45784791470,
-        45837699861
+        45837699861,
+        45846381246,
+        45846834995
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -140,7 +143,8 @@
         "shared read-only RFB frames and ticket revocation",
         "guest-visible WSS human takeover and HTTP batch markers observed in failed-run artifact; regression revalidation required",
         "45770716860: real RFB observers passed; recording test exposed asynchronous CirrOS kernel log interrupting second marker, no original MP4 certified.",
-        "45780959318: original API H.264 recording 44.5s, 750335 bytes, SHA256 cee693b3cf74c537bbbf4cc218d31dd7f7e53e1a5492d4bc03785570e3767a9c; decoded exact ordered markers and redacted trace; recording authorization lifecycle passed."
+        "45780959318: original API H.264 recording 44.5s, 750335 bytes, SHA256 cee693b3cf74c537bbbf4cc218d31dd7f7e53e1a5492d4bc03785570e3767a9c; decoded exact ordered markers and redacted trace; recording authorization lifecycle passed.",
+        "a1d7861 native input takeover/revocation, HTTP input replay, reset and recording lifecycle passed; control marker interrupted by kernel at 99s."
       ],
       "pending": [
         "Latest exact-candidate input ownership/takeover, pointer, Linux application recording and full verifier regression."
@@ -150,7 +154,8 @@
         45544070366,
         45548980997,
         45770716860,
-        45780959318
+        45780959318,
+        45846381246
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -167,7 +172,8 @@
         "quota",
         "narrow role",
         "key and ticket isolation and revocation",
-        "45780959318: durable recovery passed."
+        "45780959318: durable recovery passed.",
+        "a1d7861 native private tunnel, actual guest HTTP, loopback adapter, isolation, revocation, stop and idle/recovery passed."
       ],
       "pending": [
         "Native private network/tunnel, idle convergence regression; public exposure only in eligible qualified environment; failure/node/storage pressure and operational limits."
@@ -175,7 +181,8 @@
       "evidence": [
         45542879476,
         45544070366,
-        45780959318
+        45780959318,
+        45846381246
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -214,7 +221,8 @@
         "Actual pinned ARM64 archive download, publisher attestation, QCOW2 inspection and signed proof APK build",
         "Signed APK v2 and concrete scenario structural validation passed; authorized first-run and SAF setup before recorded action.",
         "45770845250: actual pinned Android archive and signed APK v3 prepared; artifact 15094046905. Guest compatibility unverified.",
-        "45782398435: actual pinned media, publisher attestation, signed APK 3.0 and both offline scenario preflights; no guest boot certified."
+        "45782398435: actual pinned media, publisher attestation, signed APK 3.0 and both offline scenario preflights; no guest boot certified.",
+        "a1d7861 45846852839 exact pinned media, signed APK and both offline scenarios passed."
       ],
       "pending": [
         "Final offline preparation regression; native ARM64 boot/driver/SAF and authorized application execution."
@@ -225,7 +233,8 @@
         45623125031,
         45645803256,
         45770845250,
-        45782398435
+        45782398435,
+        45846852839
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -243,7 +252,8 @@
         "37c26f0 static pass; original control MP4, real CSI and partial core evidence independently inspected.",
         "21c2594 core static 45808210022 passed; 8a6322d pointer candidate static 45808592805 passed; neither is a comprehensive native pass.",
         "465cfa4 static 45810437981, Android 45810778040 and real CSI 45810766327 passed; full 45813447072 failed input prompt, Linux pointer, CDI rejection transport, ISO transport; original control recording passed. Diagnostic 45808210022 passed input/reset and BIOS+UEFI but Linux and CDI failed.",
-        "d9fecaa static, Android and real CSI passed; 45837699861 failed registry replay, control readiness, input marker, network reconnect and reboot OCR timeout. e2b351d static 45844514806 passed 141 tests."
+        "d9fecaa static, Android and real CSI passed; 45837699861 failed registry replay, control readiness, input marker, network reconnect and reboot OCR timeout. e2b351d static 45844514806 passed 141 tests.",
+        "a1d7861 static 144 tests and Android/CSI passed; native core failed export DELETE transport, downstream quota and control marker, missing combined verifier."
       ],
       "pending": [
         "Full exact-candidate hosted integration before #12; independent device validation only after all feasible implementation checks; 0/3 comprehensive reviewed passes."
@@ -266,7 +276,8 @@
         45837699861,
         45838084838,
         45838068367,
-        45844514806
+        45844514806,
+        45846381246
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -278,7 +289,7 @@
       ]
     }
   ],
-  "candidateBranch": "implementation/virtualization-backend",
+  "candidateBranch": "implementation/issue-12-qualification",
   "candidateStatus": "blocked-hosted-core-integration-and-final-candidate-regression",
   "nonKvmLocalEvidence": {
     "scope": "isolated local tests on Node 22 transpiled with TypeScript 5.8 and Python; not full Node 24 build",

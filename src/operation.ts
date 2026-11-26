@@ -40,8 +40,12 @@ export async function normalizePending(o:OperationRow):Promise<OperationRow>{
  if(!latest)throw new ApiError(404,"Operation not found");
  return latest;
 }
-export async function mutate(account:string,key:string|null,request:unknown,run:(id:string)=>Promise<unknown>){
+export function requireIdempotencyKey(key:string|null){
  if(!key || !/^[A-Za-z0-9_.:-]{8,128}$/.test(key))throw new ApiError(400,"Valid Idempotency-Key required");
+ return key;
+}
+export async function mutate(account:string,key:string|null,request:unknown,run:(id:string)=>Promise<unknown>){
+ key=requireIdempotencyKey(key);
  const requestHash=createHash("sha256").update(JSON.stringify(request)).digest("hex");
  const db=database(), id=randomUUID();
  const inserted=await db.insert(operations).values({account,key,id,requestHash,status:"pending",intent:safeIntent(request,id)}).onConflictDoNothing().returning();
@@ -70,4 +74,12 @@ export async function operation(account:string,id:string){
  if(!row)throw new ApiError(404,"Operation not found");
  const o=await normalizePending(row);
  return operationView(await observeOperation(o));
+}
+
+/** Read-only receipt lookup, never submit a mutation. Key stays in the header. */
+export async function operationForKey(account:string,key:string|null){
+ const valid=requireIdempotencyKey(key);
+ const [row]=await database().select().from(operations).where(and(eq(operations.account,account),eq(operations.key,valid)));
+ if(!row)throw new ApiError(404,"Operation not found");
+ return operationView(await observeOperation(await normalizePending(row)));
 }
