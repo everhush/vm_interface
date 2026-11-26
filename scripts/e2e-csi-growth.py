@@ -42,7 +42,7 @@ systemctl enable --now measure-exchange.service
 def quota():return call("GET","/account/quota")["usage"]["storageGiB"]
 def main():
     baseline=quota()
-    spec={"version":1,"name":"csi-growth","architecture":"amd64","cpu":1,"memoryMiB":1536,"image":"fedora-exchange-test","storage":{"systemGiB":4,"exchangeGiB":1,"exchangeMode":"virtiofs"},"cloudInit":CLOUD}
+    spec={"version":1,"name":"csi-growth","architecture":"amd64","cpu":1,"memoryMiB":1536,"image":"fedora-exchange-test","storage":{"systemGiB":6,"exchangeGiB":1,"exchangeMode":"virtiofs"},"cloudInit":CLOUD}
     created=call("POST","/computers",body=spec,expected=202,phase="create")
     path="/computers/"+created["result"]["id"]
     def state():return call("GET",path)
@@ -98,13 +98,13 @@ def main():
         body={"disk":"exchange.disk","sizeGiB":2,"expectedResourceVersion":state()["resourceVersion"]}
         call("PATCH",path+"/storage",token=B,body=body,expected=404)
         call("PATCH",path+"/storage",body={**body,"expectedResourceVersion":"stale"},expected=409)
-        assert quota()==baseline+5
+        assert quota()==baseline+7
         exchange=grow("exchange.disk",2)
-        assert quota()==baseline+6
+        assert quota()==baseline+8
         reserved=volumes()["exchange"]["growth"]
         assert reserved["reservedGiB"]==2 and reserved["submitted"] is True,reserved
-        boot=grow("system.disk",6)
-        assert quota()==baseline+8
+        boot=grow("system.disk",8)
+        assert quota()==baseline+10
         call("PATCH",path+"/storage",body={"disk":"exchange.disk","sizeGiB":1,"expectedResourceVersion":state()["resourceVersion"]},expected=422)
         call("POST",path+"/start",body={},expected=202)
         new_uid=wait(running,600,"Guest did not restart after PVC growth")
