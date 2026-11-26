@@ -23,5 +23,5 @@ test("retained 181-second automation marker interleave with f/1 OCR delimiters",
  assert.equal(cirrosNormalize(observed),"cirrosloginautocitest");
  assert.equal(cirrosNormalize(observed+"forbiddeninputobserverinput"),"cirrosloginautocitestforbiddeninputobserverinput");
  assert.ok(!cirrosNormalize("af 181.5210601 random: forbiddeninput pool is initialized\nutocitest").includes("autocitest"));
- assert.ok(!cirrosNormalize("af 181.5210601 random: nonblocking pool is initializedextra\nutocitest").includes("autocitest"));
+ assert.ok(!cirrosNormalize("af 181.5210601 random: nonblocking pool is initializedsuffix\nutocitest").includes("autocitest"));
 });
