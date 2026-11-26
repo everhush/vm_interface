@@ -8,6 +8,7 @@ from pathlib import Path
 from evidence_frames import verify_marker_frames, ocr
 from android_fixture import ANDROID_RESULT_MODE,android_result
 from showcase_inputs import load_scenario
+from android_guest_transfer import verify_staged_bundle
 from linux_showcase_fixture import package, verify_archive, verify_platform
 
 
@@ -86,10 +87,25 @@ def verify_folder(folder, profile):
             load_scenario(folder/'scenario.json','android')
             check('upload challenge' in phases,'Missing challenge upload')
             expected=android_result(challenge)
+            check(proof['instanceUid']!=proof['resizedInstanceUid'] and proof['cpuAfterResize']==3 and proof['originalPvcUids']==proof['resizedPvcUids'] and len(proof['originalPvcUids'])>=2,'Missing native resize or persistent PVC identity proof')
+            check('restart after resize' in phases,'Missing resize restart API call')
+            transfer=proof['transferPath']
+            check(transfer in ('virtiofs-saf','authorized-adb-over-private-tunnel'),'Unknown Android transfer path')
+            if transfer=='authorized-adb-over-private-tunnel':
+                report=json.loads((folder/'android-adb.json').read_text())
+                check(file_hash(folder/'android-adb.json')==proof['guestTransferSha256'],'Guest transfer report hash mismatch')
+                check(report['transferPath']==transfer and report['freshKeyAuthorized'] is True and report['adbSecure'] is True and report['selinux']=='Enforcing' and report['shellUid']==2000 and report['abi']=='arm64-v8a','Missing authenticated non-root guest security evidence')
+                check(report['installedApkSha256']==proof['softwareSha256'] and report['guestChallengeSha256']==proof['challengeSha256'] and report['guestOutputSha256']==report['rebootOutputSha256']==proof['outputSha256'],'Guest transfer byte mismatch')
+                check(file_hash(folder/'staged-exchange.tar')==report['stagedBundleSha256'],'Staged API bundle mismatch')
+                verify_staged_bundle((folder/'staged-exchange.tar').read_bytes(),{'proof.apk':(folder/'proof.apk').read_bytes(),'challenge.bin':challenge})
+                check({'staged bundle','guest transfer grant','guest transfer revoke','guest transfer ownership denial'}<=phases,'Missing private tunnel API calls')
+            else:check('download file' in phases,'Missing VirtioFS download')
         check((folder/'guest-result.bin').read_bytes() == expected, 'Unexpected native result bytes')
         check(file_hash(folder/'guest-result.bin') == proof['outputSha256'], 'Output hash mismatch')
         check(file_hash(trace) == proof['traceSha256'], 'Trace checksum mismatch')
-        check({'upload file','download file','guest action'} <= phases, 'Missing native application API calls')
+        required={'upload file','guest action'}
+        if profile=='windows' or proof.get('transferPath')=='virtiofs-saf':required.add('download file')
+        check(required <= phases, 'Missing native application API calls')
     return {'profile': profile, 'video': video, 'httpCalls': len(rows), 'scope': 'artifact-integrity-independent-marker-decode-and-reported-assertions'}
 
 

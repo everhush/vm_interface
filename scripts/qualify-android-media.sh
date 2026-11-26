@@ -21,4 +21,5 @@ grep -F "versionName='3.0'" "$out/apk-badging.txt"
 # Retain only metadata and our fixture APK, not third-party disk images.
 
 python3 scripts/write-showcase-scenario.py android "$out/android-scenario.json"
+python3 scripts/write-showcase-scenario.py android "$out/android-adb-scenario.json" --android-transfer adb-saf
 if [ "${2:-}" = --retain-disks ]; then mv "$work/disks" "$out/disks"; fi

@@ -132,3 +132,13 @@ python3 scripts/prepared_android.py /absolute/path/to/android-inputs --preflight
 ```
 
 This verifies the exact pinned archive and both disk hashes against the committed prior qualification manifest, builds/signs APK v3, generates the matching scenario, and validates input only. No KVM, API credentials or guest execution. Keep disks private to the authorized operator; CI artifacts retain only manifest, APK and scenario. On the independent disposable native ARM64 device after explicit #12 readiness, run `python3 scripts/prepared_android.py /absolute/path/to/android-inputs --confirm-disposable`. No manual digest substitution required. First-run UI/SAF authorization remains a genuine device checkpoint; no security bypass or synthetic evidence.
+
+### Explicit Android guest-transfer alternative
+
+The pinned LineageOS source uses the VirtioFS tag `share`, mounted at `/mnt/vendor/shared`. This does not prove that Android's ordinary Storage Access Framework (SAF) exposes that vendor mount. Choose the direct VirtioFS scenario first when it is available. For a disposable guest with ordinary authenticated Ethernet ADB (TCP 5555), an alternative can be selected **before** creating the VM:
+
+```sh
+python3 scripts/prepared_android.py /path/to/prepared --confirm-disposable --transfer adb-saf --authorize-android-debug
+```
+
+Requires native platform-tools adb, private TLS WSS tunnel and a human approving the freshly generated guest RSA key. Never enable unauthenticated debugging, root, permissive SELinux or public port forwarding. The client verifies the original API-staged APK and challenge from the halted exchange bundle, installs and transfers those bytes through the authorized tunnel, selects Documents/VMInterface with SAF, and obtains the computed result through that same authenticated guest-transfer path. The report distinguishes this from a direct VirtioFS file download; both require actual video, independent challenge verification and preserved disk identities after cold resize. This route is prepared, not yet native-device-qualified.

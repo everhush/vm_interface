@@ -4,7 +4,7 @@ from pathlib import Path
 from prepare_android import SOURCE,ARCHIVE_SHA,digest
 from showcase_inputs import load_scenario
 ROOT=Path(__file__).resolve().parents[1]
-def arguments(root):
+def arguments(root,transfer="virtiofs-saf"):
     manifest=json.loads((root/"android-disk-manifest.json").read_text())
     pinned=json.loads((ROOT/"showcases/android/pinned-disks.json").read_text())
     assert manifest["source"]==SOURCE and manifest["archiveSha256"]==ARCHIVE_SHA and manifest["architecture"]=="arm64"
@@ -15,7 +15,7 @@ def arguments(root):
     apk=root/"proof.apk"
     expected=(root/"apk.sha256").read_text().split()
     assert expected==[digest(apk),"proof.apk"],"APK checksum mismatch"
-    scenario=root/"android-scenario.json"
+    scenario=root/("android-adb-scenario.json" if transfer=="adb-saf" else "android-scenario.json")
     load_scenario(scenario,"android")
     badging=(root/"apk-badging.txt").read_text()
     assert "package: name='org.vminterface.proof'" in badging and "versionName='3.0'" in badging
@@ -26,7 +26,12 @@ def main():
     mode=p.add_mutually_exclusive_group(required=True)
     mode.add_argument("--preflight-only",action="store_true")
     mode.add_argument("--confirm-disposable",action="store_true")
-    a=p.parse_args();args=arguments(a.directory.resolve())
+    p.add_argument("--transfer",choices=["virtiofs-saf","adb-saf"],default="virtiofs-saf")
+    p.add_argument("--authorize-android-debug",action="store_true")
+    a=p.parse_args()
+    if (a.transfer=="adb-saf")!=a.authorize_android_debug:p.error("adb-saf requires explicit debug authorization")
+    args=arguments(a.directory.resolve(),a.transfer)+["--android-transfer",a.transfer]
+    if a.authorize_android_debug:args+=["--authorize-android-debug"]
     if a.preflight_only:
         subprocess.run(["python3",str(ROOT/"scripts/showcase-native.py"),"android",*args,"--preflight-only"],check=True)
     else:
