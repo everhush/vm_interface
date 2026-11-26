@@ -1,0 +1,75 @@
+name: Real CSI expansion qualification
+on:
+  push:
+    branches: ['prep/storage-growth-ci']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vm-interface-csi-growth-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  csi:
+    if: github.repository == 'xad3play/vm_interface'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: bash -n scripts/provision-csi-growth-ci.sh
+      - run: python3 -m py_compile scripts/e2e-csi-growth.py
+      - run: bash scripts/reclaim-hosted-runner-space.sh
+      - run: bash scripts/provision-ci.sh
+      - name: Build and deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build -t vm-interface:ci .
+          docker save vm-interface:ci | sudo k3s ctr images import -
+          # The deployed image is now in K3s; run public-API clients on the Node 24 host.
+          docker image rm vm-interface:ci
+          docker builder prune --all --force
+          docker image prune --all --force
+          python3 scripts/check-runner-space.py after-build 10
+          A=$(openssl rand -hex 32); B=$(openssl rand -hex 32)
+          echo "::add-mask::$A"; echo "::add-mask::$B"
+          echo "TOKEN_A=$A" >> "$GITHUB_ENV"; echo "TOKEN_B=$B" >> "$GITHUB_ENV"
+          kubectl -n vm-interface create secret generic vm-api-test --from-literal=identities="{\"alpha\":\"$A\",\"beta\":\"$B\"}"
+          EXPORT_TOKEN=$(openssl rand -hex 32); echo "::add-mask::$EXPORT_TOKEN"
+          kubectl -n vm-interface create secret generic vm-api-export --from-literal=token="$EXPORT_TOKEN"
+          unset EXPORT_TOKEN
+          umask 077
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" -keyout /tmp/console-tls.key -out /tmp/console-tls.crt
+          kubectl -n vm-interface create secret tls vm-console-tls --key=/tmp/console-tls.key --cert=/tmp/console-tls.crt
+          rm -f /tmp/console-tls.key
+          chmod 644 /tmp/console-tls.crt
+          kubectl apply -f infra/app.yaml
+          kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
+          python3 scripts/check-rbac-ci.py
+      - name: Install pinned real expandable CSI driver
+        run: bash scripts/provision-csi-growth-ci.sh
+      - name: Exercise actual guest and native expansion using public API
+        run: |
+          set -euo pipefail
+          kubectl -n vm-interface port-forward svc/vm-api 3000:3000 >/tmp/csi-port.log 2>&1 &
+          port_pid=$!
+          trap 'kill "$port_pid" 2>/dev/null || true' EXIT
+          curl --retry 20 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:3000/api/v1/health
+          python3 scripts/e2e-csi-growth.py
+      - name: Retain qualification evidence
+        if: always()
+        run: |
+          mkdir -p evidence
+          kubectl -n vm-interface get vm,vmi,dv,pvc > evidence/csi-resources.txt 2>&1 || true
+          kubectl -n vm-interface get events --sort-by=.lastTimestamp > evidence/csi-events.txt 2>&1 || true
+          kubectl -n openebs get pods > evidence/csi-pods.txt 2>&1 || true
+          kubectl get csidriver,sc > evidence/csi-classes.txt 2>&1 || true
+          kubectl get validatingadmissionpolicy vm-pvc-growth -o json > evidence/csi-admission.json 2>&1 || true
+          kubectl -n vm-interface logs deployment/vm-api -c api --tail=200 > evidence/csi-api.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-csi-growth-evidence
+          path: evidence/
