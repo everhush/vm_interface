@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
+from cirros_screen import normalize as cirros_normalize, ready as cirros_ready
 
 BASE = os.environ.get("API_URL", "http://127.0.0.1:3000/api/v1")
 A, B = os.environ["TOKEN_A"], os.environ["TOKEN_B"]
@@ -91,18 +92,18 @@ def cold_resize(path, cpu, memory_mib):
         return result
     raise AssertionError("Cold resize optimistic concurrency did not stabilize")
 
-def ocr(file):
+def ocr(file, cirros=False):
     text = subprocess.check_output(
         ["tesseract", str(file), "stdout", "--psm", "6", "--dpi", "180"],
         stderr=subprocess.DEVNULL, timeout=15, text=True)
-    return re.sub(r"[^a-z0-9]", "", text.lower()), text.lower()
+    return (cirros_normalize(text) if cirros else re.sub(r"[^a-z0-9]", "", text.lower())), text.lower()
 
-def screen(path, file):
+def screen(path, file, cirros=False):
     data, headers = call("GET", path + "/screenshot", binary=True)
     assert headers.get("Content-Type") == "image/png"
     assert data.startswith(b"\x89PNG\r\n\x1a\n")
     file.write_bytes(data)
-    return ocr(file)
+    return ocr(file,cirros)
 
 def batch(text):
     return {"events": [{"type": "key", "keysym": ord(ch), "down": down}
@@ -128,7 +129,7 @@ def check_video(raw, first, second):
         frames = sorted(Path(tmp).glob("frame-*.png"))
         assert len(frames) >= 4
         for frame in frames:
-            normalized, _ = ocr(frame)
+            normalized, _ = ocr(frame,first=="scriptstart")
             if first_frame is None and normalized.count(first) == 1 and second not in normalized:
                 first_frame = frame.name
                 (OUT/"video-first-marker.png").write_bytes(frame.read_bytes())
@@ -196,15 +197,12 @@ def main():
             return instance["metadata"]["uid"] if instance and instance["status"]["phase"] == "Running" else None
         uid = wait(running, 360, "VMI not Running")
         before = OUT/"before.png"
+        running_at=time.monotonic()
         def ready():
-            normalized, text = screen(path, before)
-            # The pinned CirrOS kernel emits an asynchronous entropy message
-            # onto the login tty. Wait for it BEFORE the consented input test.
-            # Run 45770716860 retained the interrupted marker in a real PNG.
-            return (bool(re.search(r"login\s*:", text)) and
-                    "nonblockingpoolisinitialized" in normalized and
+            normalized, text = screen(path, before, True)
+            return (cirros_ready(text,time.monotonic()-running_at) and
                     first not in normalized and second not in normalized)
-        wait(ready, 240, "No real login prompt with initialized entropy pool")
+        wait(ready, 240, "No real CirrOS login prompt after settling")
         key = call("POST", "/keys", body={"label":"api-control-proof", "permission":"manage",
                    "ttlSeconds":600}, expected=201, phase="controller key")
         key_id = key["id"]
@@ -231,7 +229,7 @@ def main():
         time.sleep(4)
         call("POST", path+"/input", ticket, batch(first), expected=409,
              scheme="Console", phase="unleased input denial")
-        assert first not in screen(path, OUT/"denied-input.png")[0], "Unleased input reached guest"
+        assert first not in screen(path, OUT/"denied-input.png",True)[0], "Unleased input reached guest"
         claim = call("POST", path+"/input-lease", ticket, {}, scheme="Console", phase="lease acquire")
         lease = True
         assert claim["active"] and claim["actor"] == "automation"
@@ -239,7 +237,7 @@ def main():
                    scheme="Console", phase="first input")
         assert one["result"]["accepted"] == len(first)*2
         after_first = OUT/"after-first.png"
-        wait(lambda: screen(path, after_first)[0].count(first) == 1, 18, "First input not visible exactly once")
+        wait(lambda: screen(path, after_first,True)[0].count(first) == 1, 18, "First input not visible exactly once")
         time.sleep(5)
         call("POST", path+"/input-lease", ticket, {}, scheme="Console")
         k2 = str(uuid.uuid4())
@@ -251,7 +249,7 @@ def main():
         assert replay == two
         after_second = OUT/"after-second.png"
         def final_screen():
-            text, _ = screen(path, after_second)
+            text, _ = screen(path, after_second,True)
             return second in text and text.count(second) == 1
         wait(final_screen, 18, "Second input not visible or duplicated")
         time.sleep(6)

@@ -3,6 +3,7 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
+from cirros_screen import normalize as cirros_normalize
 
 
 def normalized(text):
@@ -34,10 +35,11 @@ def decoded_frame(raw, index, dest):
         raise ValueError('Referenced video frame does not exist')
 
 
-def ocr(path):
-    return normalized(subprocess.check_output([
+def ocr(path, cirros=False):
+    text=subprocess.check_output([
         'tesseract', str(path), 'stdout', '--psm', '6', '--dpi', '180'
-    ], stderr=subprocess.DEVNULL, timeout=15, text=True))
+    ], stderr=subprocess.DEVNULL, timeout=15, text=True)
+    return cirros_normalize(text) if cirros else normalized(text)
 
 
 def verify_marker_frames(raw, folder, meta, profile):
@@ -62,7 +64,7 @@ def verify_marker_frames(raw, folder, meta, profile):
             decoded_frame(raw,index,path)
             if pixels(path) != pixels(folder/name):
                 raise ValueError('Marker frame does not match original video')
-            text = ocr(path)
+            text = ocr(path,profile=='control')
             if text.count(expected) != 1 or (index == first and after in text):
                 raise ValueError('Required unique marker absent or out of order')
     return {'independentlyDecodedMarkerFrames': True, 'before': before, 'after': after}
