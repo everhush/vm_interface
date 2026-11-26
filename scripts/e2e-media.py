@@ -1,6 +1,7 @@
 """Real API-only media import and guest display proof with pinned public smoke disk."""
 import hashlib,http.client,json,os,sys,time,urllib.request,urllib.error,uuid
 from pathlib import Path
+from media_http import binary_request
 base=os.environ.get("API_URL","http://127.0.0.1:3000/api/v1")
 a,b=os.environ["TOKEN_A"],os.environ["TOKEN_B"]
 def key(): return uuid.uuid4().hex
@@ -10,7 +11,11 @@ def call(method,path,token=a,data=None,idem=None,expected=200,raw=None,binary=Fa
     if data is not None: headers["Content-Type"]="application/json"
     if raw is not None: headers["Content-Type"]="application/octet-stream"
     if extra: headers.update(extra)
-    req=urllib.request.Request(base+path,data=raw if raw is not None else json.dumps(data).encode() if data is not None else None,headers=headers,method=method)
+    if raw is not None:
+        status,payload=binary_request(base+path,method,headers,raw)
+        assert status==expected,(method,path,status,payload[:500])
+        return payload if binary else json.loads(payload)
+    req=urllib.request.Request(base+path,data=json.dumps(data).encode() if data is not None else None,headers=headers,method=method)
     for attempt in range(8):
         try:
             with urllib.request.urlopen(req,timeout=240) as res: status,payload=res.status,res.read()
@@ -49,7 +54,7 @@ if mode=="url":
     assert call("GET",ap)["state"]=="registered"
     assert call("GET","/media-artifacts",token=b)["artifacts"]==[]
     call("GET",ap,token=b,expected=404)
-    call("PUT",ap+"/file",token=b,raw=disk[:512],idem=key(),expected=404)
+    call("PUT",ap+"/file",token=b,raw=disk,idem=key(),expected=404)
     call("PUT",ap+"/file",raw=bytes([disk[0]^1])+disk[1:],idem=key(),expected=422)
     assert call("GET",ap)["state"]=="registered"
     k=key()
@@ -65,7 +70,7 @@ media=path+"/media"
 try:
     call("POST",path+"/start",data={},idem=key(),expected=409)
     call("GET",media,token=b,expected=404)
-    call("PUT",media+"/boot",token=b,raw=disk[:512],idem=key(),expected=404)
+    call("PUT",media+"/boot",token=b,raw=disk,idem=key(),expected=404)
     deadline=time.monotonic()+300
     while time.monotonic()<deadline:
         if call("GET",media)["phase"]=="UploadReady": break
@@ -93,7 +98,7 @@ try:
             return call("PUT",endpoint,token=token,raw=blob,idem=idem or key(),expected=expected,extra={"Upload-Offset":str(offset),"X-Content-SHA256":sha or hashlib.sha256(blob).hexdigest()})
         first_chunk=disk[:chunk]
         call("POST",media+"/boot/commit",idem=key(),expected=409)
-        send(0,first_chunk[:512],token=b,expected=404)
+        send(0,first_chunk,token=b,expected=404)
         send(0,first_chunk,sha="0"*64,expected=422)
         if len(disk)>chunk:
             send(chunk,disk[chunk:2*chunk],expected=409)
