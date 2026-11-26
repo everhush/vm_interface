@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {readFileSync,writeFileSync} from "node:fs";
 import {randomUUID} from "node:crypto";
 import {WebSocket,createWebSocketStream} from "ws";
+import {startGuestRelay} from "./guest-tcp-relay";
+import {connect} from "node:net";
 const base=process.env.API_URL||"http://127.0.0.1:3000/api/v1";
 const gateway=process.env.VNC_URL||"wss://127.0.0.1:3443/api/v1";
 const a=process.env.TOKEN_A,b=process.env.TOKEN_B;
@@ -41,7 +43,7 @@ async function guestHttp(path:string,token:string){
   stream.write("GET /marker.txt HTTP/1.0\r\nHost: guest\r\nConnection: close\r\n\r\n");
   let result="",size=0;
   const timer=setTimeout(()=>s.terminate(),10000);
-  try{for await(const chunk of stream){size+=chunk.length;if(size>65536)throw Error("Oversized guest response");result+=chunk.toString();if(result.includes("network-marker-")&&result.includes("cluster-egress-"))break}}
+  try{for await(const chunk of stream){size+=chunk.length;if(size>65536)throw Error("Oversized guest response");result+=chunk.toString();if(result.includes(marker)&&(result.includes("cluster-egress-blocked")||result.includes("cluster-egress-open")))break}}
   finally{clearTimeout(timer)}
   return result;
  }finally{stream.destroy();s.terminate()}
@@ -76,6 +78,22 @@ try{
  }
  assert.ok(response.includes("200 OK")&&response.includes(marker),"Actual guest application did not respond");
  assert.ok(response.includes("cluster-egress-blocked")&&!response.includes("cluster-egress-open"),"Guest could reach cluster API endpoint");
+ // The same loopback TCP relay used by the Android client must work
+ // against this actual guest application, not just a local echo fixture.
+ const adapter=await startGuestRelay(gateway+tunnel,grant.token,ca);
+ try{
+  const actual=await new Promise<string>((resolve,reject)=>{
+   const socket=connect(adapter.port,"127.0.0.1");
+   let data="";
+   const timer=setTimeout(()=>{socket.destroy();reject(Error("Guest relay timeout"))},15000);
+   socket.on("connect",()=>socket.write("GET /marker.txt HTTP/1.0\r\nHost: guest\r\nConnection: close\r\n\r\n"));
+   socket.on("data",chunk=>{data+=chunk.toString();if(data.length>65536){socket.destroy();clearTimeout(timer);reject(Error("Oversized relay response"))}else if(data.includes(marker)&&data.includes("cluster-egress-blocked")){clearTimeout(timer);resolve(data);socket.destroy()}});
+   socket.on("error",e=>{clearTimeout(timer);reject(e)});
+   socket.on("close",()=>{clearTimeout(timer);if(!data.includes(marker)||!data.includes("cluster-egress-blocked"))reject(Error("Guest relay response incomplete"))});
+  });
+  assert.ok(actual.includes("200 OK")&&actual.includes(marker)&&actual.includes("cluster-egress-blocked"));
+ }finally{await adapter.close()}
+ await delay(1000);
  const live=await open(tunnel,grant.token);sockets.push(live);
  await deny(tunnel,grant.token,409);
  await call("DELETE",collection+"/"+grant.id,a);
@@ -87,7 +105,7 @@ try{
  await waitClosed(s);
  const grants=await call("GET",collection,a);
  assert.equal(grants.find((g:{id:string})=>g.id===second.id).active,false);
- writeFileSync("evidence/network-verification.json",JSON.stringify({nativeGuestHttp:true,marker,clusterApiEgressBlocked:true,crossAccountDenied:true,duplicateConnectionDenied:true,revokedDisconnect:true,stopDisconnect:true},null,2));
+ writeFileSync("evidence/network-verification.json",JSON.stringify({nativeGuestHttp:true,loopbackTcpRelayVerified:true,marker,clusterApiEgressBlocked:true,crossAccountDenied:true,duplicateConnectionDenied:true,revokedDisconnect:true,stopDisconnect:true},null,2));
  console.log("Actual private guest HTTP tunnel, default-deny cluster egress and revocation verified");
 }finally{
  for(const s of sockets)s.terminate();

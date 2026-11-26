@@ -32,6 +32,8 @@ cleanup() {
 }
 trap cleanup EXIT
 curl --retry 20 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:3000/api/v1/health
+# TLS listener must be actually reachable and certificate-verified before clients run.
+test "$(curl -sS --cacert "$CONSOLE_CA_PATH" --retry 20 --retry-delay 2 --retry-connrefused -o /dev/null -w '%{http_code}' https://127.0.0.1:3443/)" = 404
 printf '%s START %s\n' "$(date -u +%FT%TZ)" "$*" >>evidence/api-test-stages.txt
 rc=0
 "$@" || rc=$?

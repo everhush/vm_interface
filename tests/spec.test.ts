@@ -53,3 +53,10 @@ test("inline cloud-init matches pinned KubeVirt UTF-8 byte limit",()=>{
  assert.equal(computerSpec.safeParse({...fedora,cloudInit:"a".repeat(2049)}).success,false);
  assert.equal(computerSpec.safeParse({...fedora,cloudInit:"é".repeat(1025)}).success,false);
 });
+
+test("private tunnel ingress label is generated only for explicitly private VM",()=>{
+ const privateVm=vmManifest("vm-test","alpha",computerSpec.parse({...sample,network:"private"}));
+ const isolated=vmManifest("vm-test","alpha",computerSpec.parse({...sample,network:"isolated"}));
+ assert.equal(privateVm.spec.template.metadata.labels["vm-interface.io/private-network"],"true");
+ assert.equal(isolated.spec.template.metadata.labels["vm-interface.io/private-network"],undefined);
+});
