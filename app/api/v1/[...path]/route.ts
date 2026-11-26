@@ -27,7 +27,7 @@ import {chunkLength,readChunk,validateChunk,discardStage} from "../../../../src/
 import {exposureSpec,issueExposure,listExposures,revokeExposure} from "../../../../src/network";
 import {auditContext,recordAudit,rateLimit,auditHistory,type AuditContext} from "../../../../src/audit";
 import {touchIdleActivity} from "../../../../src/idle";
-import {boundedBody,boundedText} from "../../../../src/request-body";
+import {boundedBody,boundedText,discardUnreadBody,unreadMediaLimit} from "../../../../src/request-body";
 import {mediaMaxBytes,stageMaxBytes,systemMaxGiB,accountMaxStorageGiB} from "../../../../src/media-config";
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{"cache-control":"no-store"}});
 const imageResponse=(png:Buffer)=>new Response(Uint8Array.from(png),{headers:{"content-type":"image/png","cache-control":"no-store","x-content-type-options":"nosniff","content-disposition":"inline; filename=\"screenshot.png\""}});
@@ -325,7 +325,13 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
 }
 async function handle(req:Request){
  const context:{audit?:AuditContext}={};
- const result=await handleCore(req,context);
+ let result=await handleCore(req,context);
+ // Authenticated bounded binary replay/denial responses must not abandon
+ // unread client bytes. Never execute or replay the mutation again.
+ const limit=context.audit&&result.status!==429?unreadMediaLimit(req):0;
+ if(limit&&!req.bodyUsed)try{await discardUnreadBody(req,limit)}catch(e){
+  result=json({error:e instanceof ApiError?e.message:"Media request interrupted; inspect operation state"},e instanceof ApiError?e.status:400);
+ }
  if(context.audit&&result.status!==429)try{await recordAudit(context.audit,result.status)}catch{console.error("Audit persistence unavailable")}
  return result;
 }

@@ -15,6 +15,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 from cirros_screen import normalize as cirros_normalize, ready as cirros_ready
+from evidence_frames import ocr_text
 
 BASE = os.environ.get("API_URL", "http://127.0.0.1:3000/api/v1")
 A, B = os.environ["TOKEN_A"], os.environ["TOKEN_B"]
@@ -93,9 +94,7 @@ def cold_resize(path, cpu, memory_mib):
     raise AssertionError("Cold resize optimistic concurrency did not stabilize")
 
 def ocr(file, cirros=False):
-    text = subprocess.check_output(
-        ["tesseract", str(file), "stdout", "--psm", "6", "--dpi", "180"],
-        stderr=subprocess.DEVNULL, timeout=15, text=True)
+    text = ocr_text(file)
     return (cirros_normalize(text) if cirros else re.sub(r"[^a-z0-9]", "", text.lower())), text.lower()
 
 def screen(path, file, cirros=False):

@@ -36,3 +36,17 @@ test("relay revocation closes both actual peers and releases reservation once",{
  try{await Promise.all([once(left.client,"close"),once(right.client,"close")])}finally{abort();await cleanup(left,right)}
  assert.equal(done,1);
 });
+
+test("closed downstream releases grant despite stalled upstream close",{timeout:8000},async()=>{
+ const left=await pair(),right=await pair();
+ let done=0,complete:()=>void=()=>{};
+ const released=new Promise<void>(resolve=>{complete=resolve});
+ const abort=relayBinaryTunnel(left.peer,right.peer,Date.now()+10000,async()=>true,()=>{done++;complete()});
+ let timer:ReturnType<typeof setTimeout>|undefined;
+ try{
+  right.client.pause();
+  left.client.close(1000);
+  await Promise.race([released,new Promise<void>((_,reject)=>{timer=setTimeout(()=>reject(Error("Grant reservation not released promptly")),1500)})]);
+  assert.equal(done,1);
+ }finally{if(timer)clearTimeout(timer);right.client.resume();abort();await cleanup(left,right)}
+});
