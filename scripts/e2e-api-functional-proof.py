@@ -191,13 +191,12 @@ def main():
         wait(lambda: call("GET", path)["instance"] is None, 240, "VM stop did not converge")
         stored, _ = call("GET", path+"/files/result.bin", binary=True)
         assert stored == expected
-        halted=wait(lambda:(v if (v:=call("GET",path))["instance"] is None and v["desired"]["runStrategy"]=="Halted" and not (v.get("status") or {}).get("stateChangeRequests") and not (v.get("status") or {}).get("created") and not (v.get("status") or {}).get("ready") else None),120,"VM not halted")
-        call("PATCH",path+"/hardware",body={"cpu":2,"memoryMiB":2048,"expectedResourceVersion":halted["resourceVersion"]},expected=202,phase="cold resize")
+        h["cold_resize"](path,2,2048)
         call("POST",path+"/start",body={},expected=202,phase="restart after resize")
         new_uid=wait(running,420,"Resized VMI not Running")
         assert new_uid!=uid and identities()==original
         domain=call("GET",path)["instance"]["spec"]["domain"]
-        assert domain["cpu"]["cores"]==2 and domain["memory"]["guest"]=="2048Mi"
+        assert domain["cpu"]["cores"]==2 and domain["memory"]["guest"] in ("2048Mi","2Gi")
         wait(lambda:"proofpersisted" in screen(path,OUT/"reboot.png")[0],240,"Installed application did not persist after reboot")
         assert call("GET",path+"/files/result.bin",binary=True)[0]==expected
         assert call("GET",path+"/files/archive.zip",binary=True)[0]==archive
@@ -211,7 +210,7 @@ def main():
         derived = h["presentation"](raw, "REAL NATIVE APPLICATION PROOF")
         proof = {"scope":"native Fedora uploaded and installed Linux archive application, product APIs only",
                  "profile":"linux","architecture":"amd64","image":image,"softwareSha256":software_digest,"archiveSha256":h["sha"](archive),
-                 "softwareInstalled":True,"coldResizeAndFilePersistence":True,"originalPvcUids":original,"resizedInstanceUid":new_uid,
+                 "softwareInstalled":True,"coldResizeAndFilePersistence":True,"originalPvcUids":original,"resizedInstanceUid":new_uid,"rebootScreenshotSha256":h["sha"]((OUT/"reboot.png").read_bytes()),
                  "runId":os.environ.get("GITHUB_RUN_ID"), "commit":os.environ.get("GITHUB_SHA"),
                  "vmId":vm["result"]["id"], "instanceUid":uid,
                  "inputBytes":len(data),"inputSha256":digest,"outputBytes":len(result),

@@ -265,10 +265,7 @@ try:
     call("DELETE",rec,expected=202);rec=None
     call("POST",path+"/stop",body={},expected=202,phase="stop")
     wait(lambda:call("GET",path)["instance"] is None,300,"Stop failed")
-    v=call("GET",path)
-    hw={"cpu":3,"memoryMiB":4096,"expectedResourceVersion":v["resourceVersion"]}
-    call("POST",path+"/hardware/plan",body=hw)
-    call("PATCH",path+"/hardware",body=hw,expected=202)
+    h["cold_resize"](path,3,4096)
     call("POST",path+"/start",body={},expected=202)
     wait(lambda:(call("GET",path).get("instance") or {}).get("status",{}).get("phase")=="Running",600,"Resize restart failed")
     again,_=call("GET",path+"/files/"+scenario["resultName"],binary=True)

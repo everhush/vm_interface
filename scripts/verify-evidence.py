@@ -5,7 +5,7 @@ import hashlib
 import json
 import subprocess
 from pathlib import Path
-from evidence_frames import verify_marker_frames
+from evidence_frames import verify_marker_frames, ocr
 from linux_showcase_fixture import package, verify_archive
 
 
@@ -66,6 +66,8 @@ def verify_folder(folder, profile):
         verify_archive((folder/'guest-archive.zip').read_bytes(),challenge)
         check(file_hash(folder/'guest-archive.zip')==proof['archiveSha256'], 'Guest archive hash mismatch')
         check(proof['instanceUid']!=proof['resizedInstanceUid'] and (folder/'reboot.png').is_file(), 'Missing reboot evidence')
+        check(file_hash(folder/'reboot.png')==proof['rebootScreenshotSha256'] and ocr(folder/'reboot.png').count('proofpersisted')==1, 'Installed application persistence marker absent or screenshot changed')
+        check(any(row.get('phase')=='cold resize' and row['status']==202 for row in rows), 'Successful resize response missing')
     else:
         check(proof['profile'] == profile and proof['architecture'] == ('amd64' if profile == 'windows' else 'arm64'), 'Wrong showcase profile')
         check(proof['screenMarkersVerified'] and proof['coldResizeAndFilePersistence'], 'Missing showcase assertions')
