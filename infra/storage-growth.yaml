@@ -15,6 +15,9 @@ spec:
   matchConditions:
   - name: api-service-account
     expression: "request.userInfo.username == 'system:serviceaccount:vm-interface:vm-api'"
+  # PVC VolumeResourceRequirements is not expanded by the API server's CEL
+  # static schema in this K3s release. dyn retains all runtime comparisons,
+  # failurePolicy Fail and Deny while avoiding invalid static field warnings.
   validations:
   - expression: >-
       request.namespace == 'vm-interface' &&
@@ -37,13 +40,13 @@ spec:
       has(object.spec.dataSource) == has(oldObject.spec.dataSource) && (!has(object.spec.dataSource) || object.spec.dataSource == oldObject.spec.dataSource) &&
       has(object.spec.dataSourceRef) == has(oldObject.spec.dataSourceRef) && (!has(object.spec.dataSourceRef) || object.spec.dataSourceRef == oldObject.spec.dataSourceRef) &&
       has(object.spec.volumeAttributesClassName) == has(oldObject.spec.volumeAttributesClassName) && (!has(object.spec.volumeAttributesClassName) || object.spec.volumeAttributesClassName == oldObject.spec.volumeAttributesClassName) &&
-      !has(object.spec.resources.limits) && !has(oldObject.spec.resources.limits) &&
-      size(object.spec.resources.requests) == 1 && size(oldObject.spec.resources.requests) == 1 &&
-      object.spec.resources.requests['storage'].matches('^([2-9]|[1-5][0-9]|6[0-4])Gi$') &&
-      quantity(object.spec.resources.requests['storage']).compareTo(quantity(oldObject.spec.resources.requests['storage'])) > 0 &&
+      !has(dyn(object.spec.resources).limits) && !has(dyn(oldObject.spec.resources).limits) &&
+      size(dyn(object.spec.resources).requests) == 1 && size(dyn(oldObject.spec.resources).requests) == 1 &&
+      dyn(object.spec.resources).requests['storage'].matches('^([2-9]|[1-5][0-9]|6[0-4])Gi$') &&
+      quantity(dyn(object.spec.resources).requests['storage']).compareTo(quantity(dyn(oldObject.spec.resources).requests['storage'])) > 0 &&
       (oldObject.metadata.name.matches('^vm-[a-f0-9]{32}-boot$') ||
-       oldObject.metadata.name.matches('^vm-[a-f0-9]{32}-exchange$') && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi'] ||
-       oldObject.metadata.name.matches('^vm-[a-f0-9]{32}-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$') && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi','5Gi','6Gi','7Gi','8Gi'])
+       oldObject.metadata.name.matches('^vm-[a-f0-9]{32}-exchange$') && dyn(object.spec.resources).requests['storage'] in ['2Gi','3Gi','4Gi'] ||
+       oldObject.metadata.name.matches('^vm-[a-f0-9]{32}-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$') && dyn(object.spec.resources).requests['storage'] in ['2Gi','3Gi','4Gi','5Gi','6Gi','7Gi','8Gi'])
     message: "Only bounded monotonic storage-request increases on vm-expandable are permitted"
 ---
 apiVersion: admissionregistration.k8s.io/v1

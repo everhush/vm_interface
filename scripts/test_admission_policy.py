@@ -13,3 +13,11 @@ class AdmissionPolicyTests(unittest.TestCase):
         self.assertIn("!has(object.spec.sourceRef)",disk[0])
         self.assertIn("object.spec.source.pvc.namespace == request.namespace",disk[0])
         self.assertTrue(disk[1].endswith("  validationActions: [Deny]\n"))
+
+    def test_growth_policy_checks_dynamic_pvc_resource_fields(self):
+        raw=(Path(__file__).resolve().parents[1]/"infra/storage-growth.yaml").read_text()
+        self.assertIn("failurePolicy: Fail",raw)
+        self.assertIn("validationActions: [Deny]",raw)
+        self.assertIn("size(dyn(object.spec.resources).requests) == 1",raw)
+        self.assertIn("quantity(dyn(object.spec.resources).requests['storage']).compareTo(quantity(dyn(oldObject.spec.resources).requests['storage'])) > 0",raw)
+        self.assertIn("!has(dyn(object.spec.resources).limits)",raw)
