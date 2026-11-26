@@ -3,6 +3,7 @@ import argparse,json,os,shutil,subprocess
 from pathlib import Path
 from prepare_android import SOURCE,ARCHIVE_SHA,digest
 from showcase_inputs import load_scenario
+from apk_manifest_check import verify_proof_apk_metadata
 ROOT=Path(__file__).resolve().parents[1]
 def arguments(root,transfer="virtiofs-saf"):
     manifest=json.loads((root/"android-disk-manifest.json").read_text())
@@ -20,14 +21,18 @@ def arguments(root,transfer="virtiofs-saf"):
     # Revalidate the actual APK, not a detached report that could be stale.
     sdk=os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
     tools=Path(sdk)/"build-tools"/"34.0.0" if sdk else None
-    def executable(name):
-        if tools and os.access(tools/name,os.X_OK):return str(tools/name)
-        path=shutil.which(name)
-        if path:return path
-        raise ValueError("Install authorized Android build tool: "+name)
-    subprocess.run([executable("apksigner"),"verify","--verbose",str(apk)],check=True,stdout=subprocess.DEVNULL,timeout=60)
-    badging=subprocess.check_output([executable("aapt2"),"dump","badging",str(apk)],text=True,timeout=60)
-    assert "package: name='org.vminterface.proof'" in badging and "versionName='3.0'" in badging
+    # apksigner.jar is Java, so ARM64 devices do not need the x86 SDK aapt2.
+    jar=Path(os.environ["APKSIGNER_JAR"]) if "APKSIGNER_JAR" in os.environ else tools/"lib"/"apksigner.jar" if tools else None
+    if jar and jar.is_file():
+        java=shutil.which("java")
+        if not java:raise ValueError("Java runtime required for portable apksigner.jar")
+        signer=[java,"-jar",str(jar)]
+    else:
+        path=shutil.which("apksigner")
+        if not path:raise ValueError("Provide authorized apksigner.jar or apksigner in PATH")
+        signer=[path]
+    subprocess.run(signer+["verify","--verbose",str(apk)],check=True,stdout=subprocess.DEVNULL,timeout=60)
+    verify_proof_apk_metadata(apk)
     return ["--media",str(root/"disks/vda.qcow2"),"--media-sha256",pinned["vda.qcow2"]["sha256"],"--system-gib",str(pinned["vda.qcow2"]["sizeGiB"]),"--auxiliary-media",str(root/"disks/vdb.qcow2"),"--auxiliary-sha256",pinned["vdb.qcow2"]["sha256"],"--auxiliary-gib",str(pinned["vdb.qcow2"]["sizeGiB"]),"--source",SOURCE,"--version","v2026.10.18","--software",str(apk),"--software-sha256",digest(apk),"--scenario",str(scenario),"--authorize-media","--record-consent"]
 def main():
     p=argparse.ArgumentParser(description=__doc__)
