@@ -14,9 +14,11 @@ export function validDataDiskMedia(value:unknown,sizeGiB:number):DataDiskMedia|n
  return parsed.success&&parsed.data.format!=="iso"&&installerGiB(parsed.data.bytes)<=sizeGiB?parsed.data:null;
 }
 export type DataDiskRequest={action:"create";name:string;sizeGiB:number;expectedResourceVersion:string}|{action:"clone";name:string;source:string;sizeGiB:number;expectedResourceVersion:string}|{action:"import";name:string;media:DataDiskMedia;sizeGiB:number;expectedResourceVersion:string}|{action:"attach"|"detach";name:string;expectedResourceVersion:string};
-type Named={name?:string;disk?:{bus?:string};bootOrder?:number;dataVolume?:{name?:string}};
+type Named={name?:string;serial?:string;disk?:{bus?:string};bootOrder?:number;dataVolume?:{name?:string}};
 type Desired={runStrategy?:string;dataVolumeTemplates?:unknown[];template?:{metadata?:{annotations?:Record<string,string>};spec?:{domain?:{devices?:{disks?:Named[]}};volumes?:Named[]}}};
 export const dataDiskDevice=(name:string)=>"data-"+name;
+// <=18 ASCII bytes: deterministic guest-visible virtio serial, independent of enumeration.
+export const dataDiskSerial=(name:string)=>"d-"+name;
 export const dataDiskClaim=(id:string,name:string)=>id+"-"+dataDiskDevice(name);
 function invalid():never{throw new ApiError(409,"Unrecognized managed data disk layout")}
 export function dataDiskDeclarations(raw:unknown):DataDisk[]{
@@ -50,7 +52,7 @@ export function readDataDisks(vm:Resource,id:string):DataDisk[]{
  if(ds.length!==managed.length||vs.length!==managed.length)invalid();
  for(const d of managed){
   const device=dataDiskDevice(d.name),dd=ds.filter(x=>x.name===device),vv=vs.filter(x=>x.name===device);
-  if(dd.length!==1||vv.length!==1||dd[0].disk?.bus!=="virtio"||dd[0].bootOrder!==undefined||vv[0].dataVolume?.name!==dataDiskClaim(id,d.name))invalid();
+  if(dd.length!==1||vv.length!==1||dd[0].disk?.bus!=="virtio"||(dd[0].serial!==undefined&&dd[0].serial!==dataDiskSerial(d.name))||dd[0].bootOrder!==undefined||vv[0].dataVolume?.name!==dataDiskClaim(id,d.name))invalid();
  }
  return entries;
 }
@@ -80,7 +82,7 @@ export function coldDataDiskPatch(vm:Resource,instance:Resource|null,id:string,r
  }
  const device=dataDiskDevice(r.name),disks=s.template?.spec?.domain?.devices?.disks,volumes=s.template?.spec?.volumes;
  if(!Array.isArray(disks)||!Array.isArray(volumes))invalid();
- const updatedDisks=r.action==="attach"?[...disks,{name:device,disk:{bus:"virtio"}}]:r.action==="detach"?disks.filter(d=>d.name!==device):disks;
+ const updatedDisks=r.action==="attach"?[...disks,{name:device,serial:dataDiskSerial(r.name),disk:{bus:"virtio"}}]:r.action==="detach"?disks.filter(d=>d.name!==device):disks;
  const updatedVolumes=r.action==="attach"?[...volumes,{name:device,dataVolume:{name:dataDiskClaim(id,r.name)}}]:r.action==="detach"?volumes.filter(v=>v.name!==device):volumes;
  return {entries,patch:{metadata:{resourceVersion:r.expectedResourceVersion},spec:{template:{metadata:{annotations:{[DATA_DISKS_ANNOTATION]:JSON.stringify(entries)}},spec:{domain:{devices:{disks:updatedDisks}},volumes:updatedVolumes}}}}};
 }

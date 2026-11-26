@@ -6,7 +6,7 @@ import json
 import subprocess
 from pathlib import Path
 from evidence_frames import verify_marker_frames, ocr
-from linux_showcase_fixture import package, verify_archive
+from linux_showcase_fixture import package, verify_archive, verify_platform
 
 
 def file_hash(path):
@@ -65,6 +65,10 @@ def verify_folder(folder, profile):
         check((folder/'guest-result.bin').read_bytes()==b'guest-result:'+hashlib.sha256(challenge).hexdigest().encode('ascii')+b'\n', 'Wrong guest result')
         verify_archive((folder/'guest-archive.zip').read_bytes(),challenge)
         check(file_hash(folder/'guest-archive.zip')==proof['archiveSha256'], 'Guest archive hash mismatch')
+        check(proof['guestDiskCloneByteProof'] and proof['clonePvcUid'] not in proof['originalPvcUids'].values(), 'Missing distinct data disk clone evidence')
+        check((folder/'disk-original.bin').read_bytes()==challenge and (folder/'disk-original-after.bin').read_bytes()==challenge and (folder/'disk-clone-after.bin').read_bytes()==bytes(x^255 for x in challenge), 'Guest disk clone byte proof mismatch')
+        check(file_hash(folder/'guest-platform.json')==proof['guestPlatformSha256'] and file_hash(folder/'guest-rpm.tsv')==proof['guestRpmSha256'], 'Guest media provenance mismatch')
+        verify_platform((folder/'guest-platform.json').read_bytes(),(folder/'guest-rpm.tsv').read_bytes(),proof['image']['version'])
         check(proof['instanceUid']!=proof['resizedInstanceUid'] and (folder/'reboot.png').is_file(), 'Missing reboot evidence')
         check(file_hash(folder/'reboot.png')==proof['rebootScreenshotSha256'] and ocr(folder/'reboot.png').count('proofpersisted')==1, 'Installed application persistence marker absent or screenshot changed')
         check(any(row.get('phase')=='cold resize' and row['status']==202 for row in rows), 'Successful resize response missing')

@@ -30,7 +30,7 @@ installed=Path("/usr/local/lib/vm-interface-proof/proof.py")
 if installed.is_file():
     if hashlib.sha256(installed.read_bytes()).hexdigest()!="__APP_SHA__":
         raise SystemExit("installed application digest mismatch")
-    print("proofpersisted",flush=True)
+    subprocess.run(["/usr/bin/python3","-u",str(installed),"--verify-clone"],check=True)
 else:
     print("proofready",flush=True)
     print("Type runproof then Enter to install and launch the uploaded application",flush=True)
@@ -93,6 +93,34 @@ def main():
         call("POST", "/computers/plan", body=spec)
         vm = call("POST", "/computers", body=spec, expected=202, phase="create")
         path = "/computers/" + vm["result"]["id"]
+        def cold_disk(action,name,**fields):
+            initial=call("GET",path)["desired"]
+            deadline=time.monotonic()+60
+            while time.monotonic()<deadline:
+                current=call("GET",path)
+                assert current["desired"]==initial
+                body={"action":action,"name":name,"expectedResourceVersion":current["resourceVersion"],**fields}
+                planned=call("POST",path+"/disks/plan",body=body,expected=(200,409))
+                if planned.get("error"):
+                    assert planned["error"] in ("VM identity or resource version changed","VM resource version changed before disk reservation"),planned
+                    time.sleep(1);continue
+                current=call("GET",path)
+                assert current["desired"]==initial
+                body["expectedResourceVersion"]=current["resourceVersion"]
+                key=str(uuid.uuid4())
+                submitted=call("POST",path+"/disks",body=body,idem=key,expected=(202,409),phase="cold disk "+action)
+                if submitted.get("error"):
+                    assert submitted["error"] in ("VM identity or resource version changed","VM resource version changed before disk reservation"),submitted
+                    assert call("POST",path+"/disks",body=body,idem=key,expected=409)==submitted
+                    time.sleep(1);continue
+                assert submitted["status"]=="submitted"
+                assert call("POST",path+"/disks",body=body,idem=key,expected=202)==submitted
+                return submitted
+            raise AssertionError("Cold disk version did not stabilize")
+        def get_disk(name):
+            return next((v for v in call("GET",path+"/storage")["volumes"] if v.get("diskName")==name),None)
+        cold_disk("create","proof",sizeGiB=1)
+        cold_disk("attach","proof")
         images=call("GET","/images")
         image=next(i for i in images if i["id"]==spec["image"])
         assert image["architecture"]=="amd64" and image["digest"].startswith("sha256:") and image["image"].endswith(image["digest"])
@@ -115,9 +143,10 @@ def main():
         uid = wait(running, 420, "VMI not Running")
         def identities():
             volumes=call("GET",path+"/storage")["volumes"]
-            if len(volumes)!=2 or not all(v["pvcPhase"]=="Bound" and v["pvcUid"] for v in volumes):return None
-            return {v["kind"]:v["pvcUid"] for v in volumes}
+            if not all(v["pvcPhase"]=="Bound" and v["pvcUid"] for v in volumes):return None
+            return {v.get("diskName",v["kind"]):v["pvcUid"] for v in volumes}
         original=wait(identities,120,"Persistent storage not bound")
+        assert set(original)=={"boot","exchange","proof"}
         def ready():
             text, _ = screen(path, OUT/"before.png")
             return "proofready" in text and "proofcomplete" not in text
@@ -167,6 +196,17 @@ def main():
         (OUT/"guest-archive.zip").write_bytes(archive)
         (OUT/"challenge.bin").write_bytes(data)
         (OUT/"software.zip").write_bytes(software)
+        def retrieve(name):
+            wait(lambda:any(f["name"]==name for f in call("GET",path+"/files")),60,"Missing guest output "+name)
+            raw,headers=call("GET",path+"/files/"+name,binary=True,phase="download "+name)
+            assert headers["X-Content-SHA256"]==h["sha"](raw)
+            (OUT/name).write_bytes(raw)
+            return raw
+        assert retrieve("disk-original.bin")==data
+        platform=retrieve("guest-platform.json")
+        rpm=retrieve("guest-rpm.tsv")
+        from linux_showcase_fixture import verify_platform
+        verify_platform(platform,rpm,image["version"])
         time.sleep(5)
         call("DELETE", path+"/input-lease", ticket, scheme="Console", phase="lease release")
         lease = False
@@ -191,15 +231,26 @@ def main():
         wait(lambda: call("GET", path)["instance"] is None, 240, "VM stop did not converge")
         stored, _ = call("GET", path+"/files/result.bin", binary=True)
         assert stored == expected
+        def halted():
+            v=call("GET",path);s=v.get("status") or {}
+            return not v["instance"] and v["desired"]["runStrategy"]=="Halted" and not any(s.get(k) for k in ("created","ready","stateChangeRequests"))
+        wait(halted,120,"VM did not fully stop before clone")
+        cloned=cold_disk("clone","proofcopy",source="proof",sizeGiB=2)
+        copy=wait(lambda:(d if (d:=get_disk("proofcopy")) and d["dataVolumePhase"]=="Succeeded" and d["pvcPhase"]=="Bound" and d["pvcUid"] else None),420,"Clone failed to converge")
+        assert copy["pvcUid"]!=original["proof"]
+        wait(lambda:call("GET","/operations/"+cloned["operationId"]).get("observation",{}).get("state")=="converged",120,"Clone observation failed")
+        cold_disk("attach","proofcopy")
         h["cold_resize"](path,2,2048)
         call("POST",path+"/start",body={},expected=202,phase="restart after resize")
         new_uid=wait(running,420,"Resized VMI not Running")
-        assert new_uid!=uid and identities()==original
+        assert new_uid!=uid and identities()=={**original,"proofcopy":copy["pvcUid"]}
         domain=call("GET",path)["instance"]["spec"]["domain"]
         assert domain["cpu"]["cores"]==2 and domain["memory"]["guest"] in ("2048Mi","2Gi")
         wait(lambda:"proofpersisted" in screen(path,OUT/"reboot.png")[0],240,"Installed application did not persist after reboot")
         assert call("GET",path+"/files/result.bin",binary=True)[0]==expected
         assert call("GET",path+"/files/archive.zip",binary=True)[0]==archive
+        assert retrieve("disk-original-after.bin")==data
+        assert retrieve("disk-clone-after.bin")==bytes(x^255 for x in data)
         call("POST",path+"/stop",body={},expected=202,phase="stop after resize")
         wait(lambda:call("GET",path)["instance"] is None,240,"Final stop failed")
         call("DELETE", path, expected=409)
@@ -210,7 +261,7 @@ def main():
         derived = h["presentation"](raw, "REAL NATIVE APPLICATION PROOF")
         proof = {"scope":"native Fedora uploaded and installed Linux archive application, product APIs only",
                  "profile":"linux","architecture":"amd64","image":image,"softwareSha256":software_digest,"archiveSha256":h["sha"](archive),
-                 "softwareInstalled":True,"coldResizeAndFilePersistence":True,"originalPvcUids":original,"resizedInstanceUid":new_uid,"rebootScreenshotSha256":h["sha"]((OUT/"reboot.png").read_bytes()),
+                 "softwareInstalled":True,"coldResizeAndFilePersistence":True,"originalPvcUids":original,"clonePvcUid":copy["pvcUid"],"guestDiskCloneByteProof":True,"guestPlatformSha256":h["sha"](platform),"guestRpmSha256":h["sha"](rpm),"resizedInstanceUid":new_uid,"rebootScreenshotSha256":h["sha"]((OUT/"reboot.png").read_bytes()),
                  "runId":os.environ.get("GITHUB_RUN_ID"), "commit":os.environ.get("GITHUB_SHA"),
                  "vmId":vm["result"]["id"], "instanceUid":uid,
                  "inputBytes":len(data),"inputSha256":digest,"outputBytes":len(result),
