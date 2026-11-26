@@ -36,7 +36,7 @@ async function screenshot(path:string,filename:string){
  writeFileSync(filename,data);
  // OCR is used only to assert the real visible test marker, never to infer
  // guest state from KubeVirt readiness. Retain original PNG for inspection.
- return execFileSync("tesseract",[filename,"stdout","--psm","6","--dpi","180"],{encoding:"utf8",timeout:15000,stdio:["ignore","pipe","ignore"]}).toLowerCase();
+ return execFileSync("tesseract",[filename,"stdout","--psm","6","--dpi","180"],{encoding:"utf8",timeout:30000,env:{...process.env,OMP_THREAD_LIMIT:"1",OMP_NUM_THREADS:"1"},stdio:["ignore","pipe","ignore"]}).toLowerCase();
 }
 async function awaitScreen(path:string,file:string,predicate:(text:string)=>boolean,seconds=90){
  const end=Date.now()+seconds*1000;

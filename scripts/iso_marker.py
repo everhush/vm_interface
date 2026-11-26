@@ -1,5 +1,6 @@
 """Exact OCR boot marker on original, and scaled/inverted source pixels."""
 import re
+import os
 import subprocess
 
 MARKER = "ISOBOOTPROOFPASSED"
@@ -39,13 +40,13 @@ def exact_marker(text):
     return MARKER in re.sub("[^A-Z]","",text.upper())
 
 def read_marker(png):
-    original=subprocess.run(["tesseract",str(png),"stdout","--psm","6"],capture_output=True,text=True,check=True,timeout=15).stdout
+    original=subprocess.run(["tesseract",str(png),"stdout","--psm","6"],capture_output=True,text=True,check=True,timeout=30,env={**os.environ,"OMP_THREAD_LIMIT":"1","OMP_NUM_THREADS":"1"}).stdout
     if exact_marker(original):return True,original
     pgm=subprocess.check_output(["ffmpeg","-v","error","-i",str(png),"-frames:v","1","-f","image2pipe","-vcodec","pgm","-"],timeout=15)
     scaled=crop_for_ocr(*parse_pgm(pgm))
     if scaled:
         for psm in ("6","11"):
-            text=subprocess.run(["tesseract","stdin","stdout","--psm",psm,"--dpi","180"],input=scaled,capture_output=True,check=True,timeout=15).stdout.decode()
+            text=subprocess.run(["tesseract","stdin","stdout","--psm",psm,"--dpi","180"],input=scaled,capture_output=True,check=True,timeout=30,env={**os.environ,"OMP_THREAD_LIMIT":"1","OMP_NUM_THREADS":"1"}).stdout.decode()
             if exact_marker(text):return True,text
             original=text
     return False,original

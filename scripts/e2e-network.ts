@@ -46,13 +46,23 @@ async function deny(path:string,token:string,status:number){
   s.once("error",e=>{clearTimeout(timer);reject(e)});
  })}finally{s.terminate()}
 }
+class TunnelHandshakeError extends Error{constructor(readonly status:number){super("Guest tunnel handshake HTTP "+status)}}
 async function open(path:string,token:string){
  const s=ws(path,token);
  try{await new Promise<void>((resolve,reject)=>{
   const timer=setTimeout(()=>reject(Error("Tunnel handshake timeout")),20000);
-  s.once("open",()=>{clearTimeout(timer);log({method:"WSS",path,expected:101,status:101});resolve()});s.once("error",e=>{clearTimeout(timer);reject(e)});s.once("unexpected-response",(_req,res)=>{clearTimeout(timer);res.resume();log({method:"WSS",path,expected:101,status:res.statusCode});reject(Error("Guest tunnel handshake HTTP "+res.statusCode))});
+  s.once("open",()=>{clearTimeout(timer);log({method:"WSS",path,expected:101,status:101});resolve()});s.once("error",e=>{clearTimeout(timer);reject(e)});s.once("unexpected-response",(_req,res)=>{clearTimeout(timer);res.resume();log({method:"WSS",path,expected:101,status:res.statusCode});reject(new TunnelHandshakeError(res.statusCode??502))});
  })}catch(e){s.terminate();throw e}
  return s;
+}
+async function reopen(path:string,token:string){
+ // Only an explicit 409 after this client's known prior connection closed
+ // can be retried; other authorization errors remain failures.
+ const deadline=Date.now()+6000;
+ for(;;){try{return await open(path,token)}catch(e){
+  if(!(e instanceof TunnelHandshakeError)||e.status!==409||Date.now()>=deadline)throw e;
+  await delay(250);
+ }}
 }
 async function guestHttp(path:string,token:string){
  const s=await open(path,token),stream=createWebSocketStream(s);
@@ -113,7 +123,7 @@ try{
   assert.ok(actual.includes("200 OK")&&actual.includes(marker)&&actual.includes("cluster-egress-blocked"));
  }finally{await adapter.close()}
  await delay(1000);
- const live=await open(tunnel,grant.token);sockets.push(live);
+ const live=await reopen(tunnel,grant.token);sockets.push(live);
  await deny(tunnel,grant.token,409);
  await call("DELETE",collection+"/"+grant.id,a);
  await waitClosed(live);

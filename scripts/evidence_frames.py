@@ -1,5 +1,6 @@
 """Independently decode and OCR the reported frames of an original MP4."""
 import re
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -35,10 +36,14 @@ def decoded_frame(raw, index, dest):
         raise ValueError('Referenced video frame does not exist')
 
 
-def ocr(path, cirros=False):
-    text=subprocess.check_output([
+def ocr_text(path):
+    return subprocess.check_output([
         'tesseract', str(path), 'stdout', '--psm', '6', '--dpi', '180'
-    ], stderr=subprocess.DEVNULL, timeout=15, text=True)
+    ], stderr=subprocess.DEVNULL, timeout=30, text=True,
+       env={**os.environ,"OMP_THREAD_LIMIT":"1","OMP_NUM_THREADS":"1"})
+
+def ocr(path, cirros=False):
+    text=ocr_text(path)
     return cirros_normalize(text) if cirros else normalized(text)
 
 

@@ -39,6 +39,8 @@ export function relayBinaryTunnel(client:WebSocket,source:WebSocket,expiresAt:nu
  client.on("message",(data,binary)=>forward(client,source,data,binary));
  source.on("message",(data,binary)=>forward(source,client,data,binary));
  client.on("error",abort);source.on("error",abort);
- client.on("close",code=>ended(source,code));source.on("close",code=>ended(client,code));
+ // A closed downstream has no recipient to drain. Abort upstream and
+ // release the grant immediately; only upstream EOF needs reply draining.
+ client.on("close",abort);source.on("close",code=>ended(client,code));
  return abort;
 }
