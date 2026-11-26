@@ -23,9 +23,9 @@ spec:
       (oldObject.metadata.ownerReferences[0].kind == 'DataVolume' && oldObject.metadata.ownerReferences[0].name == oldObject.metadata.name ||
       oldObject.metadata.ownerReferences[0].kind == 'VirtualMachine' && oldObject.metadata.ownerReferences[0].name + '-exchange' == oldObject.metadata.name) &&
       object.metadata.ownerReferences == oldObject.metadata.ownerReferences &&
-      object.metadata.labels == oldObject.metadata.labels &&
-      object.metadata.annotations == oldObject.metadata.annotations &&
-      object.metadata.finalizers == oldObject.metadata.finalizers
+      has(object.metadata.labels) == has(oldObject.metadata.labels) && (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+      has(object.metadata.annotations) == has(oldObject.metadata.annotations) && (!has(object.metadata.annotations) || object.metadata.annotations == oldObject.metadata.annotations) &&
+      has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) && (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers)
     message: "Only an existing owner-bound managed PVC may grow; metadata may not change"
   - expression: >-
       oldObject.spec.storageClassName == 'vm-expandable' &&
@@ -33,15 +33,122 @@ spec:
       object.spec.volumeMode == 'Filesystem' && object.spec.volumeMode == oldObject.spec.volumeMode &&
       object.spec.accessModes == oldObject.spec.accessModes &&
       object.spec.volumeName == oldObject.spec.volumeName &&
-      !has(object.spec.selector) && !has(oldObject.spec.selector) &&
-      !has(object.spec.dataSource) && !has(oldObject.spec.dataSource) &&
-      !has(object.spec.dataSourceRef) && !has(oldObject.spec.dataSourceRef) &&
-      !has(object.spec.volumeAttributesClassName) && !has(oldObject.spec.volumeAttributesClassName) &&
+      has(object.spec.selector) == has(oldObject.spec.selector) && (!has(object.spec.selector) || object.spec.selector == oldObject.spec.selector) &&
+      has(object.spec.dataSource) == has(oldObject.spec.dataSource) && (!has(object.spec.dataSource) || object.spec.dataSource == oldObject.spec.dataSource) &&
+      has(object.spec.dataSourceRef) == has(oldObject.spec.dataSourceRef) && (!has(object.spec.dataSourceRef) || object.spec.dataSourceRef == oldObject.spec.dataSourceRef) &&
+      has(object.spec.volumeAttributesClassName) == has(oldObject.spec.volumeAttributesClassName) && (!has(object.spec.volumeAttributesClassName) || object.spec.volumeAttributesClassName == oldObject.spec.volumeAttributesClassName) &&
       !has(object.spec.resources.limits) && !has(oldObject.spec.resources.limits) &&
       size(object.spec.resources.requests) == 1 && size(oldObject.spec.resources.requests) == 1 &&
       object.spec.resources.requests['storage'].matches('^([2-9]|[1-5][0-9]|6[0-4])Gi$') &&
       quantity(object.spec.resources.requests['storage']).compareTo(quantity(oldObject.spec.resources.requests['storage'])) > 0 &&
-      (oldObject.metadata.name.endsWith('-boot') ||
+      (oldObject.metadata.name.matches('^vm-[a-f0-9]{32}-boot ||
+       oldObject.metadata.name.matches('^vm-[a-f0-9]{32}-exchange && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi'] ||
+       oldObject.metadata.name.matches('-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$') && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi','5Gi','6Gi','7Gi','8Gi'])
+    message: "Only bounded monotonic storage-request increases on vm-expandable are permitted"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: vm-pvc-growth
+spec:
+  policyName: vm-pvc-growth
+  validationActions: [Deny]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vm-api-pvc-growth
+  namespace: vm-interface
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vm-api-pvc-growth
+  namespace: vm-interface
+subjects:
+- kind: ServiceAccount
+  name: vm-api
+  namespace: vm-interface
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vm-api-pvc-growth
+) ||
+       oldObject.metadata.name.endsWith('-exchange') && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi'] ||
+       oldObject.metadata.name.matches('-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$') && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi','5Gi','6Gi','7Gi','8Gi'])
+    message: "Only bounded monotonic storage-request increases on vm-expandable are permitted"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: vm-pvc-growth
+spec:
+  policyName: vm-pvc-growth
+  validationActions: [Deny]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vm-api-pvc-growth
+  namespace: vm-interface
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vm-api-pvc-growth
+  namespace: vm-interface
+subjects:
+- kind: ServiceAccount
+  name: vm-api
+  namespace: vm-interface
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vm-api-pvc-growth
+) && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi'] ||
+       oldObject.metadata.name.matches('-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$') && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi','5Gi','6Gi','7Gi','8Gi'])
+    message: "Only bounded monotonic storage-request increases on vm-expandable are permitted"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: vm-pvc-growth
+spec:
+  policyName: vm-pvc-growth
+  validationActions: [Deny]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vm-api-pvc-growth
+  namespace: vm-interface
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vm-api-pvc-growth
+  namespace: vm-interface
+subjects:
+- kind: ServiceAccount
+  name: vm-api
+  namespace: vm-interface
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vm-api-pvc-growth
+) ||
        oldObject.metadata.name.endsWith('-exchange') && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi'] ||
        oldObject.metadata.name.matches('-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$') && object.spec.resources.requests['storage'] in ['2Gi','3Gi','4Gi','5Gi','6Gi','7Gi','8Gi'])
     message: "Only bounded monotonic storage-request increases on vm-expandable are permitted"
