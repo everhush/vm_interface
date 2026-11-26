@@ -99,7 +99,7 @@ elif [ "$profile" = linux ]; then
 else
   stage python3 scripts/showcase-native.py "$profile" "$@"
 fi
-python3 scripts/verify-evidence.py --root evidence --profile "$profile" | tee evidence/device-evidence-verification.json
+python3 scripts/verify-evidence.py --root evidence --profile "$profile" --commit "$GITHUB_SHA" | tee evidence/device-evidence-verification.json
 printf '%s\n' "$GITHUB_SHA" > evidence/device-commit.txt
 printf '%s\n' "$GITHUB_RUN_ID" > evidence/device-run-id.txt
 echo 'Selected device workflow passed; independent artifact review remains mandatory.'
