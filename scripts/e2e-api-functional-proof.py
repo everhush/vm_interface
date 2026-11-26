@@ -104,7 +104,7 @@ def main():
                      expected=201, phase="control ticket")
         ticket = grant["token"]
         assert grant["actor"] == "automation" and grant["instanceUid"] == uid
-        started = call("POST", path+"/recordings", body={"consent":True,"maxSeconds":150},
+        started = call("POST", path+"/recordings", body={"consent":True,"maxSeconds":120},
                        expected=202, phase="record start")
         recording = path+"/recordings/"+started["result"]["id"]
         def active():

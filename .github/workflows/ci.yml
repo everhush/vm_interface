@@ -87,6 +87,55 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           bash scripts/install-evidence-tools.sh
+      - name: Linux installation, archive, native clone and original recording
+        id: linux_proof
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
+        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-api-functional-proof.py
+      - name: Retain linux-partial-evidence immediately on failed stage
+        if: ${{ !cancelled() && steps.linux_proof.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-partial-evidence
+          path: |
+            evidence/api-functional-proof/
+            evidence/api-test-stages.txt
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Actual CDI disk import
+        id: media_proof
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
+        run: bash scripts/run-api-tests-ci.sh bash scripts/e2e-media-ci.sh
+      - name: Retain media-partial-evidence immediately on failed stage
+        if: ${{ !cancelled() && steps.media_proof.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-partial-evidence
+          path: |
+            evidence/media-*-verification.json
+            evidence/imported-disk-*-display.png
+            evidence/public-image-*.json
+            evidence/registered-artifact-verification.json
+            evidence/api-test-stages.txt
+            evidence/api-relay.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Actual authorized ISO import and boot configuration
+        id: iso_proof
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
+        run: bash scripts/run-api-tests-ci.sh bash scripts/e2e-iso-ci.sh
+      - name: Retain iso-partial-evidence immediately on failed stage
+        if: ${{ !cancelled() && steps.iso_proof.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: iso-partial-evidence
+          path: |
+            evidence/iso-*.png
+            evidence/iso-*.txt
+            evidence/iso-*.json
+            evidence/api-test-stages.txt
+            evidence/api-relay.log
+          if-no-files-found: warn
+          retention-days: 7
       - name: Actual VNC transport
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-vnc.ts
@@ -94,8 +143,22 @@ jobs:
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-api-control-proof.py
       - name: Input ownership, pointer and keyboard isolation
+        id: input_proof
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-input.ts
+      - name: Retain input-partial-evidence immediately on failed stage
+        if: ${{ !cancelled() && steps.input_proof.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: input-partial-evidence
+          path: |
+            evidence/input-*.png
+            evidence/reset-*.png
+            evidence/input-ownership.json
+            evidence/reset-verification.json
+            evidence/api-test-stages.txt
+          if-no-files-found: warn
+          retention-days: 7
       - name: Private network isolation and tunnel
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-network.ts
@@ -105,18 +168,9 @@ jobs:
       - name: Actual guest VirtioFS exchange and published bundle
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-exchange.py
-      - name: Linux installation, archive, native clone and original recording
-        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-api-functional-proof.py
       - name: Idle-stop semantics
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-idle.py
-      - name: Actual CDI disk import
-        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh bash scripts/e2e-media-ci.sh
-      - name: Actual authorized ISO import and boot configuration
-        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh bash scripts/e2e-iso-ci.sh
       - name: Verify durable API recovery across deployment restart
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: |
