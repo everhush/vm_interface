@@ -41,6 +41,7 @@ results=[]
 for firmware in ["bios","uefi"]:
     spec=dict(version=1,name="ci-iso-"+firmware,architecture="amd64",cpu=1,memoryMiB=768,image="uploaded-installer",storage={"systemGiB":2,"exchangeGiB":1},media={"format":"iso","bytes":len(disk),"sha256":digest,"source":"CI-generated GRUB fixture from distribution packages","os":"GRUB boot evidence only","version":"1","authorizedByClient":True},firmware=firmware)
     spec["auxiliaryDisk"]={"sizeGiB":1,"media":{**spec["media"],"os":"auxiliary read-only fixture"}}
+    quota_before=call("GET","/account/quota")["usage"]["storageGiB"]
     call("POST","/computers/plan",data=spec)
     created=call("POST","/computers",data=spec,idem=key(),expected=202)
     path="/computers/"+created["result"]["id"]
@@ -91,5 +92,7 @@ for firmware in ["bios","uefi"]:
         wait(marker,180,"Reinserted installer boot not visible")
         results[-1]["coldTrayDesiredStateAndReinsertBootVerified"]=True
     finally:
-        call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
+        deleted=call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
+        wait(lambda:(call("GET","/operations/"+deleted["operationId"]).get("observation") or {}).get("state")=="converged",300,"ISO VM/storage deletion did not converge")
+        assert call("GET","/account/quota")["usage"]["storageGiB"]==quota_before
 Path("evidence/iso-boot-verification.json").write_text(json.dumps({"scope":"real-api-CDROM-boot-only","results":results},indent=2))

@@ -79,8 +79,20 @@ jobs:
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-persistent.py
       - name: Independent data disk lifecycle, media and native export
+        id: data_disks
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-data-disks.py
+      - name: Retain data disk partial evidence immediately on failed stage
+        if: ${{ !cancelled() && steps.data_disks.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: disk-partial-evidence
+          path: |
+            evidence/data-disks*.json*
+            evidence/api-test-stages.txt
+            evidence/api-relay.log
+          if-no-files-found: warn
+          retention-days: 7
       - name: Install locked client dependencies and evidence tools
         id: client_tools
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}

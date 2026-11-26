@@ -1,3 +1,4 @@
+import {onceSuccessful} from "./once-successful";
 import postgres from "postgres";
 import {drizzle} from "drizzle-orm/postgres-js";
 import {pgTable,text,jsonb,timestamp,primaryKey,integer,bigint} from "drizzle-orm/pg-core";
@@ -69,7 +70,7 @@ export function database(){
  if(!db){if(!process.env.DATABASE_URL)throw Error("Missing DATABASE_URL");db=drizzle(postgres(process.env.DATABASE_URL,{max:5,connect_timeout:10}));}
  return db;
 }
-export async function migrate(){
+async function migrateSchema(){
  await database().execute(sql`CREATE TABLE IF NOT EXISTS operations (
  account text NOT NULL, key text NOT NULL, id text NOT NULL UNIQUE, request_hash text NOT NULL,
  status text NOT NULL, result jsonb, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(account,key))`);
@@ -130,3 +131,7 @@ export async function migrate(){
  await database().execute(sql`CREATE INDEX IF NOT EXISTS audit_age_idx ON audit_events(created_at)`);
  await database().execute(sql`CREATE TABLE IF NOT EXISTS api_rate (account text PRIMARY KEY, window_start bigint NOT NULL, count integer NOT NULL)`);
 }
+
+const initialize=onceSuccessful(migrateSchema);
+export async function migrate(){await initialize()}
+export async function databaseReady(){await initialize();await database().execute(sql`SELECT 1`)}

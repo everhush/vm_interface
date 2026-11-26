@@ -8,7 +8,10 @@ class CirrosScreenTests(unittest.TestCase):
         self.assertIn("forbiddeninput",normalize(observed+"forbiddeninput"))
         self.assertNotIn("humancontrol",normalize("human[65.731613] random: forbiddeninput control"))
     def test_optional_entropy_and_real_prompt(self):
-        self.assertFalse(ready("cirros login:",89.99))
-        self.assertTrue(ready("cirros login:",90))
+        self.assertFalse(ready("cirros login:",179.99))
+        self.assertTrue(ready("cirros login:",180))
         self.assertTrue(ready("cirros login:\n[65.731613] random: nonblocking pool is initialized",1))
         self.assertFalse(ready("booting",120))
+    def test_retained_99_second_control_interleave(self):
+        self.assertIn("scriptstart",normalize("cirros login: scriptst£ 99.340024] random: nonblocking pool is initialized\nart_"))
+        self.assertNotIn("scriptstart",normalize("cirros login: scriptst£ 99.340024] random: forbiddeninput pool is initialized\nart_"))

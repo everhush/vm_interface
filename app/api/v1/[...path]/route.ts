@@ -3,8 +3,8 @@ import {schema,vmManifest} from "../../../../src/spec";
 import {parseComputerRequest,advancedSchema} from "../../../../src/advanced-spec";
 import {catalog} from "../../../../src/catalog";
 import {ApiError,kube,vmPath,vmiPath,actionPath,resetPath,owned,list,type Resource} from "../../../../src/kube";
-import {mutate,operation,listOperations,recordOperationTarget} from "../../../../src/operation";
-import {migrate} from "../../../../src/db";
+import {mutate,operation,operationForKey,listOperations,recordOperationTarget} from "../../../../src/operation";
+import {databaseReady} from "../../../../src/db";
 import {openApiDocument} from "../../../../src/openapi";
 import {inspectStorage,managedDisks,requireDeleteConfirmation} from "../../../../src/storage";
 import {configureGrowth,growthSpec,requireGrowthSubmitted} from "../../../../src/storage-growth";
@@ -35,7 +35,7 @@ const capabilities={phase:"console and storage development",verified:["native am
 async function handleCore(req:Request,context:{audit?:AuditContext}){
  try{
   const p=new URL(req.url).pathname.split("/").filter(Boolean).slice(2), m=req.method;
-  if(m==="GET"&&p.join("/")==="health"){await migrate();await kube("GET",vmPath()+"?limit=1");return json({ready:true});}
+  if(m==="GET"&&p.join("/")==="health"){await databaseReady();await kube("GET",vmPath()+"?limit=1");return json({ready:true});}
   const authorization=req.headers.get("authorization");
   const ticket=displayToken(authorization);
   if(ticket&&m==="GET"&&p[0]==="computers"&&p.length===3&&p[2]==="screenshot"){
@@ -115,6 +115,7 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
   if(m==="GET"&&p.join("/")==="audit")return json(await auditHistory(account));
   if(m==="GET"&&p.join("/")==="account/quota")return json(await quota(account));
   if(m==="GET"&&p[0]==="operations"&&p.length===1)return json(await listOperations(account));
+  if(m==="GET"&&p[0]==="operations"&&p.length===2&&p[1]==="by-key")return json(await operationForKey(account,req.headers.get("idempotency-key")));
   if(m==="GET"&&p[0]==="operations"&&p.length===2)return json(await operation(account,p[1]));
   if(p[0]!=="computers")throw new ApiError(404,"Not found");
   const key=req.headers.get("idempotency-key");

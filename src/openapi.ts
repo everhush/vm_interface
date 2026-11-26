@@ -111,6 +111,7 @@ export function openApiDocument(){
    "/computers/{id}/restart":lifecycle("Restart"),
    "/computers/{id}/reset":{post:write("Hard reset current VMI; unsaved guest data can be lost; verify guest boot separately",[id,idem],{required:true,content:json({type:"object",additionalProperties:false,required:["confirmHardReset","instanceUid"],properties:{confirmHardReset:{const:true},instanceUid:{type:"string",format:"uuid"}}})})},
    "/operations":{get:read("Latest 100 account-owned operation records",{type:"array",items:ref("Operation")})},
+   "/operations/by-key":{get:read("Read an account-owned durable operation receipt using the original Idempotency-Key header; never submit or replay a mutation",ref("Operation"),[idem])},
    "/operations/{id}":{get:read("Read durable submission and observed convergence independently; no automatic mutation replay",ref("Operation"),[opId])}
   },
   components:{
