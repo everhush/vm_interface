@@ -3,6 +3,8 @@ import {isIP} from "node:net";
 import {ApiError,kube,owned,pvcPath,type Resource} from "./kube";
 import {diskNames} from "./spec";
 import {hasOwner,managedDisks} from "./storage";
+import {vmStorageClass,type ManagedStorageClass} from "./storage-class";
+import {growthFor,growthState} from "./storage-growth-layout";
 const ns=()=>process.env.VM_NAMESPACE||"vm-interface";
 const podsPath=(id="")=>"/api/v1/namespaces/"+ns()+"/pods"+(id?"/"+id:"");
 export const MAX_FILE_BYTES=8*1024*1024;
@@ -23,8 +25,8 @@ async function optional(path:string){
  try{return await kube("GET",path) as Resource}catch(e){if(e instanceof ApiError&&e.status===404)return null;throw e}
 }
 function owner(id:string,uid:string){return [{apiVersion:"kubevirt.io/v1",kind:"VirtualMachine",name:id,uid,controller:false,blockOwnerDeletion:false}]}
-export function exchangePVC(id:string,account:string,uid:string,size:string){
- return {apiVersion:"v1",kind:"PersistentVolumeClaim",metadata:{name:diskNames(id).exchange,labels:{"vm-interface.io/account":account,"vm-interface.io/computer":id,"vm-interface.io/exchange":"true"},ownerReferences:owner(id,uid)},spec:{storageClassName:"local-path",accessModes:["ReadWriteOnce"],volumeMode:"Filesystem",resources:{requests:{storage:size+"Gi"}}}};
+export function exchangePVC(id:string,account:string,uid:string,size:string,storageClass:ManagedStorageClass="local-path"){
+ return {apiVersion:"v1",kind:"PersistentVolumeClaim",metadata:{name:diskNames(id).exchange,labels:{"vm-interface.io/account":account,"vm-interface.io/computer":id,"vm-interface.io/exchange":"true"},ownerReferences:owner(id,uid)},spec:{storageClassName:storageClass,accessModes:["ReadWriteOnce"],volumeMode:"Filesystem",resources:{requests:{storage:size+"Gi"}}}};
 }
 export function exchangePod(id:string,account:string,uid:string,token:string){
  return {apiVersion:"v1",kind:"Pod",metadata:{name:id+"-files",labels:{"vm-interface.io/account":account,"vm-interface.io/computer":id,"vm-interface.io/exchange-broker":"true"},ownerReferences:owner(id,uid)},spec:{
@@ -44,11 +46,13 @@ export async function ensureExchange(id:string,account:string,vm:Resource,initia
  if(!pvc){
   if(!initial)throw new ApiError(409,"Exchange PVC missing; refusing to recreate data");
   // Resource name is not part of the collection endpoint.
-  pvc=await kube("POST",pvcPath("").replace(/\/$/,""),exchangePVC(id,account,uid,size)) as Resource;
+  pvc=await kube("POST",pvcPath("").replace(/\/$/,""),exchangePVC(id,account,uid,size,vmStorageClass(vm.spec))) as Resource;
  }
  verify(pvc,id,account,uid);
  const spec=pvc.spec as {storageClassName?:string;volumeMode?:string;resources?:{requests?:{storage?:string}}};
- if(spec.storageClassName!=="local-path"||spec.volumeMode!=="Filesystem"||spec.resources?.requests?.storage!==size+"Gi")throw new ApiError(409,"Exchange PVC layout changed");
+ const grown=growthFor(vm.spec,pvcName);
+ if(grown&&!growthState(vm,pvcName,pvc)?.submitted)throw new ApiError(409,"Submit reserved exchange growth first");
+ if(spec.storageClassName!==vmStorageClass(vm.spec)||spec.volumeMode!=="Filesystem"||spec.resources?.requests?.storage!==(grown?.sizeGiB??size)+"Gi")throw new ApiError(409,"Exchange PVC layout changed");
  let pod=await optional(podsPath(id+"-files"));
  if(!pod){
   try{pod=await kube("POST",podsPath(),exchangePod(id,account,uid,randomBytes(32).toString("base64url"))) as Resource}catch(e){if(!(e instanceof ApiError)||e.status!==409)throw e;pod=await optional(podsPath(id+"-files"))}

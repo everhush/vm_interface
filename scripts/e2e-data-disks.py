@@ -93,6 +93,11 @@ def export_gone(ep):
     return False
 try:
     wait(stopped)
+    growth={"disk":"system.disk","sizeGiB":3,"expectedResourceVersion":state()["resourceVersion"]}
+    call("PATCH",path+"/storage",growth,token=b,idem=key(),expected=404)
+    call("POST",path+"/storage/plan",growth,expected=422)
+    call("PATCH",path+"/storage",growth,idem=key(),expected=422)
+    assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+3
     call("POST",path+"/disks",req("create",sizeGiB=1),token=b,idem=key(),expected=404)
     change("create",sizeGiB=1)
     created=wait(lambda: (d if (d:=disk()) and d.get("dataVolumeUid") and not d["attached"] else None))

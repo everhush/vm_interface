@@ -8,6 +8,7 @@ import {exposureSpec} from "./network";
 import {bootSpec} from "./boot";
 import {hardwareSchema} from "./hardware";
 import {dataDiskSpec} from "./data-disks";
+import {growthSpec} from "./storage-growth";
 
 const object = {type:"object"} as const;
 const ref = (name:string) => ({"$ref":"#/components/schemas/"+name});
@@ -83,7 +84,8 @@ export function openApiDocument(){
    "/computers/{id}/exchange-bundle":{get:{summary:"Download a bounded TAR of published VirtioFS inputs and verified outputs on a halted VM (not a full filesystem snapshot)",parameters:[id],responses:{"200":{description:"Published file bundle with manifest and SHA256 header",content:{"application/x-tar":{schema:{type:"string",format:"binary"}}}},...errors}}},
    "/computers/{id}/files":{get:read("List fully published guest output files",{type:"array",items:ref("ExchangeFile")},[id])},
    "/computers/{id}/files/{name}":{get:{summary:"Download verified guest output bytes",parameters:[id,{name:"name",in:"path",required:true,schema:{type:"string"}}],responses:{"200":{description:"Verified output",content:{"application/octet-stream":{schema:{type:"string",format:"binary"}}}},...errors}},put:write("Upload actual bytes atomically into the exchange volume",[id,idem,{name:"name",in:"path",required:true,schema:{type:"string"}},{name:"X-Content-SHA256",in:"header",required:true,schema:{type:"string",pattern:"^[0-9a-f]{64}$"}}],{required:true,content:{"application/octet-stream":{schema:{type:"string",format:"binary",maxLength:8388608}}}})},
-   "/computers/{id}/storage":{get:read("Inspect account-owned managed DataVolumes and PVCs including retained detached data disks",object,[id])},
+   "/computers/{id}/storage":{get:read("Inspect account-owned managed DataVolumes and PVCs including retained detached data disks",object,[id]),patch:write("Submit monotonic PVC growth on an operator-qualified CSI profile; guest growth is separate",[id,idem],{required:true,content:json(z.toJSONSchema(growthSpec))})},
+   "/computers/{id}/storage/plan":{post:{...read("Dry-run PVC growth and quota",object,[id]),requestBody:{required:true,content:json(z.toJSONSchema(growthSpec))}}},
    "/computers/{id}/disks":{post:write("Create, import or clone a reserved same-VM data disk, attach or detach while stopped; detached disks retain data and quota",[id,idem],diskBody)},
    "/computers/{id}/disk-exports/{name}":{post:write("Create bounded native offline export for an owned populated raw disk (data disk name, system.disk, or exchange.disk for block exchange)",[id,idem,{name:"name",in:"path",required:true,schema:{type:"string"}}]),get:read("Inspect private native export readiness",object,[id,{name:"name",in:"path",required:true,schema:{type:"string"}}]),delete:write("Close native export and release source after foreground deletion",[id,idem,{name:"name",in:"path",required:true,schema:{type:"string"}}])},
    "/computers/{id}/disk-exports/{name}/file":{get:{summary:"Stream owned native raw disk bytes",parameters:[id,{name:"name",in:"path",required:true,schema:{type:"string"}}],responses:{"200":{description:"Raw disk image",content:{"application/octet-stream":{schema:{type:"string",format:"binary"}}}},...errors}}},

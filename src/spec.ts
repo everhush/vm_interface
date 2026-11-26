@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {mediaMaxBytes,systemMaxGiB,installerGiB} from "./media-config";
 import {cirrosImage,fedoraImage} from "./catalog";
+import {configuredStorageClass} from "./storage-class";
 export {cirrosImage} from "./catalog";
 export const storageSpec=z.strictObject({
  systemGiB:z.number().int().min(1).max(systemMaxGiB),
@@ -49,7 +50,7 @@ export const schema=z.toJSONSchema(computerSpec);
 export function diskNames(id:string){return {boot:id+"-boot",exchange:id+"-exchange"};}
 function dataVolume(name:string,account:string,id:string,giB:number,source:object){
  return {metadata:{name,labels:{"vm-interface.io/account":account,"vm-interface.io/computer":id}},spec:{
-  source,storage:{storageClassName:"local-path",accessModes:["ReadWriteOnce"],volumeMode:"Filesystem",resources:{requests:{storage:giB+"Gi"}}}
+  source,storage:{storageClassName:configuredStorageClass(),accessModes:["ReadWriteOnce"],volumeMode:"Filesystem",resources:{requests:{storage:giB+"Gi"}}}
  }};
 }
 export function vmManifest(id:string,account:string,s:ComputerSpec){

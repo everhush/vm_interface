@@ -5,6 +5,7 @@ import {readDataDisks,dataDiskClaim,dataDiskNamePattern} from "./data-disk-layou
 import {hasOwner,managedDisks} from "./storage";
 import {mediaStatus} from "./media";
 import {systemMaxGiB} from "./media-config";
+import {growthState} from "./storage-growth-layout";
 const ns=()=>process.env.VM_NAMESPACE||"vm-interface";
 const exportPath=(id="")=>"/apis/export.kubevirt.io/v1/namespaces/"+ns()+"/virtualmachineexports"+(id?"/"+id:"");
 const exportName=/^vx-[a-f0-9]{32}$/;
@@ -59,7 +60,9 @@ async function diskTarget(id:string,account:string,disk:string,vm:Resource){
  if(!dv?.metadata?.uid||!pvc?.metadata?.uid||dv.metadata.name!==claim||pvc.metadata.name!==claim||dv.metadata.deletionTimestamp||pvc.metadata.deletionTimestamp||!hasOwner(dv,"VirtualMachine",vm.metadata?.uid)||!hasOwner(pvc,"DataVolume",dv.metadata.uid)||dv.metadata.labels?.[accountLabel]!==account||dv.metadata.labels?.[computerLabel]!==id||dvStorage?.resources?.requests?.storage!==sizeGiB+"Gi"||(dv.status as {phase?:string}|undefined)?.phase!=="Succeeded"||(pvc.status as {phase?:string}|undefined)?.phase!=="Bound")throw new ApiError(409,"Owned populated disk required for export");
  if(d?.media&&!(await mediaStatus(id,account,`data-${disk}`))?.ready)throw new ApiError(409,"Media transfer not verified");
  if(ref.kind==="boot"){const state=await mediaStatus(id,account,"boot");if(state&&!state.ready)throw new ApiError(409,"Boot media transfer not verified")}
- return {claim,pvcUid:pvc.metadata.uid,sizeGiB};
+ const growth=growthState(vm,claim,pvc);
+ if(growth&&!growth.pvcCapacityConverged)throw new ApiError(409,"Wait for PVC growth convergence before exporting");
+ return {claim,pvcUid:pvc.metadata.uid,sizeGiB:growth?.reservedGiB??sizeGiB};
 }
 async function ownedExport(id:string,account:string,name:string){
  const vm=await owned(id,account);

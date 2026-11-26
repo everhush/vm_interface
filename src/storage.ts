@@ -1,6 +1,7 @@
 import {ApiError,kube,owned,dvPath,pvcPath,type Resource} from "./kube";
 import {diskNames} from "./spec";
 import {readDataDisks,dataDiskClaim} from "./data-disk-layout";
+import {growthState} from "./storage-growth-layout";
 
 type DiskRef={kind:"boot"|"exchange"|"installer"|"auxiliary"|"data";name:string;mode?:"virtiofs";diskName?:string;attached?:boolean;sizeGiB?:number;source?:string};
 type Template={metadata?:{name?:string}};
@@ -42,7 +43,7 @@ export async function inspectStorage(id:string,account:string){
   if(pvc&&!hasOwner(pvc,"DataVolume",dv?.metadata?.uid)&&!hasOwner(pvc,"VirtualMachine",vm.metadata?.uid))throw new ApiError(409,"PVC ownership not confirmed");
   const ds=dv?.status as {phase?:string;progress?:string}|undefined;
   const ps=pvc?.status as {phase?:string;capacity?:{storage?:string}}|undefined;
-  return {...disk,dataVolumeUid:dv?.metadata?.uid??null,dataVolumePhase:ds?.phase??null,progress:ds?.progress??null,pvcPhase:ps?.phase??null,pvcUid:pvc?.metadata?.uid??null,capacity:ps?.capacity?.storage??null};
+  return {...disk,growth:growthState(vm,disk.name,pvc),dataVolumeUid:dv?.metadata?.uid??null,dataVolumePhase:ds?.phase??null,progress:ds?.progress??null,pvcPhase:ps?.phase??null,pvcUid:pvc?.metadata?.uid??null,capacity:ps?.capacity?.storage??null};
  }));
  return {id,mode:disks.length?"persistent":"ephemeral",volumes,deletePolicy:disks.length?"explicit-confirmation-required":"no-persistent-disks"};
 }
