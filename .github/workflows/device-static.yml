@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg tesseract-ocr fonts-dejavu-core
+      - run: bash scripts/install-evidence-tools.sh
       - run: bash scripts/device-validate.sh checks
       - name: Retain resolved dependency lock for reproducibility review
         if: always() && hashFiles('package-lock.json') != ''
