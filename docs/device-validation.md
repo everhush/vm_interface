@@ -24,7 +24,7 @@ sudo python3 scripts/device-preflight.py --architecture amd64
 bash scripts/device-validate.sh core --confirm-disposable
 ```
 
-The script provisions K3s and the pinned operator versions, deploys Vinext, generates ephemeral local test account secrets, port-forwards only to localhost, and exercises actual product API tests. It retains the cluster for operator inspection/disposal. Do not rerun over the same installation; use a clean disposable device per validation iteration. It does not register a persistent GitHub runner. KVM API creation alone does not establish actual native acceleration, particularly inside an emulated outer EL2 guest.
+The script verifies the exact K3s installer, matching native binary and KubeVirt/CDI/CNPG release manifests against `infra/provision-sources.json` before execution (see `evidence/provision-sources.json`; integrity is not full publisher signature or container-image attestation). It provisions K3s and the pinned operator versions, deploys Vinext, generates ephemeral local test account secrets, port-forwards only to localhost, and exercises actual product API tests. It retains the cluster for operator inspection/disposal. Do not rerun over the same installation; use a clean disposable device per validation iteration. It does not register a persistent GitHub runner. KVM API creation alone does not establish actual native acceleration, particularly inside an emulated outer EL2 guest.
 
 ## 3. Historical optional Windows x64 (not a readiness gate)
 
@@ -78,7 +78,7 @@ bash scripts/device-validate.sh android --confirm-disposable \
 
 Each scenario is an external client file, not a mandatory backend workflow. JSON fields: setup (array), application (array), beforeMarker, afterMarker, resultName ("result.txt"), expectedResultSha256 (fixed fixture bytes, calculate with SHA256). Each action is a single-key object: wait ({text,seconds}), delay (seconds), text (printable ASCII, never credentials), keys (X11 keysyms pressed together), click ([x,y] at actual display resolution), human (description, setup only), system-boot (true, Windows setup only). Use screen inspection and exact-version scenario files; screenshots are not collected during human credential entry. Recording is capped at 120 seconds per segment; qualify that application sequence fits, or explicitly revise and validate segmentation. Never pretend an unfinished run is complete.
 
-Expected Windows output: ASCII "VM Interface Windows 7-Zip functional proof" followed by LF. Expected Android output: UTF-8 "VM Interface Android APK functional proof" followed by LF. The latter must show APKCOMPLETE arm64-v8a. Input markers/after markers are real OCR assertions and must not be inserted into video.
+Expected Windows output: ASCII "VM Interface Windows 7-Zip functional proof" followed by LF. Expected Android output: UTF-8 "VM Interface Android APK functional proof" followed by LF, then `challenge-sha256:` plus the lower-case SHA256 of the fresh 4096-byte input and a final LF. The latter must show APKCOMPLETE arm64-v8a. Input markers/after markers are real OCR assertions and must not be inserted into video.
 
 ## 6. Evidence
 
@@ -90,7 +90,7 @@ To verify already downloaded evidence independently (no KVM needed): `python3 sc
 
 The LineageOS 23.2 ARM64 bundle from release v2026.10.18 passed publisher-attestation verification, exact archive SHA256 and QCOW2 checks on fork run 45623125031. The signed proof APK was built and checked in the same job. See its android-media-qualification artifact 15026182260 for exact disk manifests and APK digest. This does not certify boot or the exchange mount.
 
-Use an authorized SDK/image and run the acquisition workflow or reproduce its steps using scripts/fetch-pinned-media.py, scripts/qualify-android-media.sh and the pinned sources. Use vda as --media and vdb as --auxiliary-media with the matching hashes and capacities in the disk manifest (6 GiB and 18 GiB respectively). No bundled NVRAM or unsigned recovery is imported. Verify native boot and SAF exchange without bypassing signatures or SELinux.
+Use an authorized SDK/image and run the acquisition workflow or reproduce its steps using scripts/fetch-pinned-media.py, scripts/qualify-android-media.sh and the pinned sources. Use vda as --media and vdb as --auxiliary-media with the matching hashes and capacities in the disk manifest (6 GiB and 18 GiB respectively). No bundled NVRAM or unsigned recovery is imported. The ARM64 showcase explicitly selects `storage.exchangeTag: share`, matching the LineageOS virtio-common fstab (`share /mnt/vendor/shared virtiofs`); the backend claim stays account-owned. The source tree is corroboration, not proof that the pinned build mounts or exposes it through SAF. The large-media disposable profile reserves a 20 GiB staging PVC, caps staged data at 16 GiB and verifies API/reconciler settings. Verify native boot, effective tag, and user-authorized SAF read/write without bypassing signatures or SELinux.
 
 ### Windows driver media (offline qualified; guest installation pending)
 
@@ -129,6 +129,6 @@ On an authorized preparation machine with Android SDK 34, JDK, qemu-img and auth
 ```sh
 bash scripts/qualify-android-media.sh /absolute/path/to/android-inputs --retain-disks
 python3 scripts/prepared_android.py /absolute/path/to/android-inputs --preflight-only
-````
+```
 
 This verifies the exact pinned archive and both disk hashes against the committed prior qualification manifest, builds/signs APK v3, generates the matching scenario, and validates input only. No KVM, API credentials or guest execution. Keep disks private to the authorized operator; CI artifacts retain only manifest, APK and scenario. On the independent disposable native ARM64 device after explicit #12 readiness, run `python3 scripts/prepared_android.py /absolute/path/to/android-inputs --confirm-disposable`. No manual digest substitution required. First-run UI/SAF authorization remains a genuine device checkpoint; no security bypass or synthetic evidence.
