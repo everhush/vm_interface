@@ -62,6 +62,9 @@ assert s["provisioner"]=="rawfile.csi.openebs.io" and s["allowVolumeExpansion"] 
 PY
 kubectl get csidriver rawfile.csi.openebs.io
 # The default RBAC suite was verified before enabling this explicit profile.
+# Keep API offline until actual admission enforcement stabilizes.
+kubectl -n vm-interface scale deployment/vm-api --replicas=0
+kubectl -n vm-interface wait --for=delete pod -l app=vm-api --timeout=180s
 kubectl apply --dry-run=server -f infra/storage-growth.yaml
 kubectl apply -f infra/storage-growth.yaml
 for i in $(seq 1 30); do
@@ -80,14 +83,33 @@ done
 # Kubernetes' built-in storage admission before our policy can be evaluated.
 # Test a normally valid metadata patch instead; require OUR policy's denial,
 # not an unrelated storage-class error. Dry-run prevents a real mutation.
-if kubectl --as=system:serviceaccount:vm-interface:vm-api -n vm-interface patch pvc vm-recordings --type=merge --dry-run=server -p '{"metadata":{"annotations":{"vm-interface.example/denial-probe":"true"}}}' >evidence/csi-denied-patch.txt 2>&1; then
-  echo "Unexpected non-VM PVC patch permission" >&2
+# Policy typing is not proof of binding activation. Require three consecutive
+# actual policy denials; no API container runs during propagation.
+denials=0
+: > evidence/csi-denied-patch.txt
+for attempt in $(seq 1 30); do
+  if output=$(kubectl --as=system:serviceaccount:vm-interface:vm-api -n vm-interface patch pvc vm-recordings --type=merge --dry-run=server -p '{"metadata":{"annotations":{"vm-interface.example/denial-probe":"true"}}}' 2>&1); then
+    denials=0
+    printf '%s dry-run unexpectedly allowed; API remains scaled down\n' "$attempt" >> evidence/csi-denied-patch.txt
+  elif grep -q 'vm-pvc-growth' <<<"$output"; then
+    denials=$((denials+1))
+    printf '%s %s\n' "$attempt" "$output" >> evidence/csi-denied-patch.txt
+    if [ "$denials" -ge 3 ]; then break; fi
+  else
+    printf '%s %s\n' "$attempt" "$output" >> evidence/csi-denied-patch.txt
+    denials=0
+  fi
+  sleep 2
+done
+cat evidence/csi-denied-patch.txt
+if [ "$denials" -lt 3 ]; then
+  kubectl -n vm-interface delete rolebinding vm-api-pvc-growth --ignore-not-found
+  echo "PVC admission enforcement did not stabilize; API stays scaled down" >&2
   exit 1
 fi
-cat evidence/csi-denied-patch.txt
-grep -q 'vm-pvc-growth' evidence/csi-denied-patch.txt
 # Patch both containers in one rollout; kubectl set env --containers accepts
 # a name pattern, not a reliable comma-separated selection.
 kubectl -n vm-interface patch deployment vm-api --type=strategic -p '{"spec":{"template":{"spec":{"containers":[{"name":"api","env":[{"name":"VM_STORAGE_CLASS","value":"vm-expandable"}]},{"name":"reconcile","env":[{"name":"VM_STORAGE_CLASS","value":"vm-expandable"}]}]}}}}'
+kubectl -n vm-interface scale deployment/vm-api --replicas=1
 kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
 kubectl -n vm-interface get deployment vm-api -o json | python3 -c 'import json,sys; c={x["name"]:x for x in json.load(sys.stdin)["spec"]["template"]["spec"]["containers"]}; assert all(any(e["name"]=="VM_STORAGE_CLASS" and e.get("value")=="vm-expandable" for e in c[n].get("env",[])) for n in ("api","reconcile"))'

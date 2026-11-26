@@ -11,9 +11,16 @@ def call(method,path,token=a,data=None,idem=None,expected=200,raw=None,binary=Fa
     if raw is not None: headers["Content-Type"]="application/octet-stream"
     if extra: headers.update(extra)
     req=urllib.request.Request(base+path,data=raw if raw is not None else json.dumps(data).encode() if data is not None else None,headers=headers,method=method)
-    try:
-        with urllib.request.urlopen(req,timeout=240) as res: status,payload=res.status,res.read()
-    except urllib.error.HTTPError as exc: status,payload=exc.code,exc.read()
+    for attempt in range(8):
+        try:
+            with urllib.request.urlopen(req,timeout=240) as res: status,payload=res.status,res.read()
+            break
+        except urllib.error.HTTPError as exc:
+            status,payload=exc.code,exc.read()
+            break
+        except (urllib.error.URLError,ConnectionError):
+            if method!="GET" or attempt==7:raise
+            time.sleep(2)
     assert status==expected,(method,path,status,payload[:500])
     return payload if binary else json.loads(payload)
 mode=sys.argv[2] if len(sys.argv)>2 else "direct"
