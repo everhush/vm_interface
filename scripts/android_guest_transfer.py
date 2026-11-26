@@ -75,7 +75,7 @@ class AndroidGuestTransfer:
         self.call, self.wait, self.path, self.token_b, self.output = call, wait, path, token_b, output
         self.tmp = tempfile.TemporaryDirectory(prefix="vm-android-adb-")
         self.env = dict(os.environ)
-        for name in ("ADB_SERVER_SOCKET", "ANDROID_ADB_SERVER_PORT", "ADB_SERVER_PORT", "ANDROID_SERIAL", "ANDROID_SDK_HOME", "ADB_VENDOR_KEYS"):
+        for name in ("ADB_SERVER_SOCKET", "ANDROID_ADB_SERVER_PORT", "ADB_SERVER_PORT", "ANDROID_SERIAL", "ANDROID_SDK_HOME", "ADB_VENDOR_KEYS","TOKEN_A","TOKEN_B","GUEST_RELAY_TOKEN"):
             self.env.pop(name, None)
         self.env.update({"HOME":self.tmp.name, "ANDROID_USER_HOME":self.tmp.name})
         self.adb = shutil.which("adb")
@@ -116,7 +116,8 @@ class AndroidGuestTransfer:
 
     def disconnect(self):
         if self.serial:
-            self.command("disconnect",self.serial,check=False)
+            try:self.command("disconnect",self.serial,check=False,timeout=10)
+            except (OSError,subprocess.SubprocessError):pass
         self.serial=None
         if self.relay:
             self.relay.terminate()

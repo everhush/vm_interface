@@ -7,6 +7,7 @@ from pathlib import Path
 from showcase_inputs import load_scenario
 from android_fixture import ANDROID_RESULT_MODE,android_result
 from screen_targets import locate_label
+from android_guest_transfer import AndroidGuestTransfer, verify_staged_bundle
 
 P = argparse.ArgumentParser()
 P.add_argument("profile", choices=["windows", "android"])
@@ -27,7 +28,12 @@ P.add_argument("--record-consent", action="store_true", required=True)
 P.add_argument("--retain", action="store_true")
 P.add_argument("--exchange-drive", default="X:", help="Windows mounted guest exchange drive")
 P.add_argument("--preflight-only", action="store_true", help="Validate local inputs without provisioning or API credentials")
+P.add_argument("--android-transfer", choices=["virtiofs-saf","adb-saf"], default="virtiofs-saf")
+P.add_argument("--authorize-android-debug", action="store_true")
 args = P.parse_args()
+adb_mode=args.android_transfer=="adb-saf"
+if adb_mode != args.authorize_android_debug or (adb_mode and args.profile!="android"):
+    P.error("Explicit Android-only authenticated debug authorization is required for adb-saf")
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 def digest(path):
@@ -72,13 +78,13 @@ else:
     assert args.profile!="windows", "Windows driver bootstrap requires a separately verified auxiliary ISO"
 
 if args.preflight_only:
-    print(json.dumps({"profile":args.profile,"localInputsVerified":True,"guestCompatibilityVerified":False,"mediaSha256":args.media_sha256,"softwareSha256":args.software_sha256,"scenarioSha256":digest(args.scenario)}))
+    print(json.dumps({"profile":args.profile,"localInputsVerified":True,"guestCompatibilityVerified":False,"transferPath":args.android_transfer,"mediaSha256":args.media_sha256,"softwareSha256":args.software_sha256,"scenarioSha256":digest(args.scenario)}))
     raise SystemExit(0)
 os.environ["PROOF_OUTPUT_DIR"] = "evidence/showcase-" + args.profile
 h = runpy.run_path(str(Path(__file__).with_name("e2e-api-control-proof.py")), run_name="proof_helpers")
 call, wait, screen, batch, sha = (h[x] for x in ("call","wait","screen","batch","sha"))
 OUT, A, B = h["OUT"], h["A"], h["B"]
-path = rec = key_id = ticket = None
+path = rec = key_id = ticket = guest_transfer = None
 lease = False
 ticket_expiry = 0
 ticket_id = None
@@ -175,6 +181,23 @@ def steps(items, recording=False):
         else:
             raise AssertionError("Unsupported scenario action: "+kind)
 
+def running():
+    instance=call("GET",path).get("instance")
+    return instance if instance and instance["status"]["phase"]=="Running" else None
+
+def identities():
+    volumes=call("GET",path+"/storage")["volumes"]
+    if not volumes or not all(v["pvcPhase"]=="Bound" and v["pvcUid"] for v in volumes):return None
+    return {v.get("diskName") or v["kind"]:v["pvcUid"] for v in volumes}
+
+def upload_android():
+    for name,data,phase in [("proof.apk",software,"upload file"),("challenge.bin",challenge,"upload challenge")]:
+        response=call("PUT",path+"/files/"+name,raw=data,expected=202,extra_headers={"Content-Type":"application/octet-stream","X-Content-SHA256":sha(data)},phase=phase)
+        assert response["result"]["sha256"]==sha(data)
+    (OUT/"challenge.bin").write_bytes(challenge)
+    (OUT/"proof.apk").write_bytes(software)
+    (OUT/"scenario.json").write_bytes(args.scenario.read_bytes())
+
 try:
     win=args.profile=="windows"
     fmt="iso" if win else ("qcow2" if args.media.suffix.lower()==".qcow2" else "raw")
@@ -185,6 +208,7 @@ try:
           "media":{"format":fmt,"bytes":args.media.stat().st_size,"sha256":args.media_sha256,
                    "source":args.source,"os":"Windows Server 2022" if win else "Android",
                    "version":args.version,"authorizedByClient":True}}
+    if adb_mode:spec["network"]="private"
     if args.auxiliary_media:
         spec["auxiliaryDisk"]={"sizeGiB":args.auxiliary_gib,"media":{**spec["media"],"format":"iso" if win else "qcow2","bytes":args.auxiliary_media.stat().st_size,"sha256":args.auxiliary_sha256}}
     call("POST","/computers/plan",body=spec)
@@ -210,12 +234,25 @@ try:
     if args.auxiliary_media:
         call("POST",path+"/start",body={},expected=409)
         import_slot("auxiliary",args.auxiliary_media)
+    software=args.software.read_bytes()
+    if not win:
+        challenge=secrets.token_bytes(4096)
+        challenge_digest=sha(challenge)
+    if adb_mode:
+        upload_android()
+        raw_bundle,headers=call("GET",path+"/exchange-bundle",binary=True,phase="staged bundle")
+        assert headers.get("X-Content-SHA256")==sha(raw_bundle)
+        call("GET",path+"/exchange-bundle",B,expected=404,binary=True)
+        staged=verify_staged_bundle(raw_bundle,{"proof.apk":software,"challenge.bin":challenge})
+        (OUT/"staged-exchange.tar").write_bytes(raw_bundle)
+        for name,data in staged.items():(OUT/("staged-"+name)).write_bytes(data)
     if win:
         challenge=secrets.token_bytes(64)
         challenge_sha=sha(challenge)
         call("PUT",path+"/files/driver-challenge.bin",raw=challenge,expected=202,extra_headers={"Content-Type":"application/octet-stream","X-Content-SHA256":challenge_sha})
     call("POST",path+"/start",body={},expected=202,phase="start")
-    wait(lambda:(call("GET",path).get("instance") or {}).get("status",{}).get("phase")=="Running",600,"VM not Running")
+    instance=wait(running,600,"VM not Running")
+    original=wait(identities,120,"Persistent storage not bound")
     refresh_key()
     steps(scenario["setup"])
     if win:
@@ -224,26 +261,24 @@ try:
         steps([{"text":"$d=(Get-Volume | Where-Object FileSystemLabel -eq 'VMDRIVERS').DriveLetter; if (@($d).Count -ne 1) { throw 'Missing driver media' }; & ($d+':\\bootstrap.ps1') -Drive '"+args.exchange_drive+"' -ChallengeSha256 '"+challenge_sha+"'"},{"keys":[0xff0d]},{"wait":{"text":"VMDRIVERSREADY","seconds":180}}])
     # Setup must establish OS installation, guest exchange mount and desktop
     # readiness before recording. Device-specific steps are not fabricated.
-    software=args.software.read_bytes()
-    name="software.exe" if win else "proof.apk"
-    upload=call("PUT",path+"/files/"+name,raw=software,expected=202,
-                extra_headers={"Content-Type":"application/octet-stream","X-Content-SHA256":sha(software)},phase="upload file")
-    assert upload["result"]["sha256"]==args.software_sha256
     if win:
+        upload=call("PUT",path+"/files/software.exe",raw=software,expected=202,
+                    extra_headers={"Content-Type":"application/octet-stream","X-Content-SHA256":sha(software)},phase="upload file")
+        assert upload["result"]["sha256"]==args.software_sha256
         fixture=(Path(__file__).resolve().parents[1]/"showcases/windows/proof.ps1").read_bytes()
         call("PUT",path+"/files/proof.ps1",raw=fixture,expected=202,extra_headers={"Content-Type":"application/octet-stream","X-Content-SHA256":sha(fixture)})
+    elif adb_mode:
+        guest_transfer=AndroidGuestTransfer(call,wait,path,B,OUT)
+        guest_transfer.authorize(lambda:steps([{"human":"Approve only the newly displayed RSA debugging key in the guest. Never enable unauthenticated debugging."}]))
+        guest_transfer.install(OUT/"staged-proof.apk",OUT/"staged-challenge.bin")
     else:
-        challenge=secrets.token_bytes(4096)
-        challenge_digest=sha(challenge)
-        uploaded=call("PUT",path+"/files/challenge.bin",raw=challenge,expected=202,extra_headers={"Content-Type":"application/octet-stream","X-Content-SHA256":challenge_digest},phase="upload challenge")
-        assert uploaded["result"]["sha256"]==challenge_digest
-        (OUT/"challenge.bin").write_bytes(challenge)
-        (OUT/"proof.apk").write_bytes(software)
-        (OUT/"scenario.json").write_bytes(args.scenario.read_bytes())
+        upload_android()
     # Install/authorize uploaded software only after the bytes exist in the exchange.
     steps(scenario["softwareSetup"])
     visible(scenario["beforeMarker"],"before",120)
-    assert not any(f["name"]==scenario["resultName"] for f in call("GET",path+"/files")), "Stale result"
+    if adb_mode:guest_transfer.absent()
+    else:assert not any(f["name"]==scenario["resultName"] for f in call("GET",path+"/files")), "Stale result"
+    uid=wait(running,120,"Guest not running")["metadata"]["uid"]
     # Never record login/MFA or installation licensing screens.
     start=call("POST",path+"/recordings",body={"consent":True,"maxSeconds":120},expected=202,phase="record start")
     rec=path+"/recordings/"+start["result"]["id"]
@@ -255,14 +290,17 @@ try:
         steps([{"text":command},{"keys":[0xff0d]}],recording=True)
     steps(scenario["application"],recording=True)
     visible(scenario["afterMarker"],"after",45)
-    wait(lambda:any(f["name"]==scenario["resultName"] for f in call("GET",path+"/files")),20,"Guest output not published")
-    result,headers=call("GET",path+"/files/"+scenario["resultName"],binary=True,phase="download file")
-    if win:
-        assert sha(result)==scenario["expectedResultSha256"]==headers.get("X-Content-SHA256")
+    if adb_mode:
+        result=guest_transfer.result()
+        assert result==android_result(challenge)
     else:
-        assert result==android_result(challenge) and sha(result)==headers.get("X-Content-SHA256")
+        wait(lambda:any(f["name"]==scenario["resultName"] for f in call("GET",path+"/files")),20,"Guest output not published")
+        result,headers=call("GET",path+"/files/"+scenario["resultName"],binary=True,phase="download file")
+        assert sha(result)==headers.get("X-Content-SHA256")
+        if win:assert sha(result)==scenario["expectedResultSha256"]
+        else:assert result==android_result(challenge)
+        call("GET",path+"/files/"+scenario["resultName"],B,expected=404,binary=True)
     (OUT/"guest-result.bin").write_bytes(result)
-    call("GET",path+"/files/"+scenario["resultName"],B,expected=404,binary=True)
     time.sleep(4);release()
     call("POST",rec+"/stop",body={},expected=202,phase="record stop")
     def complete():
@@ -270,17 +308,30 @@ try:
         return s if s["status"]=="completed" else None
     meta=wait(complete,120,"Recording incomplete")
     video,headers=call("GET",rec+"/file",binary=True,phase="retrieve MP4")
-    assert sha(video)==meta["sha256"] and len(video)==meta["bytes"] and headers.get("Content-Type")=="video/mp4"
+    assert meta["instanceUid"]==uid and sha(video)==meta["sha256"] and len(video)==meta["bytes"] and headers.get("Content-Type")=="video/mp4"
     raw=OUT/"platform-recording.mp4";raw.write_bytes(video)
     decoded=h["check_video"](raw,norm(scenario["beforeMarker"]),norm(scenario["afterMarker"]))
     call("GET",rec+"/file",B,expected=404,binary=True)
     call("DELETE",rec,expected=202);rec=None
+    if guest_transfer:guest_transfer.disconnect()
     call("POST",path+"/stop",body={},expected=202,phase="stop")
     wait(lambda:call("GET",path)["instance"] is None,300,"Stop failed")
     h["cold_resize"](path,3,4096)
-    call("POST",path+"/start",body={},expected=202)
-    wait(lambda:(call("GET",path).get("instance") or {}).get("status",{}).get("phase")=="Running",600,"Resize restart failed")
-    again,_=call("GET",path+"/files/"+scenario["resultName"],binary=True)
+    call("POST",path+"/start",body={},expected=202,phase="restart after resize")
+    resized=wait(running,600,"Resize restart failed")
+    new_uid=resized["metadata"]["uid"]
+    domain=resized["spec"]["domain"]
+    assert new_uid!=uid and domain["cpu"]["cores"]==3 and domain["memory"]["guest"] in ("4096Mi","4Gi")
+    after=wait(identities,120,"Storage not bound after resize")
+    assert original==after
+    if adb_mode:
+        again=guest_transfer.result()
+        guest_transfer.report["rebootOutputSha256"]=sha(again)
+        guest_transfer.report["stagedBundleSha256"]=sha(raw_bundle)
+        (OUT/"android-adb.json").write_text(json.dumps(guest_transfer.report,indent=2)+"\n")
+        guest_transfer.close();guest_transfer=None
+    else:
+        again,_=call("GET",path+"/files/"+scenario["resultName"],binary=True)
     assert again==result
     call("POST",path+"/stop",body={},expected=202)
     wait(lambda:call("GET",path)["instance"] is None,300,"Final stop failed")
@@ -293,12 +344,17 @@ try:
     key_id=None
     proof={"profile":args.profile,"vmId":created["result"]["id"],"architecture":spec["architecture"],
            "mediaSha256":args.media_sha256,"auxiliarySha256":args.auxiliary_sha256,"softwareSha256":args.software_sha256,"outputSha256":sha(result),
-           "scenarioSha256":digest(args.scenario),"traceSha256":sha(h["TRACE"].read_bytes()),"runId":os.environ.get("GITHUB_RUN_ID"),"commit":os.environ.get("GITHUB_SHA"),"screenMarkersVerified":True,"recording":{**decoded,"sha256":meta["sha256"]},
-           "coldResizeAndFilePersistence":True,"retained":args.retain}
+           "scenarioSha256":digest(args.scenario),"traceSha256":sha(h["TRACE"].read_bytes()),"runId":os.environ.get("GITHUB_RUN_ID"),"commit":os.environ.get("GITHUB_SHA"),"screenMarkersVerified":True,"recording":{**decoded,"sha256":meta["sha256"],"bytes":meta["bytes"]},
+           "coldResizeAndFilePersistence":True,"instanceUid":uid,"resizedInstanceUid":new_uid,"originalPvcUids":original,"resizedPvcUids":after,"cpuAfterResize":domain["cpu"]["cores"],"retained":args.retain}
     if not win:proof.update({"challengeSha256":challenge_digest,"challengeBytes":len(challenge),"resultMode":ANDROID_RESULT_MODE})
+    if not win:proof["transferPath"]="authorized-adb-over-private-tunnel" if adb_mode else "virtiofs-saf"
+    if adb_mode:proof["guestTransferSha256"]=digest(OUT/"android-adb.json")
     proof["derivedPresentation"]=h["presentation"](raw,"REAL "+args.profile.upper()+" SHOWCASE")
     (OUT/"verification.json").write_text(json.dumps(proof,indent=2)+"\n")
 finally:
+    if guest_transfer:
+        try:guest_transfer.close()
+        except Exception:print("Guest transfer cleanup incomplete")
     for method,endpoint,token,scheme,body,expected in [
         ("DELETE",path+"/input-lease" if path and lease else None,ticket,"Console",None,200),
         ("POST",rec+"/stop" if rec else None,A,"Bearer",{},202),
