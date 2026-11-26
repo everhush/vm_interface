@@ -13,14 +13,22 @@ const a=process.env.TOKEN_A,b=process.env.TOKEN_B;
 assert.ok(a&&b);
 const ca=readFileSync(process.env.CONSOLE_CA_PATH||"/tmp/console-tls.crt");
 const delay=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
+async function readRetry(url:string,init:RequestInit){
+ for(let i=0;i<8;i++){
+  try{return await fetch(url,{...init,signal:AbortSignal.timeout(30000)})}
+  catch(e){if(i===7)throw e;await delay(2000)}
+ }
+ throw Error("Read transport did not recover");
+}
 async function call(method:string,path:string,token:string,body?:unknown,expected=200,scheme="Bearer",idempotencyKey=randomUUID()){
  console.log("API",method,path,"expected",expected);
- const r=await fetch(base+path,{method,headers:{connection:"close",authorization:scheme+" "+token,"content-type":"application/json","idempotency-key":idempotencyKey},...(body!==undefined?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)});
+ const request=method==="GET"?readRetry:fetch;
+ const r=await request(base+path,{method,headers:{connection:"close",authorization:scheme+" "+token,"content-type":"application/json","idempotency-key":idempotencyKey},...(body!==undefined?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)});
  assert.equal(r.status,expected,method+" "+path);
  return r.json();
 }
 async function screenshot(path:string,filename:string){
- const r=await fetch(base+path+"/screenshot",{headers:{authorization:"Bearer "+a},signal:AbortSignal.timeout(30000)});
+ const r=await readRetry(base+path+"/screenshot",{headers:{connection:"close",authorization:"Bearer "+a},signal:AbortSignal.timeout(30000)});
  assert.equal(r.status,200);
  assert.equal(r.headers.get("content-type"),"image/png");
  const data=Buffer.from(await r.arrayBuffer());assert.ok(data.length>100&&data.length<=8*1024*1024);

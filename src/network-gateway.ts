@@ -1,12 +1,12 @@
 import {readFileSync} from "node:fs";
-import {Transform,pipeline} from "node:stream";
 import type {Duplex} from "node:stream";
 import type {IncomingMessage} from "node:http";
-import {WebSocket,WebSocketServer,createWebSocketStream} from "ws";
+import {WebSocket,WebSocketServer} from "ws";
+import {relayBinaryTunnel} from "./tunnel-relay";
 import {lookupExposure,networkToken} from "./network";
 import {ApiError} from "./kube";
 const active=new Set<string>();
-const MAX_TUNNELS=8,MAX_BYTES=32*1024*1024,MAX_IDLE=30000;
+const MAX_TUNNELS=8;
 const pattern=/^\/api\/v1\/computers\/(vm-[a-f0-9]{32})\/exposures\/([a-f0-9-]{36})\/connect$/;
 export function isExposurePath(path:string){return pattern.test(path)}
 function reject(socket:Duplex,status:number){if(!socket.destroyed)socket.end("HTTP/1.1 "+status+" Rejected\r\nConnection: close\r\nContent-Length: 0\r\n\r\n")}
@@ -31,33 +31,18 @@ export async function handleNetworkUpgrade(req:IncomingMessage,socket:Duplex,hea
   upstream.on("error",()=>{});
   const source=upstream;
   await new Promise<void>((resolve,reject)=>{
-   source.once("open",resolve);source.once("error",reject);source.once("close",()=>reject(Error("Guest tunnel closed")));
+   source.once("open",()=>{source.pause();resolve()});source.once("error",reject);source.once("close",()=>reject(Error("Guest tunnel closed")));
+   source.once("unexpected-response",(_req,res)=>{const status=res.statusCode;res.resume();console.warn("Private tunnel upstream rejected",status);reject(new ApiError(502,"Guest TCP tunnel unavailable"))});
   });
   await lookupExposure(grantId,computerId,token);
   if(socket.destroyed||source.readyState!==WebSocket.OPEN)throw new ApiError(502,"Tunnel unavailable");
+  let attached=false;
   wss.handleUpgrade(req,socket,head,client=>{
-   let closed=false,checking=false,total=0,last=Date.now();
-   const inbound=createWebSocketStream(client),outbound=createWebSocketStream(source);
-   const finish=()=>{
-    if(closed)return;closed=true;clearInterval(timer);active.delete(grant.id);
-    inbound.destroy();outbound.destroy();
-    client.terminate();source.terminate();
-   };
-   const meter=()=>new Transform({transform(chunk,_encoding,callback){
-    total+=chunk.length;last=Date.now();
-    if(total>MAX_BYTES||Date.now()>=grant.expiresAt.getTime()){callback(Error("Tunnel limit exceeded"));return}
-    callback(null,chunk);
-   }});
-   const timer=setInterval(()=>{
-    if(closed)return;
-    if(Date.now()-last>MAX_IDLE||Date.now()>=grant.expiresAt.getTime()){finish();return}
-    if(checking)return;checking=true;
-    void lookupExposure(grantId,computerId,token).catch(()=>finish()).finally(()=>{checking=false});
-   },500);
-   client.on("error",finish);source.on("error",finish);client.on("close",finish);source.on("close",finish);
-   pipeline(inbound,meter(),outbound,finish);
-   pipeline(outbound,meter(),inbound,finish);
+   attached=true;
+   relayBinaryTunnel(client,source,grant.expiresAt.getTime(),()=>lookupExposure(grantId,computerId,token),()=>active.delete(grant.id));
+   source.resume();
   });
+  if(!attached)throw new ApiError(502,"Tunnel client handshake failed");
   // ownership transferred to the live tunnel.
   reservation=undefined;upstream=undefined;
  }catch(e){
