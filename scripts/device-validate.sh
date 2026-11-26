@@ -18,9 +18,9 @@ if [ "$profile" = checks ]; then
   exit 0
 fi
 case "$profile" in
-  core|windows) architecture=amd64 ;;
+  core|linux|windows) architecture=amd64 ;;
   android) architecture=arm64 ;;
-  *) echo 'Usage: bash scripts/device-validate.sh checks | {core|windows|android} --confirm-disposable [showcase args...]' >&2; exit 2 ;;
+  *) echo 'Usage: bash scripts/device-validate.sh checks | {core|linux|windows|android} --confirm-disposable [showcase args...]' >&2; exit 2 ;;
 esac
 test "${2:-}" = --confirm-disposable
 shift 2
@@ -33,7 +33,8 @@ test ! -e "$HOME/.kube/config"
 test -z "${KUBECONFIG:-}"
 for cmd in docker node npm python3 curl openssl tesseract ffmpeg ffprobe git skopeo; do command -v "$cmd" >/dev/null; done
 mkdir -p evidence
-if [ "$profile" = core ]; then
+if [ "$profile" = core ] || [ "$profile" = linux ]; then
+  test "$#" -eq 0
   sudo python3 scripts/device-preflight.py --architecture "$architecture" | tee evidence/device-preflight.json
 else
   sudo python3 scripts/device-preflight.py --architecture "$architecture" --large-media | tee evidence/device-preflight.json
@@ -67,7 +68,7 @@ kubectl -n vm-interface create secret tls vm-console-tls --key="$tls/key" --cert
 rm -f "$tls/key"
 chmod 644 "$tls/ca"
 kubectl apply -f infra/app.yaml
-if [ "$profile" != core ]; then
+if [ "$profile" = windows ] || [ "$profile" = android ]; then
   kubectl -n vm-interface set env deployment/vm-api --containers=api,reconcile VM_MEDIA_MAX_MIB=8192 VM_MEDIA_STAGE_MAX_MIB=16384 VM_SYSTEM_MAX_GIB=64 VM_ACCOUNT_STORAGE_GIB=128 VM_ENABLE_GUEST_EXCHANGE_EVALUATION=true
   if [ "$profile" = android ]; then
     kubectl -n vm-interface set env deployment/vm-api --containers=api VM_ENABLE_ARM64_EVALUATION=true
@@ -104,6 +105,8 @@ if [ "$profile" = core ]; then
   start_port
   python3 scripts/e2e-recovery.py after
   python3 scripts/probe-virtiofs-ci.py
+elif [ "$profile" = linux ]; then
+  python3 scripts/e2e-api-functional-proof.py
 else
   python3 scripts/showcase-native.py "$profile" "$@"
 fi

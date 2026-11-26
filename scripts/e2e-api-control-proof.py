@@ -43,8 +43,10 @@ def call(method, path, token=A, body=None, expected=200, scheme="Bearer",
             code, data, headers = res.status, res.read(65 * 1024 * 1024), res.headers
     except urllib.error.HTTPError as exc:
         code, data, headers = exc.code, exc.read(16384), exc.headers
+    allowed = (expected,) if isinstance(expected, int) else expected
+    declared = code if code in allowed else allowed[0]
     entry = {"elapsedMs": round((t-START)*1000), "method": method,
-             "path": path, "status": code, "expected": expected,
+             "path": path, "status": code, "expected": declared,
              "responseMs": round((time.monotonic()-t)*1000)}
     if phase:
         entry["phase"] = phase
@@ -52,9 +54,9 @@ def call(method, path, token=A, body=None, expected=200, scheme="Bearer",
     events.append(entry)
     with TRACE.open("a") as stream:
         stream.write(json.dumps(entry) + "\n")
-    if phase or code != expected:
+    if phase or code not in allowed:
         print(method, path, code, phase or "", flush=True)
-    assert code == expected, (method, path, code, expected)
+    assert code in allowed, (method, path, code, expected)
     return (data, headers) if binary else json.loads(data)
 
 def wait(check, seconds, reason):
@@ -65,6 +67,29 @@ def wait(check, seconds, reason):
             return result
         time.sleep(1.5)
     raise AssertionError(reason)
+
+def cold_resize(path, cpu, memory_mib):
+    def halted():
+        v = call("GET", path)
+        s = v.get("status") or {}
+        return v if v["instance"] is None and v["desired"]["runStrategy"] == "Halted" and not any(s.get(k) for k in ("stateChangeRequests", "created", "ready")) else None
+    initial = wait(halted, 120, "VM did not converge to halted")["desired"]
+    deadline = time.monotonic() + 45
+    while time.monotonic() < deadline:
+        v = halted()
+        assert v and v["desired"] == initial, "Unexpected desired configuration change"
+        body = {"cpu":cpu,"memoryMiB":memory_mib,"expectedResourceVersion":v["resourceVersion"]}
+        key = str(uuid.uuid4())
+        result = call("PATCH", path+"/hardware", body=body, idem=key, expected=(202,409), phase="cold resize")
+        if result.get("error"):
+            assert result["error"] in ("Configuration version changed; inspect current VM", "Kubernetes rejected request (409)"), result
+            assert call("PATCH",path+"/hardware",body=body,idem=key,expected=409)==result
+            time.sleep(1)
+            continue
+        assert result["status"]=="submitted", result
+        assert call("PATCH",path+"/hardware",body=body,idem=key,expected=202)==result
+        return result
+    raise AssertionError("Cold resize optimistic concurrency did not stabilize")
 
 def ocr(file):
     text = subprocess.check_output(

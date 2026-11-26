@@ -84,7 +84,7 @@ Expected Windows output: ASCII "VM Interface Windows 7-Zip functional proof" fol
 
 Core proof folders contain platform-recording.mp4, real screenshots, redacted HTTP trace, verification.json and a separately labelled derived presentation. Native showcases produce the same evidence plus output bytes and media/software digests. Preserve original MP4; verify SHA256 and full H264 decode; inspect actual frames and guest results. A static presentation or synthetic video is not evidence. Review failures and rerun after corrections. No release merge until full applicable gates and three comprehensive reviewed passes, unless the owner explicitly changes release policy.
 
-To verify already downloaded evidence independently (no KVM needed): `python3 scripts/verify-evidence.py --root evidence --profile core` or `--profile all` for the four proof folders. This requires original recordings, hashes and reported assertions; it does not certify hardware or replace manual review of actual guest frames. Historical screenshot-only evidence must fail this gate.
+To verify already downloaded evidence independently (no KVM needed): `python3 scripts/verify-evidence.py --root evidence --profile core` or `--profile all` for the three mandatory proof folders. This requires original recordings, hashes and reported assertions; it does not certify hardware or replace manual review of actual guest frames. Historical screenshot-only evidence must fail this gate.
 
 ### Pinned two-disk Android media (offline qualified; native boot pending)
 
@@ -109,3 +109,7 @@ Windows media and scenario are historical/optional. Linux and Android native qua
 
 ### Bundled scenario recipes (prepared, not runtime-qualified)
 Use `python3 scripts/write-showcase-scenario.py windows windows-scenario.json` or `python3 scripts/write-showcase-scenario.py android android-scenario.json` to create the concrete client recipe. Windows uses authorized installation and login checkpoints before recording, then actual 7-Zip GUI evidence. Android requires fixture APK version 2.0, adds a post-upload installation and authorized Storage Access Framework directory selection checkpoint, then clicks the exact unique visible Compute proof label using OCR from actual API screenshots. The APK computes and publishes its result/checksum using the user-granted directory. No fabricated click coordinates or recording of credentials. These prepared recipes still require guest qualification on the exact media; missing mount/provider or ambiguous OCR is an explicit failure, not a fallback. The new APK must be rebuilt and independently signature-checked; version 1.0 artifact is historical only.
+
+### Standalone Linux device profile
+
+On a separate disposable native x86_64 KVM device, `bash scripts/device-validate.sh linux --confirm-disposable` runs the full Linux application installation, control, archive, recording and cold-resize/reboot proof. It uses the pinned Fedora catalog image and requires no Windows installer, external APK, scenario or licensing credentials. Verify independently with `python3 scripts/verify-evidence.py --root evidence --profile linux`.
