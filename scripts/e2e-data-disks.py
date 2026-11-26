@@ -5,6 +5,12 @@ from pathlib import Path
 base=os.environ.get("API_URL","http://127.0.0.1:3000/api/v1")
 a,b=os.environ["TOKEN_A"],os.environ["TOKEN_B"]
 def key(): return uuid.uuid4().hex
+class ResponseMismatch(AssertionError):
+    def __init__(self,method,path,status,result):
+        super().__init__((method,path,status,result))
+        self.status=status
+        self.result=result
+
 def call(method,path,data=None,token=a,idem=None,expected=200):
     h={"Authorization":"Bearer "+token}
     if data is not None: h["Content-Type"]="application/json"
@@ -13,7 +19,7 @@ def call(method,path,data=None,token=a,idem=None,expected=200):
     try:
         with urllib.request.urlopen(req,timeout=30) as res: status,result=res.status,json.load(res)
     except urllib.error.HTTPError as exc: status,result=exc.code,json.load(exc)
-    assert status==expected,(method,path,status,result)
+    if status!=expected: raise ResponseMismatch(method,path,status,result)
     return result
 def wait(fn,seconds=420):
     end=time.monotonic()+seconds
@@ -30,14 +36,42 @@ def state(): return call("GET",path)
 def disk(name="work"):
     return next((x for x in call("GET",path+"/storage")["volumes"] if x["kind"]=="data" and x["diskName"]==name),None)
 def req(action,**kw): return dict(action=action,name="work",expectedResourceVersion=state()["resourceVersion"],**kw)
+def version_conflict(exc):
+    return exc.status==409 and exc.result.get("error") in (
+        "VM identity or resource version changed",
+        "VM resource version changed before disk reservation",
+    )
+def submit_disk(body):
+    # Only known rejected optimistic-concurrency requests may be retried.
+    # Reinspect desired state; never retry 502, unknown outcomes or semantic 409s.
+    initial=state()["desired"]
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        current=state()
+        assert current["desired"]==initial,"Desired VM configuration changed during retry"
+        body={**body,"expectedResourceVersion":current["resourceVersion"]}
+        try:
+            call("POST",path+"/disks/plan",body)
+        except ResponseMismatch as exc:
+            if not version_conflict(exc): raise
+            time.sleep(1);continue
+        current=state()
+        assert current["desired"]==initial,"Desired VM configuration changed after plan"
+        body["expectedResourceVersion"]=current["resourceVersion"]
+        k=key()
+        try:
+            result=call("POST",path+"/disks",body,idem=k,expected=202)
+        except ResponseMismatch as exc:
+            if not version_conflict(exc): raise
+            # The rejection must be durable; a replay cannot submit it again.
+            call("POST",path+"/disks",body,idem=k,expected=409)
+            time.sleep(1);continue
+        assert result["status"]=="submitted",result
+        assert call("POST",path+"/disks",body,idem=k,expected=202)==result
+        return result
+    raise AssertionError("Disk resource version did not stabilize")
 def change(action,**kw):
-    body=req(action,**kw)
-    call("POST",path+"/disks/plan",body)
-    # Controllers may update resourceVersion after dry-run; acquire a fresh view.
-    body=req(action,**kw)
-    k=key();result=call("POST",path+"/disks",body,idem=k,expected=202)
-    assert call("POST",path+"/disks",body,idem=k,expected=202)==result
-    return result
+    return submit_disk(req(action,**kw))
 def stopped():
     s=state()
     return s if not s["instance"] and not (s.get("status") or {}).get("stateChangeRequests") and not (s.get("status") or {}).get("created") and not (s.get("status") or {}).get("ready") else None
@@ -79,9 +113,7 @@ try:
     assert final["pvcUid"]==initial["pvcUid"] and final["dataVolumeUid"]==initial["dataVolumeUid"]
     call("POST",path+"/stop",{},idem=key(),expected=202);wait(stopped)
     body=dict(action="clone",name="copy",source="work",sizeGiB=2,expectedResourceVersion=state()["resourceVersion"])
-    call("POST",path+"/disks/plan",body)
-    body["expectedResourceVersion"]=state()["resourceVersion"]
-    cloned=call("POST",path+"/disks",body,idem=key(),expected=202)
+    cloned=submit_disk(body)
     copy=wait(lambda: (d if (d:=disk("copy")) and d.get("dataVolumePhase")=="Succeeded" and d.get("pvcPhase")=="Bound" and d.get("pvcUid") else None))
     assert copy["pvcUid"]!=final["pvcUid"] and copy["source"]=="work" and not copy["attached"] and copy["sizeGiB"]==2
     assert disk()["pvcUid"]==final["pvcUid"] and disk()["sizeGiB"]==1
@@ -91,9 +123,7 @@ try:
     payload=b"VM interface imported disk fixture"+b"\x00"*(1024*1024-34)
     digest=hashlib.sha256(payload).hexdigest()
     body=dict(action="import",name="imported",sizeGiB=1,expectedResourceVersion=state()["resourceVersion"],media=dict(format="raw",bytes=len(payload),sha256=digest,source="ci fixture",os="test",version="1",authorizedByClient=True))
-    call("POST",path+"/disks/plan",body)
-    body["expectedResourceVersion"]=state()["resourceVersion"]
-    call("POST",path+"/disks",body,idem=key(),expected=202)
+    submit_disk(body)
     endpoint=path+"/media/data-imported"
     call("GET",endpoint,token=b,expected=404)
     wait(lambda:call("GET",endpoint)["phase"]=="UploadReady")
@@ -133,8 +163,10 @@ finally:
     if export_path and not export_gone(export_path):
         call("DELETE",export_path,idem=key(),expected=202)
         wait(lambda:export_gone(export_path))
+    # Do not obscure an earlier failure with assertions about disks never created.
+    reservations={vm+"-data-"+v["diskName"] for v in call("GET",path+"/storage")["volumes"] if v["kind"]=="data"}
     deletion=call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
-    assert vm+"-data-work" in deletion["result"]["affectedDisks"]
+    assert reservations<=set(deletion["result"]["affectedDisks"])
     if "copy" in locals() and copy: assert vm+"-data-copy" in deletion["result"]["affectedDisks"]
     if "imported" in locals() and imported: assert vm+"-data-imported" in deletion["result"]["affectedDisks"]
 wait(lambda:call("GET","/operations/"+deletion["operationId"]).get("observation",{}).get("state")=="converged")
