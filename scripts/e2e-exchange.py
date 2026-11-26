@@ -1,5 +1,5 @@
 """Actual product API upload -> real native guest -> download, never kubectl."""
-import hashlib, json, os, secrets, time, urllib.request, urllib.error, uuid
+import hashlib, io, json, os, secrets, tarfile, time, urllib.request, urllib.error, uuid
 from pathlib import Path
 
 base=os.environ.get("API_URL","http://127.0.0.1:3000/api/v1")
@@ -53,6 +53,7 @@ try:
     call("PUT",upload,raw=b"conflict",digest=sha(b"conflict"),idem=key(),expected=409)
     assert call("GET",path+"/files")==[]
     call("GET",path+"/files",token=b,expected=404)
+    call("GET",path+"/exchange-bundle",token=b,expected=404)
     call("POST",path+"/start",data={},idem=key(),expected=202)
     deadline=time.monotonic()+600
     files=[]
@@ -62,6 +63,7 @@ try:
         time.sleep(3)
     else: raise AssertionError("No guest-published output")
     expected=payload+b"\nactual-fedora-guest\n"
+    call("GET",path+"/exchange-bundle",expected=409)
     result,headers=call("GET",path+"/files/result.bin",binary=True)
     assert result==expected and headers["X-Content-SHA256"]==sha(expected)
     call("GET",path+"/files/result.bin",token=b,expected=404)
@@ -72,14 +74,26 @@ try:
     call("POST",path+"/stop",data={},idem=key(),expected=202)
     deadline=time.monotonic()+240
     while time.monotonic()<deadline:
-        if call("GET",path)["instance"] is None: break
+        s=call("GET",path); status=s.get("status") or {}
+        if s["instance"] is None and not status.get("created") and not status.get("ready") and not status.get("stateChangeRequests"): break
         time.sleep(3)
     else: raise AssertionError("Stop did not converge")
     stopped=call("GET",path+"/storage")
     assert {x["kind"]:x["pvcUid"] for x in stopped["volumes"]}==identities
     after,_=call("GET",path+"/files/result.bin",binary=True)
     assert after==expected
-    Path("evidence/exchange-verification.json").write_text(json.dumps({"scope":"real-product-api","inputBytes":len(payload),"inputSha256":digest,"outputBytes":len(result),"outputSha256":sha(result),"nativeGuest":"Fedora","guestTransform":True,"crossAccountDenied":True,"idempotent":True,"stoppedDataPersistent":True,"pvcIdentities":identities},indent=2))
+    bundle,headers=call("GET",path+"/exchange-bundle",binary=True)
+    assert headers["X-Content-SHA256"]==sha(bundle)
+    with tarfile.open(fileobj=io.BytesIO(bundle),mode="r:") as archive:
+        assert set(archive.getnames())=={"upload/challenge.bin","download/result.bin","manifest.json"}
+        assert all(m.isfile() for m in archive.getmembers())
+        assert archive.extractfile("upload/challenge.bin").read()==payload
+        assert archive.extractfile("download/result.bin").read()==expected
+        manifest=json.load(archive.extractfile("manifest.json"))
+        assert manifest["scope"]=="published-exchange-files-only"
+        assert {x["name"]:x["sha256"] for x in manifest["files"]}=={"upload/challenge.bin":digest,"download/result.bin":sha(expected)}
+    Path("evidence/exchange-bundle.tar").write_bytes(bundle)
+    Path("evidence/exchange-verification.json").write_text(json.dumps({"scope":"real-product-api","inputBytes":len(payload),"inputSha256":digest,"outputBytes":len(result),"outputSha256":sha(result),"nativeGuest":"Fedora","guestTransform":True,"crossAccountDenied":True,"idempotent":True,"stoppedDataPersistent":True,"publishedBundleSha256":sha(bundle),"pvcIdentities":identities},indent=2))
     print("Actual guest-visible VirtioFS file bytes and stopped persistence verified through API")
 finally:
     call("DELETE",path,idem=key(),expected=409)

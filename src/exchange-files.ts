@@ -58,3 +58,51 @@ export async function listFiles(root:string){
  }
  return files;
 }
+
+const MAX_BUNDLE_BYTES=32*1024*1024;
+const MAX_BUNDLE_FILES=64;
+// USTAR with fixed safe names, numeric fields and deterministic metadata.
+// Never invoke tar on a guest-controlled directory or follow links.
+function tarHeader(name:string,size:number){
+ const h=Buffer.alloc(512);
+ const field=(value:string,offset:number,width:number)=>{if(Buffer.byteLength(value,"ascii")>width)throw new ApiError(409,"Bundle header overflow");h.write(value,offset,width,"ascii")};
+ const octal=(n:number,width:number)=>n.toString(8).padStart(width-1,"0")+"\0";
+ const slash=name.indexOf("/");
+ if(slash>=0){field(name.slice(slash+1),0,100);field(name.slice(0,slash),345,155)}else field(name,0,100);
+ field(octal(0o600,8),100,8);field(octal(0,8),108,8);field(octal(0,8),116,8);
+ field(octal(size,12),124,12);field(octal(0,12),136,12);h.fill(32,148,156);field("0",156,1);
+ field("ustar\0",257,6);field("00",263,2);
+ field(h.reduce((n,b)=>n+b,0).toString(8).padStart(6,"0")+"\0 ",148,8);
+ return h;
+}
+export async function exchangeBundle(root:string){
+ const dir=await opendir(root),names=new Set<string>();let entries=0;
+ for await(const entry of dir){
+  if(++entries>512)throw new ApiError(409,"Exchange directory entry limit exceeded");
+  if(entry.name.startsWith("in-")||entry.name.startsWith("out-"))names.add(entry.name);
+ }
+ const records:{name:string;bytes:number;sha256:string;direction:"upload"|"download"}[]=[],parts:Buffer[]=[];
+ let total=1024;
+ function append(name:string,data:Buffer){
+  const pad=(512-data.length%512)%512;total+=512+data.length+pad;
+  if(total>MAX_BUNDLE_BYTES)throw new ApiError(413,"Published exchange bundle exceeds 32 MiB; download individual files");
+  parts.push(tarHeader(name,data.length),data);if(pad)parts.push(Buffer.alloc(pad));
+ }
+ for(const entry of [...names].sort()){
+  const incoming=entry.startsWith("in-");
+  if(!incoming&&entry.endsWith(".sha256")){
+   if(!names.has(entry.slice(0,-7)))throw new ApiError(409,"Guest publication incomplete");
+   continue;
+  }
+  if(records.length>=MAX_BUNDLE_FILES)throw new ApiError(413,"Published exchange bundle exceeds file count limit");
+  const name=exchangeFileName(entry.slice(incoming?3:4));
+  if(!incoming&&!names.has(entry+".sha256"))throw new ApiError(409,"Guest publication incomplete");
+  const data=incoming?await readBounded(root,entry):(await download(root,name)).bytes;
+  const direction=incoming?"upload":"download",path=direction+"/"+name;
+  append(path,data);records.push({name:path,bytes:data.length,sha256:hash(data),direction});
+ }
+ append("manifest.json",Buffer.from(JSON.stringify({version:1,scope:"published-exchange-files-only",files:records},null,2)+"\n"));
+ parts.push(Buffer.alloc(1024));
+ const bytes=Buffer.concat(parts,total);
+ return {bytes,sha256:hash(bytes)};
+}
