@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # One short-lived API port-forward per named test stage; preserve diagnostics.
 set -euo pipefail
-test "${GITHUB_REPOSITORY:-}" = xad3play/vm_interface
-test "${RUNNER_ENVIRONMENT:-}" = github-hosted
+if [ "${VM_DISPOSABLE_DEVICE:-}" = true ]; then
+  case "${GITHUB_RUN_ID:-}" in device-*) ;; *) echo 'Expected disposable device run identity' >&2; exit 1 ;; esac
+else
+  test "${GITHUB_REPOSITORY:-}" = xad3play/vm_interface
+  test "${RUNNER_ENVIRONMENT:-}" = github-hosted
+fi
 test "$#" -gt 0
 mkdir -p evidence
 export API_URL=http://127.0.0.1:3000/api/v1
 export VNC_URL=wss://127.0.0.1:3443/api/v1
-export CONSOLE_CA_PATH=/tmp/console-tls.crt
+export CONSOLE_CA_PATH="${CONSOLE_CA_PATH:-/tmp/console-tls.crt}"
+test -r "$CONSOLE_CA_PATH"
 # Separate HTTP/WSS transports; restart only transport, not API mutations.
 supervise_port() {
   local child=""

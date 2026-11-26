@@ -325,6 +325,7 @@ try:
     after=wait(identities,120,"Storage not bound after resize")
     assert original==after
     if adb_mode:
+        guest_transfer.ensure(lambda:steps([{"human":"If the guest requests authorization after restart, approve only the same test RSA debugging key. Keep SELinux enforcing and ADB authentication enabled."}]))
         again=guest_transfer.result()
         guest_transfer.report["rebootOutputSha256"]=sha(again)
         guest_transfer.report["stagedBundleSha256"]=sha(raw_bundle)

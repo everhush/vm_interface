@@ -24,7 +24,7 @@ def wait(check,seconds=420):
 def observed(op):
     x=call("GET","/operations/"+op)
     return x if (x.get("observation") or {}).get("state")=="converged" else None
-statefile=Path("/tmp/vm-recovery.json")
+statefile=Path(os.environ.get("RECOVERY_STATE_PATH","/tmp/vm-recovery.json"))
 if sys.argv[1]=="before":
     spec=dict(version=1,name="ci-recovery",architecture="amd64",cpu=1,memoryMiB=512,image="cirros-smoke")
     createkey,startkey=key(),key()
