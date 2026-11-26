@@ -14,7 +14,8 @@ assert.ok(a&&b);
 const ca=readFileSync(process.env.CONSOLE_CA_PATH||"/tmp/console-tls.crt");
 const delay=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function call(method:string,path:string,token:string,body?:unknown,expected=200,scheme="Bearer",idempotencyKey=randomUUID()){
- const r=await fetch(base+path,{method,headers:{authorization:scheme+" "+token,"content-type":"application/json","idempotency-key":idempotencyKey},...(body!==undefined?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)});
+ console.log("API",method,path,"expected",expected);
+ const r=await fetch(base+path,{method,headers:{connection:"close",authorization:scheme+" "+token,"content-type":"application/json","idempotency-key":idempotencyKey},...(body!==undefined?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)});
  assert.equal(r.status,expected,method+" "+path);
  return r.json();
 }

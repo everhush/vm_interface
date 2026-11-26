@@ -51,13 +51,18 @@ for firmware in ["bios","uefi"]:
             except AssertionError: return False
             assert png.startswith(b"\x89PNG\r\n\x1a\n")
             pngfile.write_bytes(png)
-            txt=subprocess.run(["tesseract",str(pngfile),"stdout","--psm","6"],capture_output=True,text=True,check=True).stdout
-            return "VMINTERFACEISOBOOTOK" in re.sub("[^A-Z]","",txt.upper())
+            # Retained real BIOS raster contains exact marker; improve OCR.
+            pixels=subprocess.check_output(["ffmpeg","-v","error","-i",str(pngfile),"-vf","scale=iw*3:ih*3:flags=neighbor","-frames:v","1","-f","image2pipe","-vcodec","png","-"],timeout=15)
+            for psm in ("6","11"):
+                txt=subprocess.run(["tesseract","stdin","stdout","--psm",psm,"--dpi","180"],input=pixels,capture_output=True,check=True,timeout=15).stdout.decode()
+                if "VMINTERFACEISOBOOTOK" in re.sub("[^A-Z]","",txt.upper()):return True
+            return False
         wait(marker,180,"No installer boot marker in actual API screenshots")
         results.append({"firmware":firmware,"bytes":len(disk),"sha256":digest,"guestVisibleBootMarker":True,"screenshotSha256":hashlib.sha256(pngfile.read_bytes()).hexdigest(),"osInstallationVerified":False})
         print(f"Actual {firmware} installer CD-ROM boot marker visible through API")
         call("POST",path+"/stop",data={},idem=key(),expected=202)
         wait(lambda:call("GET",path)["instance"] is None,240,"Stop did not converge")
+        wait(lambda:(v:=call("GET",path))["instance"] is None and v["desired"]["runStrategy"]=="Halted" and not any((v.get("status") or {}).get(k) for k in ("created","ready","stateChangeRequests")),120,"VM not fully halted")
         current=call("GET",path)
         change={"first":"system","installerTray":"open","expectedResourceVersion":current["resourceVersion"]}
         planned=call("POST",path+"/boot/plan",data=change)

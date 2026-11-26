@@ -31,7 +31,7 @@ async function open(path:string,token:string){
  const s=ws(path,token);
  try{await new Promise<void>((resolve,reject)=>{
   const timer=setTimeout(()=>reject(Error("Tunnel handshake timeout")),20000);
-  s.once("open",()=>{clearTimeout(timer);resolve()});s.once("error",e=>{clearTimeout(timer);reject(e)});
+  s.once("open",()=>{clearTimeout(timer);resolve()});s.once("error",e=>{clearTimeout(timer);reject(e)});s.once("unexpected-response",(_req,res)=>{clearTimeout(timer);res.resume();reject(Error("Guest tunnel handshake HTTP "+res.statusCode))});
  })}catch(e){s.terminate();throw e}
  return s;
 }
@@ -51,7 +51,7 @@ async function waitClosed(s:WebSocket){
  await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(Error("Revoked tunnel remained open")),10000);s.once("close",()=>{clearTimeout(timer);resolve()})});
 }
 const marker="network-marker-"+randomUUID();
-const cloud="#!/bin/bash\nset -eu\nmkdir -p /run/netproof\nprintf '%s\\n' '"+marker+"' > /run/netproof/marker.txt\nif timeout 3 bash -c '</dev/tcp/10.43.0.1/443'; then echo cluster-egress-open; else echo cluster-egress-blocked; fi >> /run/netproof/marker.txt\nnohup python3 -m http.server 8080 --bind 0.0.0.0 --directory /run/netproof >/run/netproof/server.log 2>&1 &\n";
+const cloud="#!/bin/bash\nset -eu\nmkdir -p /run/netproof\nprintf '%s\\n' '"+marker+"' > /run/netproof/marker.txt\nif timeout 3 bash -c '</dev/tcp/10.43.0.1/443'; then echo cluster-egress-open; else echo cluster-egress-blocked; fi >> /run/netproof/marker.txt\nsystemd-run --unit=vm-netproof --property=Type=exec /usr/bin/python3 -m http.server 8080 --bind 0.0.0.0 --directory /run/netproof\n";
 const spec={version:1,name:"ci-network",architecture:"amd64",cpu:1,memoryMiB:1536,image:"fedora-exchange-test",storage:{systemGiB:8,exchangeGiB:1,exchangeMode:"virtiofs"},network:"private",cloudInit:cloud};
 const created=await call("POST","/computers",a,spec,202);
 const path="/computers/"+created.result.id,collection=path+"/exposures";
@@ -71,7 +71,7 @@ try{
  await deny("/computers/vm-"+"0".repeat(32)+"/exposures/"+grant.id+"/connect",grant.token,401);
  let response="";
  for(let i=0;i<60;i++){
-  try{response=await guestHttp(tunnel,grant.token);if(response.includes(marker))break}catch{/* guest app may still be booting */}
+  try{response=await guestHttp(tunnel,grant.token);if(response.includes(marker))break}catch(e){if(i%10===0)console.log("Guest tunnel attempt",i,e instanceof Error?e.message:"unknown")}
   await delay(2000);
  }
  assert.ok(response.includes("200 OK")&&response.includes(marker),"Actual guest application did not respond");
