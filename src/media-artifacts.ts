@@ -1,7 +1,7 @@
 import {z} from "zod";
 import {and,eq,sql} from "drizzle-orm";
 import {createHash} from "node:crypto";
-import {constants,createReadStream} from "node:fs";
+import {constants} from "node:fs";
 import {link,open,statfs,unlink} from "node:fs/promises";
 import {join} from "node:path";
 import {Readable} from "node:stream";
@@ -133,11 +133,12 @@ export async function importArtifact(account:string,id:string,slot:Slot,artifact
   if(!decl||decl.slot!==slot)throw new ApiError(404,"Media slot not found");
   if(artifact.state!=="verified"||!artifactMatches(artifact,decl.metadata,architecture))throw new ApiError(409,"Registered artifact is not verified or differs from target declaration");
   await verifyPublished(artifactId,artifact);
-  const source=createReadStream(pathFor(artifactId,".img"),{flags:constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK});
+  const file=await open(pathFor(artifactId,".img"),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+  const source=file.createReadStream({autoClose:false});
   try{
    // uploadMedia rechecks exact byte count, SHA, media header, actual VM disk
    // reservation, target CDI/PVC identity and cold lifecycle before transmission.
    return await uploadMedia(id,account,slot,Readable.toWeb(source) as ReadableStream<Uint8Array>,opId);
-  }finally{source.destroy()}
+  }finally{source.destroy();await file.close()}
  });
 }
