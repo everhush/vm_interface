@@ -177,6 +177,8 @@ jobs:
           name: input-partial-evidence
           path: |
             evidence/input-*.png
+            evidence/input-*-marker-diagnostic.json
+            evidence/reset-*-marker-diagnostic.json
             evidence/reset-*.png
             evidence/input-ownership.json
             evidence/reset-verification.json
