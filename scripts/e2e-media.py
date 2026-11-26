@@ -24,12 +24,16 @@ def call(method,path,token=a,data=None,idem=None,expected=200,raw=None,binary=Fa
     assert status==expected,(method,path,status,payload[:500])
     return payload if binary else json.loads(payload)
 mode=sys.argv[2] if len(sys.argv)>2 else "direct"
-assert mode in ("direct","resumable","dual")
+assert mode in ("direct","resumable","dual","url")
 disk=Path(sys.argv[1]).read_bytes()
 assert 512<=len(disk)<=64*1024*1024
 fmt="qcow2" if disk.startswith(b"QFI\xfb") else "raw"
 digest=hashlib.sha256(disk).hexdigest()
 spec=dict(version=1,name="ci-upload",architecture="amd64",cpu=1,memoryMiB=512,image="uploaded-disk",storage={"systemGiB":2,"exchangeGiB":1},media={"format":fmt,"bytes":len(disk),"sha256":digest,"source":"quay.io/kubevirt/cirros-container-disk-demo@sha256:0e5ac38b20abcc7752293425b239a147868facd62cd5030dede6da6f2fc526a1","os":"CirrOS","version":"pinned-test-digest","authorizedByClient":True},firmware="bios")
+if mode=="url":
+    assert digest=="7d6355852aeb6dbcd191bcda7cd74f1536cfe5cbf8a10495a7283a8396e4b75b" and len(disk)==21692416
+    spec["media"]["source"]="https://download.cirros-cloud.net/0.6.3/cirros-0.6.3-x86_64-disk.img"
+    spec["media"]["version"]="0.6.3"
 if mode=="dual":
     aux=b"VM-interface-secondary-disk"+bytes(4096)
     auxsha=hashlib.sha256(aux).hexdigest()
@@ -47,7 +51,7 @@ try:
         if call("GET",media)["phase"]=="UploadReady": break
         time.sleep(3)
     else: raise AssertionError("CDI did not reach UploadReady")
-    if mode in ("direct","dual"):
+    if mode in ("direct","dual","url"):
         bad=bytes([disk[0]^1])+disk[1:]
         call("PUT",media+"/boot",raw=bad,idem=key(),expected=422)
         assert not call("GET",media)["ready"]
