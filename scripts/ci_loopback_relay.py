@@ -47,8 +47,14 @@ async def relay(reader,writer,host,port,slots):
             # A client half-close, however, must still permit the full reply.
             done,_=await asyncio.wait(tasks,return_when=asyncio.FIRST_COMPLETED)
             if tasks[1] not in done:
-                await tasks[0]
-                await tasks[1]
+                try:
+                    await tasks[0]
+                except (ConnectionError,TimeoutError,OSError):
+                    # The service may stop accepting the request body after
+                    # rejecting it. Preserve any response already in flight.
+                    await asyncio.wait_for(tasks[1],timeout=5)
+                else:
+                    await tasks[1]
             else:
                 await tasks[1]
         except (ConnectionError,TimeoutError,OSError):

@@ -1,6 +1,7 @@
 """API-only installer CD-ROM proof. GRUB boot marker, not OS installation."""
 import hashlib,http.client,json,os,re,subprocess,sys,time,urllib.request,urllib.error,uuid
 from pathlib import Path
+from media_http import binary_request
 from iso_marker import read_marker
 base=os.environ.get("API_URL","http://127.0.0.1:3000/api/v1")
 a,b=os.environ["TOKEN_A"],os.environ["TOKEN_B"]
@@ -10,7 +11,11 @@ def call(method,path,token=a,data=None,idem=None,expected=200,raw=None,binary=Fa
     if idem: h["Idempotency-Key"]=idem
     if data is not None: h["Content-Type"]="application/json"
     if raw is not None: h["Content-Type"]="application/octet-stream"
-    req=urllib.request.Request(base+path,data=raw if raw is not None else json.dumps(data).encode() if data is not None else None,headers=h,method=method)
+    if raw is not None:
+        status,payload=binary_request(base+path,method,h,raw)
+        assert status==expected,(method,path,status,payload[:500])
+        return payload if binary else json.loads(payload)
+    req=urllib.request.Request(base+path,data=json.dumps(data).encode() if data is not None else None,headers=h,method=method)
     for attempt in range(8):
         try:
             with urllib.request.urlopen(req,timeout=240) as res: status,payload=res.status,res.read()
