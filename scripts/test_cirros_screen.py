@@ -20,4 +20,4 @@ class CirrosScreenTests(unittest.TestCase):
         self.assertEqual(normalize(observed),"cirrosloginautocitest")
         self.assertEqual(normalize(observed+"forbiddeninputobserverinput"),"cirrosloginautocitestforbiddeninputobserverinput")
         self.assertNotIn("autocitest",normalize("af 181.5210601 random: forbiddeninput pool is initialized\nutocitest"))
-        self.assertNotIn("autocitest",normalize("af 181.5210601 random: nonblocking pool is initializedextra\nutocitest"))
+        self.assertNotIn("autocitest",normalize("af 181.5210601 random: nonblocking pool is initializedsuffix\nutocitest"))
