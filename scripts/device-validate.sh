@@ -88,6 +88,7 @@ if [ "$profile" = core ]; then
   stage python3 scripts/e2e-api-functional-proof.py
   stage python3 scripts/e2e-idle.py
   stage bash scripts/e2e-media-ci.sh
+  python3 scripts/verify_media_evidence.py --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/media-evidence-verification.json
   stage bash scripts/e2e-iso-ci.sh
   stage python3 scripts/e2e-recovery.py before
   kubectl -n vm-interface rollout restart deployment/vm-api
