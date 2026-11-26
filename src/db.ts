@@ -41,6 +41,11 @@ export const mediaTransfers=pgTable("media_transfers",{
  dvUid:text("dv_uid").notNull(),operationId:text("operation_id").notNull(),sha256:text("sha256").notNull(),
  bytes:bigint("bytes",{mode:"number"}).notNull(),state:text("state").notNull(),updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull()
 },t=>[primaryKey({columns:[t.computerId,t.slot]})]);
+export const mediaArtifacts=pgTable("media_artifacts",{
+ id:text("id").primaryKey(),account:text("account").notNull(),spec:jsonb("spec").notNull(),
+ bytes:bigint("bytes",{mode:"number"}).notNull(),state:text("state").notNull(),
+ createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+});
 export const mediaStages=pgTable("media_stages",{
  computerId:text("computer_id").primaryKey(),account:text("account").notNull(),slot:text("slot").notNull(),dvUid:text("dv_uid").notNull(),stageId:text("stage_id").notNull().unique(),sha256:text("sha256").notNull(),bytes:bigint("bytes",{mode:"number"}).notNull(),received:bigint("received",{mode:"number"}).notNull(),updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull()
 });
@@ -109,6 +114,8 @@ export async function migrate(){
  ALTER TABLE media_transfers DROP CONSTRAINT media_transfers_pkey, ADD PRIMARY KEY(computer_id,slot);
  END IF;
  END; $media_migration$`);
+ await database().execute(sql`CREATE TABLE IF NOT EXISTS media_artifacts (id text PRIMARY KEY, account text NOT NULL, spec jsonb NOT NULL, bytes bigint NOT NULL CHECK(bytes BETWEEN 512 AND 67108864), state text NOT NULL CHECK(state IN ('registered','verified')), created_at timestamptz NOT NULL DEFAULT now())`);
+ await database().execute(sql`CREATE INDEX IF NOT EXISTS media_artifacts_owner_idx ON media_artifacts(account)`);
  await database().execute(sql`CREATE TABLE IF NOT EXISTS media_stages (computer_id text PRIMARY KEY, account text NOT NULL, slot text NOT NULL, dv_uid text NOT NULL, stage_id text NOT NULL UNIQUE, sha256 text NOT NULL, bytes bigint NOT NULL CHECK(bytes>0), received bigint NOT NULL CHECK(received>=0 AND received<=bytes), updated_at timestamptz NOT NULL DEFAULT now())`);
  await database().execute(sql`CREATE INDEX IF NOT EXISTS media_stages_updated_idx ON media_stages(updated_at)`);
  await database().execute(sql`CREATE TABLE IF NOT EXISTS network_grants (

@@ -21,6 +21,8 @@ spec:
         persistentVolumeClaim: {claimName: vm-recordings}
       - name: media-stage
         persistentVolumeClaim: {claimName: vm-media-stage}
+      - name: media-artifacts
+        persistentVolumeClaim: {claimName: vm-media-artifacts}
       containers:
       - name: api
         image: vm-interface:ci
@@ -39,6 +41,8 @@ spec:
           mountPath: /var/lib/vm-recordings
         - name: media-stage
           mountPath: /var/lib/vm-media-stage
+        - name: media-artifacts
+          mountPath: /var/lib/vm-media-artifacts
         readinessProbe:
           httpGet: {path: /api/v1/health, port: 3000}
           initialDelaySeconds: 5

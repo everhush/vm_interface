@@ -125,7 +125,8 @@
         "QCOW2 virtual capacity validation against actual CDI reservation on direct and resumable upload paths; reject corrupt, dirty, backing and external-data images before transmission.",
         "Operator-opt-in CSI PVC expansion: durable quota reservation, cold ownership and PVC UID fence, monotonic exact-version patch and convergence reporting; default local-path refuses; guest capacity is separate.",
         "Exact real OpenEBS Rawfile LocalPV v0.15.3 chart digest, separate native CSI evaluation lane with API-only guest statvfs and actual byte/PVC identity proof; 45769751635 running.",
-        "Client-side authorized HTTPS acquisition: checked public DNS, pinned TCP/TLS hostname, redirect allowlist, digest/size and private content-addressed public cache; actual publisher-pinned CirrOS URL/CDI proof queued for native validation."
+        "Client-side authorized HTTPS acquisition: checked public DNS, pinned TCP/TLS hostname, redirect allowlist, digest/size and private content-addressed public cache; actual publisher-pinned CirrOS URL/CDI proof queued for native validation.",
+        "Account-owned durable registered images with explicit architecture/license metadata, separate bounded PVC and reservation quota, exact byte/header verification, immutable files, independent same-account CDI imports and deletion/ownership proof. Native qualification pending."
       ]
     },
     {

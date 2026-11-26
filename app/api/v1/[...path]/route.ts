@@ -21,6 +21,7 @@ import {recordingSpec,startRecording,stopRecording,recordingStatus,listRecording
 import {quota,requireAccountCapacity,specUsage,withAccountLock} from "../../../../src/quota";
 import {batchSpec,dispatchBatch} from "../../../../src/input-batch";
 import {ensureExchange,exchangeRequest,exchangeFileName,exchangeConfigured} from "../../../../src/exchange";
+import {artifactSpec,artifactReference,registerArtifact,listArtifacts,artifactStatus,putArtifact,deleteArtifact,importArtifact} from "../../../../src/media-artifacts";
 import {mediaStatus,uploadMedia,uploadMediaChunk,commitMediaStage,requireMediaReady,isMediaSlot} from "../../../../src/media";
 import {chunkLength,readChunk,validateChunk,discardStage} from "../../../../src/media-resume";
 import {exposureSpec,issueExposure,listExposures,revokeExposure} from "../../../../src/network";
@@ -30,7 +31,7 @@ import {boundedBody,boundedText} from "../../../../src/request-body";
 import {mediaMaxBytes,stageMaxBytes,systemMaxGiB,accountMaxStorageGiB} from "../../../../src/media-config";
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{"cache-control":"no-store"}});
 const imageResponse=(png:Buffer)=>new Response(Uint8Array.from(png),{headers:{"content-type":"image/png","cache-control":"no-store","x-content-type-options":"nosniff","content-disposition":"inline; filename=\"screenshot.png\""}});
-const capabilities={phase:"console and storage development",verified:["native amd64 KVM lifecycle, account isolation, cold CPU/RAM, CDI/PVC identities, desired-resource quotas, authenticated PNG display capture (CI 45542879476)","hashed account keys, scoped display tickets, pinned image CDI, shared read-only RFB (CI 45544070366)"],implementedUnverified:["durable input lease and server-side input gating","explicit-consent sampled MP4 recording and retrieval","bounded lease-fenced HTTP input batches","VirtioFS profile and bounded account-scoped file bytes","bounded authorized CDI disk/ISO media upload","private guest masquerade network and expiring TCP tunnel","durable operation intent and read-only convergence reconciliation","resumable offset- and digest-verified media staging (larger profiles operator-configured)","opt-in idle stop, audit, request rate and body limits","hard reset, cold boot preference","cold creation, authorized media import, same-VM cloning, attachment and retention of data disks"],conditional:["ARM64 uploaded UEFI virtio disk evaluation (operator opt-in; native KVM/guest validation required)","VirtioFS (native guest mount and byte roundtrip verified; product file API pending)","virtio-mem (driver present on Fedora; live resize not certified)"],unsupported:["Windows-sized media import certification","public network exposure","hotplug","snapshots","migration","GPU"]};
+const capabilities={phase:"console and storage development",verified:["native amd64 KVM lifecycle, account isolation, cold CPU/RAM, CDI/PVC identities, desired-resource quotas, authenticated PNG display capture (CI 45542879476)","hashed account keys, scoped display tickets, pinned image CDI, shared read-only RFB (CI 45544070366)"],implementedUnverified:["durable input lease and server-side input gating","explicit-consent sampled MP4 recording and retrieval","bounded lease-fenced HTTP input batches","VirtioFS profile and bounded account-scoped file bytes","bounded authorized CDI disk/ISO media upload","account-owned registered image artifacts (64 MiB per item, immutable verified bytes and independent CDI copy; native verification pending)","private guest masquerade network and expiring TCP tunnel","durable operation intent and read-only convergence reconciliation","resumable offset- and digest-verified media staging (larger profiles operator-configured)","opt-in idle stop, audit, request rate and body limits","hard reset, cold boot preference","cold creation, authorized media import, same-VM cloning, attachment and retention of data disks"],conditional:["ARM64 uploaded UEFI virtio disk evaluation (operator opt-in; native KVM/guest validation required)","VirtioFS (native guest mount and byte roundtrip verified; product file API pending)","virtio-mem (driver present on Fedora; live resize not certified)"],unsupported:["Windows-sized media import certification","public network exposure","hotplug","snapshots","migration","GPU"]};
 async function handleCore(req:Request,context:{audit?:AuditContext}){
  try{
   const p=new URL(req.url).pathname.split("/").filter(Boolean).slice(2), m=req.method;
@@ -89,6 +90,25 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
   if(m==="GET"&&p.join("/")==="schema")return json(schema);
   if(m==="GET"&&p.join("/")==="schema/advanced")return json(advancedSchema);
   if(m==="GET"&&p.join("/")==="images")return json(catalog);
+  if(p[0]==="media-artifacts"){
+   const key=req.headers.get("idempotency-key");
+   if(m==="GET"&&p.length===1)return json(await listArtifacts(account));
+   if(m==="POST"&&p.length===1){
+    let input:unknown;try{input=JSON.parse(await boundedText(req,4096))}catch{throw new ApiError(400,"Invalid JSON")}
+    const parsed=artifactSpec.safeParse(input);if(!parsed.success)throw new ApiError(422,"Invalid registered image declaration");
+    return json(await mutate(account,key,{action:"artifact-register",spec:parsed.data},opId=>registerArtifact(account,opId,parsed.data)),202);
+   }
+   if(m==="GET"&&p.length===2)return json(await artifactStatus(account,p[1]));
+   if(m==="DELETE"&&p.length===2)return json(await mutate(account,key,{action:"artifact-delete",artifactId:p[1]},()=>deleteArtifact(account,p[1])),202);
+   if(m==="PUT"&&p.length===3&&p[2]==="file"){
+    const v=await artifactStatus(account,p[1]),length=req.headers.get("content-length");
+    if(length!==null&&Number(length)!==v.metadata.bytes)throw new ApiError(422,"Artifact length differs from declaration");
+    if(!req.body)throw new ApiError(400,"Missing media bytes");
+    const body=req.body;
+    return json(await mutate(account,key,{action:"artifact-upload",artifactId:p[1],sha256:v.metadata.sha256,bytes:v.metadata.bytes},()=>putArtifact(account,p[1],body)),202);
+   }
+   throw new ApiError(404,"Not found");
+  }
   if(m==="GET"&&p.join("/")==="openapi.json")return json(openApiDocument());
   if(m==="GET"&&p.join("/")==="capabilities")return json({...capabilities,qualification:{arm64EvaluationEnabled:process.env.VM_ENABLE_ARM64_EVALUATION==="true",uploadedGuestExchangeEvaluationEnabled:process.env.VM_ENABLE_GUEST_EXCHANGE_EVALUATION==="true",mediaMaxBytes,stageMaxBytes,systemMaxGiB,accountMaxStorageGiB,storageClass:configuredStorageClass(),diskExpansionEvaluationEnabled:configuredStorageClass()==="vm-expandable",diskExpansionCertified:false,liveResizeCertified:false,secureBootCertified:false,persistentTpmCertified:false,publicExposureCertified:false}});
   if(m==="GET"&&p.join("/")==="account")return json({account,identity:identity.kind,permission:identity.permission});
@@ -151,6 +171,12 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
    if(!isMediaSlot(p[3]))throw new ApiError(404,"Media slot not found");
    const slot=p[3];
    if(m==="GET"&&p.length===4){const state=await mediaStatus(id,account,slot);if(!state)throw new ApiError(404,"Media slot not found");return json(state)}
+   if(m==="POST"&&p.length===5&&p[4]==="artifact"){
+    await owned(id,account);
+    let input:unknown;try{input=JSON.parse(await boundedText(req,512))}catch{throw new ApiError(400,"Invalid JSON")}
+    const parsed=artifactReference.safeParse(input);if(!parsed.success)throw new ApiError(422,"Registered artifact ID required");
+    return json(await mutate(account,key,{action:"media-upload",id,slot,artifactId:parsed.data.artifactId},opId=>withVmLock(id,async()=>{await requireNoExports(id);return importArtifact(account,id,slot,parsed.data.artifactId,opId)})),202);
+   }
    if(p.length===5&&["chunks","commit"].includes(p[4])){
     const state=await mediaStatus(id,account,slot);
     if(!state||state.slot!==p[3])throw new ApiError(404,"Media slot not found");

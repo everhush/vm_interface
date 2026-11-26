@@ -93,7 +93,7 @@ export function mediaCapacityBytes(dv:Resource,metadata:Metadata){
  if(metadata.bytes>capacity)throw new ApiError(422,"Media bytes exceed reserved disk capacity");
  return capacity;
 }
-async function stage(body:ReadableStream<Uint8Array>,path:string,metadata:Metadata,maxVirtualBytes:number){
+export async function stageVerifiedMedia(body:ReadableStream<Uint8Array>,path:string,metadata:Metadata,maxVirtualBytes:number){
  const fd=await open(path,"wx",0o600),reader=body.getReader();
  const hash=createHash("sha256");let size=0,head=Buffer.alloc(0);
  const deadline=Date.now()+180000;
@@ -170,7 +170,7 @@ export async function uploadMedia(id:string,account:string,slot:Slot,body:Readab
   if(t.metadata.bytes>directMaxBytes)throw new ApiError(413,"Use resumable chunk upload for large media");
   const fs=await statfs(stageDir);
   if(fs.bavail*fs.bsize<t.metadata.bytes+64*MiB)throw new ApiError(409,"Insufficient physical staging space");
-  await stage(body,path,t.metadata,mediaCapacityBytes(t.dv!,t.metadata));
+  await stageVerifiedMedia(body,path,t.metadata,mediaCapacityBytes(t.dv!,t.metadata));
   return await sendVerified(id,account,slot,t,path,opId);
  }finally{await unlink(path).catch(()=>{});inFlight--}
 }

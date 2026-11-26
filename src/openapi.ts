@@ -9,6 +9,7 @@ import {bootSpec} from "./boot";
 import {hardwareSchema} from "./hardware";
 import {dataDiskSpec} from "./data-disks";
 import {growthSpec} from "./storage-growth";
+import {artifactSpec,artifactReference} from "./media-artifacts";
 
 const object = {type:"object"} as const;
 const ref = (name:string) => ({"$ref":"#/components/schemas/"+name});
@@ -65,6 +66,10 @@ export function openApiDocument(){
    "/schema":{get:read("ComputerSpec JSON Schema")},
    "/schema/advanced":{get:read("Versioned allowlisted native KubeVirt field subset")},
    "/images":{get:read("Allowlisted image catalog with immutable OCI references and qualification status",{type:"array",items:ref("CatalogImage")})},
+   "/media-artifacts":{get:read("List only account-owned registered media declarations and storage quota"),post:write("Reserve immutable account-owned artifact declaration; upload verified bytes separately",[idem],{required:true,content:json(z.toJSONSchema(artifactSpec))})},
+   "/media-artifacts/{artifactId}":{get:read("Inspect owned registered image",object,[{name:"artifactId",in:"path",required:true,schema:{type:"string",format:"uuid"}}]),delete:write("Delete owned registered image; existing independent VM disks are unchanged",[idem,{name:"artifactId",in:"path",required:true,schema:{type:"string",format:"uuid"}}])},
+   "/media-artifacts/{artifactId}/file":{put:write("Upload exact declared image bytes once; verify digest and format before publication",[idem,{name:"artifactId",in:"path",required:true,schema:{type:"string",format:"uuid"}}],{required:true,content:{"application/octet-stream":{schema:{type:"string",format:"binary",maxLength:67108864}}}})},
+   "/computers/{id}/media/{slot}/artifact":{post:write("Import verified owned registered media into independently reserved CDI disk; exact declaration and architecture must match",[id,idem,{name:"slot",in:"path",required:true,schema:{type:"string"}}],{required:true,content:json(z.toJSONSchema(artifactReference))})},
    "/capabilities":{get:read("Implemented, conditional and unsupported capabilities")},
    "/openapi.json":{get:read("OpenAPI document")},
    "/computers/plan":{post:{...read("Validate and server-side dry-run the configuration"),requestBody:body}},
