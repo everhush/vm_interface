@@ -11,7 +11,7 @@ import json
 import time
 import uuid
 import secrets
-from linux_showcase_fixture import package, verify_archive, launcher_cloud
+from linux_showcase_fixture import package, verify_archive, launcher_cloud, verify_pointer_receipt
 
 h = runpy.run_path(str(Path(__file__).with_name("e2e-api-control-proof.py")), run_name="proof_helpers")
 call, wait, screen, batch = (h[x] for x in ("call", "wait", "screen", "batch"))
@@ -32,7 +32,7 @@ def main():
         spec = {"version":1,"name":"api-functional-proof","architecture":"amd64",
                 "cpu":1,"memoryMiB":1536,"image":"fedora-exchange-test",
                 "storage":{"systemGiB":8,"exchangeGiB":1,"exchangeMode":"virtiofs"},
-                "cloudInit":cloud}
+                "cloudInit":cloud,"pointerTablet":"usb"}
         call("POST", "/computers/plan", body=spec)
         vm = call("POST", "/computers", body=spec, expected=202, phase="create")
         path = "/computers/" + vm["result"]["id"]
@@ -84,6 +84,8 @@ def main():
             i = call("GET", path).get("instance")
             return i["metadata"]["uid"] if i and i["status"]["phase"] == "Running" else None
         uid = wait(running, 420, "VMI not Running")
+        inputs=call("GET",path)["instance"]["spec"]["domain"]["devices"]["inputs"]
+        assert any(x.get("type")=="tablet" and x.get("bus")=="usb" and x.get("name")=="tablet1" for x in inputs)
         def identities():
             volumes=call("GET",path+"/storage")["volumes"]
             if not all(v["pvcPhase"]=="Bound" and v["pvcUid"] for v in volumes):return None
@@ -123,6 +125,20 @@ def main():
         assert action["result"]["accepted"] == len(events)
         assert call("POST", path+"/input", ticket, {"events":events}, expected=202,
                     scheme="Console", idem=idem, phase="idempotent replay") == action
+        wait(lambda:"pointerready" in screen(path,OUT/"pointer-ready.png")[0],20,"Actual guest tablet was not ready")
+        import struct
+        width,height=struct.unpack(">II",(OUT/"pointer-ready.png").read_bytes()[16:24])
+        assert 32<=width<=1920 and 32<=height<=1200
+        observer=call("POST",path+"/console-tickets",body={"scope":"observe-vnc"},expected=201)
+        move={"type":"pointer","x":width//4,"y":height//4,"buttons":0}
+        end={"type":"pointer","x":width*3//4,"y":height*3//4,"buttons":0}
+        pointer={"events":[move,end,{**end,"buttons":1},end]}
+        call("POST",path+"/input",observer["token"],pointer,expected=403,scheme="Console",phase="observer pointer denied")
+        call("POST",path+"/input",ticket,{"events":[{**move,"x":width}]},expected=422,scheme="Console",phase="outside pointer denied")
+        pointer_key=str(uuid.uuid4())
+        clicked=call("POST",path+"/input",ticket,pointer,expected=202,scheme="Console",idem=pointer_key,phase="guest pointer action")
+        assert clicked["result"]["accepted"]==len(pointer["events"])
+        assert call("POST",path+"/input",ticket,pointer,expected=202,scheme="Console",idem=pointer_key,phase="pointer replay")==clicked
         wait(lambda: "proofcomplete" in screen(path, OUT/"after.png")[0], 25,
              "Actual guest computation not visible")
         wait(lambda: any(f["name"]=="result.bin" for f in call("GET", path+"/files")),
@@ -145,6 +161,9 @@ def main():
             assert headers["X-Content-SHA256"]==h["sha"](raw)
             (OUT/name).write_bytes(raw)
             return raw
+        pointer_raw=retrieve("pointer-receipt.json")
+        verify_pointer_receipt(pointer_raw,data)
+        assert "pointerdone" in h["ocr"](OUT/"after.png")[0]
         assert retrieve("disk-original.bin")==data
         platform=retrieve("guest-platform.json")
         rpm=retrieve("guest-rpm.tsv")
@@ -204,7 +223,7 @@ def main():
         derived = h["presentation"](raw, "REAL NATIVE APPLICATION PROOF")
         proof = {"scope":"native Fedora uploaded and installed Linux archive application, product APIs only",
                  "profile":"linux","architecture":"amd64","image":image,"softwareSha256":software_digest,"archiveSha256":h["sha"](archive),
-                 "softwareInstalled":True,"coldResizeAndFilePersistence":True,"originalPvcUids":original,"clonePvcUid":copy["pvcUid"],"guestDiskCloneByteProof":True,"guestPlatformSha256":h["sha"](platform),"guestRpmSha256":h["sha"](rpm),"resizedInstanceUid":new_uid,"rebootScreenshotSha256":h["sha"]((OUT/"reboot.png").read_bytes()),
+                 "softwareInstalled":True,"pointerReceiptSha256":h["sha"](pointer_raw),"pointerReadyScreenshotSha256":h["sha"]((OUT/"pointer-ready.png").read_bytes()),"pointerDoneScreenshotSha256":h["sha"]((OUT/"after.png").read_bytes()),"guestPointerProof":True,"coldResizeAndFilePersistence":True,"originalPvcUids":original,"clonePvcUid":copy["pvcUid"],"guestDiskCloneByteProof":True,"guestPlatformSha256":h["sha"](platform),"guestRpmSha256":h["sha"](rpm),"resizedInstanceUid":new_uid,"rebootScreenshotSha256":h["sha"]((OUT/"reboot.png").read_bytes()),
                  "runId":os.environ.get("GITHUB_RUN_ID"), "commit":os.environ.get("GITHUB_SHA"),
                  "vmId":vm["result"]["id"], "instanceUid":uid,
                  "inputBytes":len(data),"inputSha256":digest,"outputBytes":len(result),
