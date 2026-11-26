@@ -76,18 +76,83 @@ PY
   test "$i" -lt 30
   sleep 2
 done
-# An attempted resize of the local-path recording claim is rejected by
-# Kubernetes' built-in storage admission before our policy can be evaluated.
-# Test a normally valid metadata patch instead; require OUR policy's denial,
-# not an unrelated storage-class error. Dry-run prevents a real mutation.
-if kubectl --as=system:serviceaccount:vm-interface:vm-api -n vm-interface patch pvc vm-recordings --type=merge --dry-run=server -p '{"metadata":{"annotations":{"vm-interface.example/denial-probe":"true"}}}' >evidence/csi-denied-patch.txt 2>&1; then
-  echo "Unexpected non-VM PVC patch permission" >&2
-  exit 1
-fi
+# CEL type checking is not proof that admission caches have converged.
+# Before granting broad patch permission, allow this identity to patch ONLY
+# a harmless disposable sentinel. All probes are server-side dry-run.
+kubectl apply -f - <<'YAML'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vm-growth-admission-sentinel
+  namespace: vm-interface
+spec:
+  storageClassName: local-path
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Mi
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vm-growth-admission-sentinel
+  namespace: vm-interface
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  resourceNames: ["vm-growth-admission-sentinel"]
+  verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vm-growth-admission-sentinel
+  namespace: vm-interface
+subjects:
+- kind: ServiceAccount
+  name: vm-api
+  namespace: vm-interface
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vm-growth-admission-sentinel
+YAML
+cleanup_probe() {
+  kubectl -n vm-interface delete rolebinding,role,pvc vm-growth-admission-sentinel --ignore-not-found --wait=false >/dev/null 2>&1 || true
+}
+cleanup() {
+  cleanup_probe
+  if [ "${growth_ready:-false}" != true ]; then
+    kubectl delete -f infra/storage-growth-rbac.yaml --ignore-not-found --wait=false >/dev/null 2>&1 || true
+  fi
+  rm -rf "$work"
+}
+trap cleanup EXIT
+probe() {
+  if kubectl --as=system:serviceaccount:vm-interface:vm-api -n vm-interface patch pvc "$1" --type=merge --dry-run=server -p '{"metadata":{"annotations":{"vm-interface.example/denial-probe":"true"}}}' >"$2" 2>&1; then
+    return 1
+  fi
+  grep -q 'vm-pvc-growth' "$2" && grep -q 'Only an existing owner-bound managed PVC may grow' "$2"
+}
+for i in $(seq 1 30); do
+  if probe vm-growth-admission-sentinel evidence/csi-admission-readiness.txt; then break; fi
+  test "$i" -lt 30 || { cat evidence/csi-admission-readiness.txt >&2; exit 1; }
+  sleep 2
+done
+cat evidence/csi-admission-readiness.txt
+cleanup_probe
+kubectl apply --dry-run=server -f infra/storage-growth-rbac.yaml
+kubectl apply -f infra/storage-growth-rbac.yaml
+for i in $(seq 1 30); do
+  if probe vm-recordings evidence/csi-denied-patch.txt; then break; fi
+  test "$i" -lt 30 || { cat evidence/csi-denied-patch.txt >&2; exit 1; }
+  sleep 2
+done
 cat evidence/csi-denied-patch.txt
-grep -q 'vm-pvc-growth' evidence/csi-denied-patch.txt
 # Patch both containers in one rollout; kubectl set env --containers accepts
 # a name pattern, not a reliable comma-separated selection.
 kubectl -n vm-interface patch deployment vm-api --type=strategic -p '{"spec":{"template":{"spec":{"containers":[{"name":"api","env":[{"name":"VM_STORAGE_CLASS","value":"vm-expandable"}]},{"name":"reconcile","env":[{"name":"VM_STORAGE_CLASS","value":"vm-expandable"}]}]}}}}'
 kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
 kubectl -n vm-interface get deployment vm-api -o json | python3 -c 'import json,sys; c={x["name"]:x for x in json.load(sys.stdin)["spec"]["template"]["spec"]["containers"]}; assert all(any(e["name"]=="VM_STORAGE_CLASS" and e.get("value")=="vm-expandable" for e in c[n].get("env",[])) for n in ("api","reconcile"))'
+
+growth_ready=true
