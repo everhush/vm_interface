@@ -84,7 +84,7 @@ Expected Windows output: ASCII "VM Interface Windows 7-Zip functional proof" fol
 
 Core proof folders contain platform-recording.mp4, real screenshots, redacted HTTP trace, verification.json and a separately labelled derived presentation. Native showcases produce the same evidence plus output bytes and media/software digests. Preserve original MP4; verify SHA256 and full H264 decode; inspect actual frames and guest results. A static presentation or synthetic video is not evidence. Review failures and rerun after corrections. No release merge until full applicable gates and three comprehensive reviewed passes, unless the owner explicitly changes release policy.
 
-To verify already downloaded evidence independently (no KVM needed): `python3 scripts/verify-evidence.py --root evidence --profile core` or `--profile all` for the three mandatory proof folders. This requires original recordings, hashes and reported assertions; it does not certify hardware or replace manual review of actual guest frames. Historical screenshot-only evidence must fail this gate.
+To verify already downloaded evidence independently (no KVM needed): `python3 scripts/verify-evidence.py --root evidence --profile core --commit <approved-sha>` or `--profile all --commit <approved-sha>` for the three mandatory proof folders. All evidence in a comprehensive review must use the same exact commit; core control and functional evidence must come from the same execution. This requires original recordings, hashes and reported assertions; it does not certify hardware or replace manual review of actual guest frames. Historical screenshot-only evidence must fail this gate.
 
 ### Pinned two-disk Android media (offline qualified; native boot pending)
 

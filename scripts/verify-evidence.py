@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 from evidence_frames import verify_marker_frames, ocr
@@ -41,8 +42,18 @@ def verify_recording(folder, proof):
     return {'sha256': file_hash(raw), 'durationSeconds': float(probe['format']['duration']), 'bytes': raw.stat().st_size}
 
 
-def verify_folder(folder, profile):
+def source_identity(proof, expected_commit=None):
+    commit=proof.get("commit")
+    run=proof.get("runId")
+    check(isinstance(commit,str) and re.fullmatch(r"[a-f0-9]{40}",commit),"Missing exact source commit")
+    check(isinstance(run,str) and re.fullmatch(r"(?:[0-9]+|device-[0-9]{8}T[0-9]{6}Z-[0-9]+)",run),"Missing exact hosted or disposable-device run identity")
+    if expected_commit is not None:
+        check(commit==expected_commit,"Evidence source commit differs from approved candidate")
+    return commit,run
+
+def verify_folder(folder, profile, expected_commit=None):
     proof = json.loads((folder/'verification.json').read_text())
+    commit,run=source_identity(proof,expected_commit)
     video = verify_recording(folder, proof)
     video.update(verify_marker_frames(folder/"platform-recording.mp4",folder,proof["recording"],profile))
     trace = folder/'http-trace.jsonl'
@@ -106,13 +117,14 @@ def verify_folder(folder, profile):
         required={'upload file','guest action'}
         if profile=='windows' or proof.get('transferPath')=='virtiofs-saf':required.add('download file')
         check(required <= phases, 'Missing native application API calls')
-    return {'profile': profile, 'video': video, 'httpCalls': len(rows), 'scope': 'artifact-integrity-independent-marker-decode-and-reported-assertions'}
+    return {'profile': profile, 'commit':commit, 'runId':run, 'video': video, 'httpCalls': len(rows), 'scope': 'artifact-integrity-independent-marker-decode-and-reported-assertions'}
 
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--root', type=Path, required=True)
     p.add_argument('--profile', choices=['core','linux','windows','android','all'], required=True)
+    p.add_argument('--commit', help='Require the exact approved Git commit in every proof')
     a = p.parse_args()
     folders = {'control': 'api-control-proof', 'functional': 'api-functional-proof',
                'windows': 'showcase-windows', 'android': 'showcase-android'}
@@ -120,8 +132,13 @@ if __name__ == '__main__':
     report = {'passed': [], 'failed': [], 'hardwareCertifiedByVerifier': False}
     for target in targets:
         try:
-            report['passed'].append(verify_folder(a.root/folders[target], target))
+            report['passed'].append(verify_folder(a.root/folders[target], target,a.commit))
         except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
             report['failed'].append({'profile': target, 'error': str(exc)})
+    if len(report['passed'])>1:
+        if len({x['commit'] for x in report['passed']})!=1:
+            report['failed'].append({'profile':a.profile,'error':'Mixed source commits are not a comprehensive pass'})
+        if a.profile=='core' and len({x['runId'] for x in report['passed']})!=1:
+            report['failed'].append({'profile':a.profile,'error':'Core evidence must come from the same execution'})
     print(json.dumps(report, indent=2))
     raise SystemExit(bool(report['failed']))
