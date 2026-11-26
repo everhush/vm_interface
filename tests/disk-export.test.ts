@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {exportManifest,exportEndpoint,assertCold} from "../src/disk-export";
+import {exportManifest,exportEndpoint,assertCold,exportClaim,exportSelector} from "../src/disk-export";
 const id="vm-"+"a".repeat(32),name="vx-"+"b".repeat(32),claim=id+"-data-work",ns="vm-interface",service="virt-export-"+name;
 test("native export manifest fixes source, owner, token and expiry",()=>{
  const m=exportManifest(id,"alpha","vmuid","work","pvcuid",name);
@@ -17,4 +17,16 @@ test("export endpoint rejects alternate destinations, expired and unready state"
 test("native export requires converged halted VM",()=>{
  const vm={metadata:{uid:"vmuid"},spec:{runStrategy:"Halted"},status:{}};
  assert.doesNotThrow(()=>assertCold(vm,null));assert.throws(()=>assertCold(vm,{}));assert.throws(()=>assertCold({...vm,status:{created:true}},null));
+});
+
+test("system and block exchange selectors cannot shadow data disk names",()=>{
+ for(const [selector,suffix] of [["system.disk","boot"],["exchange.disk","exchange"],["boot","data-boot"],["exchange","data-exchange"]]){
+  const target=id+"-"+suffix;
+  assert.equal(exportClaim(id,selector),target);
+  assert.equal(exportSelector(id,target),selector);
+  assert.equal(exportManifest(id,"alpha","vmuid",selector,"pvcuid",name).spec.source.name,target);
+ }
+ assert.throws(()=>exportSelector(id,"vm-"+"b".repeat(32)+"-boot"));
+ assert.throws(()=>exportSelector(id,id+"-installer"));
+ assert.throws(()=>exportClaim(id,"system.disk/../other"));
 });

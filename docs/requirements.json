@@ -91,7 +91,7 @@
       "pending": [
         "Real file exchange and media import, Windows signed drivers and Android mount",
         "Snapshot/backup only where supported storage path passes conformance",
-        "Native export, independent imports and larger cold clone require real API and byte verification; in-place PVC expansion needs expansion-capable storage and separate guest partition/filesystem growth. System/exchange export and separate retention support need qualified implementation."
+        "Native export, independent imports and larger cold clone require real API and byte verification; in-place PVC expansion needs expansion-capable storage and separate guest partition/filesystem growth. Raw system/block exchange export is prepared; full VirtioFS backup and separate retention remain unqualified."
       ],
       "evidence": [
         45542879476,
@@ -106,7 +106,8 @@
         "Cold creation, attachment and retained detachment of up to four bounded blank CDI DataVolumes, quota and ownership checks, durable observation, real API test prepared; import/export/expansion remain outstanding",
         "Cold same-VM CDI clone with ownership, capacity reservation and source write gate; guest byte proof pending",
         "Independent authorized data disk direct/resumable import prepared; exact digest, quota and attachment readiness",
-        "Restricted native KubeVirt export for halted owned independent data disks: fixed internal HTTPS source, dedicated operator secret, read-only bounded stream, VM mutation interlock, TTL and foreground cancellation. No additional secret RBAC. Prepared real import/export byte verification."
+        "Restricted native KubeVirt export for halted owned independent data disks: fixed internal HTTPS source, dedicated operator secret, read-only bounded stream, VM mutation interlock, TTL and foreground cancellation. No additional secret RBAC. Prepared real import/export byte verification.",
+        "Offline raw export accepts reserved system.disk and block exchange.disk selectors, verifies actual CDI capacity and owner/UID, rejects VirtioFS as a raw disk; real stream tests prepared."
       ]
     },
     {

@@ -156,9 +156,30 @@ try:
     wait(lambda:export_gone(ep))
     export_path=None
     assert call("GET","/account/quota")["usage"]["storageGiB"]==baseline+7
+    # Boot and block exchange are distinct owned native export sources.
+    system_exports={}
+    for selector,claim_suffix,capacity in [("system.disk","-boot",2),("exchange.disk","-exchange",1)]:
+        created_export=call("POST",path+"/disk-exports/"+selector,idem=key(),expected=202)["result"]
+        assert created_export["disk"]==selector
+        ep=path+"/disk-exports/"+created_export["exportId"]
+        export_path=ep
+        call("GET",ep,token=b,expected=404)
+        wait(lambda:call("GET",ep)["ready"])
+        req=urllib.request.Request(base+ep+"/file",headers={"Authorization":"Bearer "+a})
+        with urllib.request.urlopen(req,timeout=180) as res:
+            length=int(res.headers["Content-Length"])
+            assert 0<length<=capacity*1024**3
+            assert vm+claim_suffix+".raw" in res.headers["Content-Disposition"]
+            h=hashlib.sha256();total=0
+            while chunk:=res.read(1024*1024): h.update(chunk);total+=len(chunk)
+            assert total==length
+        system_exports[selector]={"bytes":total,"sha256":h.hexdigest()}
+        call("DELETE",ep,idem=key(),expected=202)
+        wait(lambda:export_gone(ep))
+        export_path=None
     call("DELETE",path,idem=key(),expected=409)
     Path("evidence").mkdir(exist_ok=True)
-    Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"import":imported,"export":exported,"guestByteProof":False},indent=2))
+    Path("evidence/data-disks.json").write_text(json.dumps({"initial":initial,"detached":detached,"reattached":final,"clone":copy,"import":imported,"export":exported,"systemExports":system_exports,"guestByteProof":False},indent=2))
 finally:
     if export_path and not export_gone(export_path):
         call("DELETE",export_path,idem=key(),expected=202)
