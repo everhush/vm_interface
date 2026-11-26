@@ -71,31 +71,36 @@ jobs:
           kubectl apply -f infra/app.yaml
           kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
           python3 scripts/check-rbac-ci.py
-      - name: Exercise the deployed HTTP API
+      - name: API smoke and tenant isolation
+        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-smoke.py
+      - name: Persistent system and exchange lifecycle
+        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-persistent.py
+      - name: Independent data disk lifecycle, media and native export
+        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-data-disks.py
+      - name: Install locked client dependencies and evidence tools
         run: |
-          set -euo pipefail
-          kubectl -n vm-interface port-forward svc/vm-api 3000:3000 3443:3443 > /tmp/vm-port.log 2>&1 &
-          port_pid=$!
-          bash scripts/watch-launcher-ci.sh &
-          diag_pid=$!
-          trap 'kill "$port_pid" "$diag_pid" 2>/dev/null || true' EXIT
-          curl --retry 20 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:3000/api/v1/health
-          python3 scripts/e2e-smoke.py
-          python3 scripts/e2e-persistent.py
-          python3 scripts/e2e-data-disks.py
           npm ci --no-audit --no-fund
-          CONSOLE_CA_PATH=/tmp/console-tls.crt node --import tsx scripts/e2e-vnc.ts
-          if ! command -v tesseract >/dev/null; then sudo apt-get update && sudo apt-get install -y tesseract-ocr; fi
-          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null || [ ! -f /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf ]; then sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core; fi
-          python3 scripts/e2e-api-control-proof.py
-          CONSOLE_CA_PATH=/tmp/console-tls.crt node --import tsx scripts/e2e-input.ts
-          CONSOLE_CA_PATH=/tmp/console-tls.crt node --import tsx scripts/e2e-network.ts
-          node --import tsx scripts/e2e-recording.ts
-          python3 scripts/e2e-exchange.py
-          python3 scripts/e2e-api-functional-proof.py
-          python3 scripts/e2e-idle.py
-          bash scripts/e2e-media-ci.sh
-          bash scripts/e2e-iso-ci.sh
+          bash scripts/install-evidence-tools.sh
+      - name: Actual VNC transport
+        run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-vnc.ts
+      - name: Original API control recording
+        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-api-control-proof.py
+      - name: Input ownership, pointer and keyboard isolation
+        run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-input.ts
+      - name: Private network isolation and tunnel
+        run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-network.ts
+      - name: Recording API lifecycle and authorization
+        run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-recording.ts
+      - name: Actual guest VirtioFS exchange and published bundle
+        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-exchange.py
+      - name: Linux installation, archive, native clone and original recording
+        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-api-functional-proof.py
+      - name: Idle-stop semantics
+        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-idle.py
+      - name: Actual CDI disk import
+        run: bash scripts/run-api-tests-ci.sh bash scripts/e2e-media-ci.sh
+      - name: Actual authorized ISO import and boot configuration
+        run: bash scripts/run-api-tests-ci.sh bash scripts/e2e-iso-ci.sh
       - name: Verify durable API recovery across deployment restart
         run: |
           set -euo pipefail
