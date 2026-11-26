@@ -2,7 +2,7 @@ import {randomUUID} from "node:crypto";
 import {and,desc,eq,sql} from "drizzle-orm";
 import {database,auditEvents} from "./db";
 import {ApiError} from "./kube";
-const groups=new Set(["account","keys","schema","images","capabilities","openapi.json","operations","audit","computers","quota","plan","storage","disks","disk-exports","hardware","boot","media","files","recordings","input","input-lease","console-tickets","screenshot","guest","start","stop","restart","reset","exposures"]);
+const groups=new Set(["account","keys","schema","images","media-artifacts","capabilities","openapi.json","operations","audit","computers","quota","plan","storage","disks","disk-exports","hardware","boot","media","files","recordings","input","input-lease","console-tickets","screenshot","guest","start","stop","restart","reset","exposures"]);
 export type AuditContext={account:string;actor:"test"|"key"|"console"|"system";method:string;group:string;computerId:string|null};
 export function auditContext(account:string,actor:AuditContext["actor"],method:string,parts:string[]):AuditContext{
  const vm=parts[0]==="computers"&&/^vm-[a-f0-9]{32}$/.test(parts[1]??"")?parts[1]:null;

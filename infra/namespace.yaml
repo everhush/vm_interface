@@ -118,3 +118,15 @@ spec:
   accessModes: ["ReadWriteOnce"]
   resources:
     requests: {storage: 512Mi}
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vm-media-artifacts
+  namespace: vm-interface
+spec:
+  storageClassName: local-path
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests: {storage: 1Gi}

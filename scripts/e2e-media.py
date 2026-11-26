@@ -38,6 +38,26 @@ if mode=="dual":
     aux=b"VM-interface-secondary-disk"+bytes(4096)
     auxsha=hashlib.sha256(aux).hexdigest()
     spec["auxiliaryDisk"]={"sizeGiB":1,"media":{"format":"raw","bytes":len(aux),"sha256":auxsha,"source":"CI-generated non-boot secondary disk","os":"fixture","version":"1","authorizedByClient":True}}
+artifact=None
+if mode=="url":
+    declaration={"metadata":spec["media"],"architecture":"amd64","licensing":"CirrOS project published free test image; client authorized"}
+    k=key()
+    registration=call("POST","/media-artifacts",data=declaration,idem=k,expected=202)
+    assert call("POST","/media-artifacts",data=declaration,idem=k,expected=202)==registration
+    artifact=registration["result"]["id"]
+    ap="/media-artifacts/"+artifact
+    assert call("GET",ap)["state"]=="registered"
+    assert call("GET","/media-artifacts",token=b)["artifacts"]==[]
+    call("GET",ap,token=b,expected=404)
+    call("PUT",ap+"/file",token=b,raw=disk,idem=key(),expected=404)
+    call("PUT",ap+"/file",raw=bytes([disk[0]^1])+disk[1:],idem=key(),expected=422)
+    assert call("GET",ap)["state"]=="registered"
+    k=key()
+    uploaded=call("PUT",ap+"/file",raw=disk,idem=k,expected=202)
+    assert uploaded["result"]["state"]=="verified"
+    assert call("PUT",ap+"/file",raw=disk,idem=k,expected=202)==uploaded
+    call("PUT",ap+"/file",raw=disk,idem=key(),expected=409)
+    call("DELETE",ap,token=b,idem=key(),expected=404)
 call("POST","/computers/plan",data=spec)
 created=call("POST","/computers",data=spec,idem=key(),expected=202)
 path="/computers/"+created["result"]["id"]
@@ -51,7 +71,13 @@ try:
         if call("GET",media)["phase"]=="UploadReady": break
         time.sleep(3)
     else: raise AssertionError("CDI did not reach UploadReady")
-    if mode in ("direct","dual","url"):
+    if mode=="url":
+        call("POST",media+"/boot/artifact",token=b,data={"artifactId":artifact},idem=key(),expected=404)
+        k=key()
+        first=call("POST",media+"/boot/artifact",data={"artifactId":artifact},idem=k,expected=202)
+        assert first["result"]["sha256"]==digest
+        assert call("POST",media+"/boot/artifact",data={"artifactId":artifact},idem=k,expected=202)==first
+    elif mode in ("direct","dual"):
         bad=bytes([disk[0]^1])+disk[1:]
         call("PUT",media+"/boot",raw=bad,idem=key(),expected=422)
         assert not call("GET",media)["ready"]
@@ -125,6 +151,36 @@ try:
     assert png.startswith(b"\x89PNG\r\n\x1a\n") and len(png)>100
     Path("evidence/imported-disk-"+mode+"-display.png").write_bytes(png)
     Path("evidence/media-"+mode+"-verification.json").write_text(json.dumps({"scope":"real-api-upload","mode":mode,"format":fmt,"bytes":len(disk),"sha256":digest,"verifiedCDI":True,"badDigestDenied":True,"crossAccountDenied":True,"idempotent":True,"screenshotSha256":hashlib.sha256(png).hexdigest(),"guestLoginVerified":False},indent=2))
+    if artifact:
+        # Reuse the exact account artifact into another independent VM while
+        # retaining the original PVC. Compare actual bound claim identities.
+        original=next(v for v in call("GET",path+"/storage")["volumes"] if v["kind"]=="boot")["pvcUid"]
+        assert original
+        second=call("POST","/computers",data={**spec,"name":"ci-artifact-copy"},idem=key(),expected=202)
+        other="/computers/"+second["result"]["id"]
+        try:
+            deadline=time.monotonic()+300
+            while time.monotonic()<deadline:
+                if call("GET",other+"/media")["phase"]=="UploadReady":break
+                time.sleep(3)
+            else:raise AssertionError("Second CDI artifact target not ready")
+            call("POST",other+"/media/boot/artifact",data={"artifactId":artifact},idem=key(),expected=202)
+            deadline=time.monotonic()+300
+            while time.monotonic()<deadline:
+                if call("GET",other+"/media")["ready"]:break
+                time.sleep(3)
+            else:raise AssertionError("Registered artifact copy did not import")
+            copy=next(v for v in call("GET",other+"/storage")["volumes"] if v["kind"]=="boot")["pvcUid"]
+            assert copy and copy!=original
+            call("DELETE",ap,idem=key(),expected=202)
+            call("GET",ap,expected=404)
+            assert call("GET",path+"/media")["ready"] and call("GET",other+"/media")["ready"]
+            assert call("GET","/media-artifacts")["usage"]=={"count":0,"bytes":0}
+            Path("evidence/registered-artifact-verification.json").write_text(json.dumps({"artifactId":artifact,"sha256":digest,"bytes":len(disk),"sourcePvcUid":original,"copyPvcUid":copy,"crossAccountDenied":True,"badDigestDenied":True,"immutable":True,"deletedArtifactIndependentDisks":True},indent=2))
+            artifact=None
+        finally:
+            call("DELETE",other+"?deleteDisks=true",idem=key(),expected=202)
     print("Actual authorized disk bytes uploaded through API, verified by CDI and boot display captured")
 finally:
     call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
+    if artifact:call("DELETE","/media-artifacts/"+artifact,idem=key(),expected=202)
