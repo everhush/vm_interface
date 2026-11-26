@@ -1,5 +1,5 @@
 """Exact media/preflight/launch arguments for pinned native Android validation."""
-import argparse,hashlib,json,subprocess
+import argparse,json,os,shutil,subprocess
 from pathlib import Path
 from prepare_android import SOURCE,ARCHIVE_SHA,digest
 from showcase_inputs import load_scenario
@@ -17,7 +17,16 @@ def arguments(root,transfer="virtiofs-saf"):
     assert expected==[digest(apk),"proof.apk"],"APK checksum mismatch"
     scenario=root/("android-adb-scenario.json" if transfer=="adb-saf" else "android-scenario.json")
     load_scenario(scenario,"android")
-    badging=(root/"apk-badging.txt").read_text()
+    # Revalidate the actual APK, not a detached report that could be stale.
+    sdk=os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
+    tools=Path(sdk)/"build-tools"/"34.0.0" if sdk else None
+    def executable(name):
+        if tools and os.access(tools/name,os.X_OK):return str(tools/name)
+        path=shutil.which(name)
+        if path:return path
+        raise ValueError("Install authorized Android build tool: "+name)
+    subprocess.run([executable("apksigner"),"verify","--verbose",str(apk)],check=True,stdout=subprocess.DEVNULL,timeout=60)
+    badging=subprocess.check_output([executable("aapt2"),"dump","badging",str(apk)],text=True,timeout=60)
     assert "package: name='org.vminterface.proof'" in badging and "versionName='3.0'" in badging
     return ["--media",str(root/"disks/vda.qcow2"),"--media-sha256",pinned["vda.qcow2"]["sha256"],"--system-gib",str(pinned["vda.qcow2"]["sizeGiB"]),"--auxiliary-media",str(root/"disks/vdb.qcow2"),"--auxiliary-sha256",pinned["vdb.qcow2"]["sha256"],"--auxiliary-gib",str(pinned["vdb.qcow2"]["sizeGiB"]),"--source",SOURCE,"--version","v2026.10.18","--software",str(apk),"--software-sha256",digest(apk),"--scenario",str(scenario),"--authorize-media","--record-consent"]
 def main():
@@ -30,6 +39,10 @@ def main():
     p.add_argument("--authorize-android-debug",action="store_true")
     a=p.parse_args()
     if (a.transfer=="adb-saf")!=a.authorize_android_debug:p.error("adb-saf requires explicit debug authorization")
+    if a.confirm_disposable and a.transfer=="adb-saf":
+        adb=shutil.which("adb")
+        if not adb:p.error("Install native Android platform-tools adb before provisioning")
+        subprocess.run([adb,"version"],check=True,timeout=15)
     args=arguments(a.directory.resolve(),a.transfer)+["--android-transfer",a.transfer]
     if a.authorize_android_debug:args+=["--authorize-android-debug"]
     if a.preflight_only:

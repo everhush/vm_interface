@@ -168,8 +168,18 @@ class AndroidGuestTransfer:
         self.ensure()
         self.report["freshKeyAuthorized"]=True
 
-    def ensure(self):
-        self.wait(lambda:self.connect()=="device",45,"Authorized guest ADB unavailable")
+    def ensure(self, checkpoint=None):
+        # Only the operator may reauthorize the same fresh key after a reboot.
+        # Never ask for authorization inside a recording or silently weaken security.
+        def connected():
+            state=self.connect()
+            if state=="unauthorized" and checkpoint:return state
+            return state=="device"
+        state=self.wait(connected,60,"Authorized guest ADB unavailable")
+        if state=="unauthorized":
+            checkpoint()
+            self.wait(lambda:self.connect()=="device",60,"ADB reauthorization unavailable")
+            self.report["rebootKeyReauthorized"]=True
         values=[self.command("shell",*args,target=True).decode().strip() for args in
                 [("getprop","ro.adb.secure"),("getenforce",),("id","-u"),("getprop","ro.product.cpu.abi")]]
         require_guest_security(*values)
