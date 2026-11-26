@@ -34,3 +34,15 @@ test("persistent manifest uses two owned CDI templates and never accepts arbitra
  assert.equal(hasOwner({metadata:{ownerReferences:[{kind:"VirtualMachine",uid:"other"}]}},"VirtualMachine","vm-uid"),false);
  assert.equal(hasOwner({},"VirtualMachine",undefined),false);
 });
+
+test("authorized ARM64 share tag preserves the platform exchange claim",()=>{
+ const id="vm-"+"a".repeat(32);
+ const value={...sample,architecture:"arm64",image:"uploaded-disk",firmware:"uefi",media:{format:"qcow2",bytes:512,sha256:"a".repeat(64),source:"test",os:"Android",version:"test",authorizedByClient:true},storage:{systemGiB:2,exchangeGiB:1,exchangeMode:"virtiofs",exchangeTag:"share"}};
+ const m=vmManifest(id,"alpha",computerSpec.parse(value));
+ assert.deepEqual(m.spec.template.spec.domain.devices.filesystems,[{name:"share",virtiofs:{}}]);
+ assert.ok(m.spec.template.spec.volumes.some(v=>v.name==="share"&&"persistentVolumeClaim" in v&&v.persistentVolumeClaim?.claimName===id+"-exchange"));
+ assert.equal(managedDisks(m,id)[1].name,id+"-exchange");
+ assert.equal(computerSpec.safeParse({...value,architecture:"amd64"}).success,false);
+ assert.equal(computerSpec.safeParse({...value,storage:{...value.storage,exchangeMode:"block"}}).success,false);
+ assert.equal(computerSpec.safeParse({...value,storage:{...value.storage,exchangeTag:"host"}}).success,false);
+});

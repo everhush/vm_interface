@@ -181,7 +181,7 @@ try:
     spec={"version":1,"name":"showcase-"+args.profile,"architecture":"amd64" if win else "arm64",
           "cpu":2,"memoryMiB":4096,"image":"uploaded-installer" if win else "uploaded-disk",
           "firmware":"uefi","bootBus":"sata" if win else "virtio",
-          "storage":{"systemGiB":args.system_gib,"exchangeGiB":1,"exchangeMode":"virtiofs"},
+          "storage":{"systemGiB":args.system_gib,"exchangeGiB":1,"exchangeMode":"virtiofs",**({} if win else {"exchangeTag":"share"})},
           "media":{"format":fmt,"bytes":args.media.stat().st_size,"sha256":args.media_sha256,
                    "source":args.source,"os":"Windows Server 2022" if win else "Android",
                    "version":args.version,"authorizedByClient":True}}

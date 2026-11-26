@@ -6,7 +6,7 @@ import {growthState} from "./storage-growth-layout";
 type DiskRef={kind:"boot"|"exchange"|"installer"|"auxiliary"|"data";name:string;mode?:"virtiofs";diskName?:string;attached?:boolean;sizeGiB?:number;source?:string};
 type Template={metadata?:{name?:string}};
 export function managedDisks(vm:Resource,id:string):DiskRef[]{
- const s=vm.spec as {dataVolumeTemplates?:Template[];template?:{metadata?:{annotations?:Record<string,string>};spec?:{volumes?:{name?:string;persistentVolumeClaim?:{claimName?:string}}[]}}}|undefined;
+ const s=vm.spec as {dataVolumeTemplates?:Template[];template?:{metadata?:{annotations?:Record<string,string>};spec?:{architecture?:string;domain?:{devices?:{filesystems?:{name?:string;virtiofs?:object}[]}};volumes?:{name?:string;persistentVolumeClaim?:{claimName?:string}}[]}}}|undefined;
  const templates=s?.dataVolumeTemplates??[];
  const additional=readDataDisks(vm,id).map(d=>({kind:"data" as const,name:dataDiskClaim(id,d.name),diskName:d.name,attached:d.attached,sizeGiB:d.sizeGiB,...(d.source?{source:d.source}:{})}));
  if(!templates.length)return [];
@@ -15,9 +15,12 @@ export function managedDisks(vm:Resource,id:string):DiskRef[]{
  const auxiliary=s?.template?.metadata?.annotations?.["vm-interface.io/auxiliary-media"]!==undefined;
  const extra=auxiliary?[{kind:"auxiliary" as const,name:id+"-auxiliary"}]:[];
  if(shared!==undefined){
+  const tag=s?.template?.metadata?.annotations?.["vm-interface.io/exchange-tag"]??"exchange";
+  const fs=s?.template?.spec?.domain?.devices?.filesystems;
+  if((tag!=="exchange"&&tag!=="share")||(tag==="share"&&s?.template?.spec?.architecture!=="arm64")||fs?.length!==1||fs[0].name!==tag||!fs[0].virtiofs)throw new ApiError(409,"Unrecognized VirtioFS mount tag");
   const installer=s?.template?.metadata?.annotations?.["vm-interface.io/media-slot"]==="installer";
   const expected=[names.boot,...(installer?[id+"-installer"]:[]),...extra.map(d=>d.name)];
-  if(!/^[1-4]$/.test(shared)||templates.length!==expected.length||!expected.every(n=>templates.some(t=>t.metadata?.name===n))||!s?.template?.spec?.volumes?.some(v=>v.name==="exchange"&&v.persistentVolumeClaim?.claimName===names.exchange))throw new ApiError(409,"Unrecognized VirtioFS layout");
+  if(!/^[1-4]$/.test(shared)||templates.length!==expected.length||!expected.every(n=>templates.some(t=>t.metadata?.name===n))||!s?.template?.spec?.volumes?.some(v=>v.name===tag&&v.persistentVolumeClaim?.claimName===names.exchange))throw new ApiError(409,"Unrecognized VirtioFS layout");
   return [{kind:"boot",name:names.boot},{kind:"exchange",name:names.exchange,mode:"virtiofs"},...(installer?[{kind:"installer" as const,name:id+"-installer"}]:[]),...extra,...additional];
  }
  const installer=s?.template?.metadata?.annotations?.["vm-interface.io/media-slot"]==="installer";

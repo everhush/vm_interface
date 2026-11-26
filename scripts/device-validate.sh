@@ -42,7 +42,7 @@ else
   python3 scripts/showcase-native.py "$profile" "$@" --preflight-only | tee evidence/showcase-input-preflight.json
 fi
 bash scripts/device-validate.sh checks
-export VM_DISPOSABLE_DEVICE=true
+export VM_DISPOSABLE_DEVICE=true VM_DEVICE_PROFILE="$profile"
 # Old provisioning probes require the CI flag; this is a local disposable
 # validation execution, not a claim that GitHub Actions has run it.
 export GITHUB_ACTIONS=true
@@ -69,10 +69,9 @@ rm -f "$tls/key"
 chmod 644 "$tls/ca"
 kubectl apply -f infra/app.yaml
 if [ "$profile" = windows ] || [ "$profile" = android ]; then
-  kubectl -n vm-interface set env deployment/vm-api --containers=api,reconcile VM_MEDIA_MAX_MIB=8192 VM_MEDIA_STAGE_MAX_MIB=16384 VM_SYSTEM_MAX_GIB=64 VM_ACCOUNT_STORAGE_GIB=128 VM_ENABLE_GUEST_EXCHANGE_EVALUATION=true
-  if [ "$profile" = android ]; then
-    kubectl -n vm-interface set env deployment/vm-api --containers=api VM_ENABLE_ARM64_EVALUATION=true
-  fi
+  kubectl -n vm-interface patch deployment vm-api --type=strategic -p "$(python3 scripts/device_profile.py deployment "$profile")"
+  kubectl -n vm-interface get deployment vm-api -o json | python3 scripts/device_profile.py verify-deployment "$profile"
+  kubectl -n vm-interface get pvc vm-media-stage -o json | python3 scripts/device_profile.py verify-pvc "$profile"
 fi
 kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
 python3 scripts/check-rbac-ci.py
