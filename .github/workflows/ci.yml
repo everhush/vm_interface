@@ -112,6 +112,7 @@ jobs:
           name: media-partial-evidence
           path: |
             evidence/media-*-verification.json
+            evidence/media-*-http.jsonl
             evidence/imported-disk-*-display.png
             evidence/public-image-*.json
             evidence/registered-artifact-verification.json
@@ -194,6 +195,9 @@ jobs:
           set -euo pipefail
           if ! command -v skopeo >/dev/null; then sudo apt-get update && sudo apt-get install -y skopeo; fi
           python3 scripts/probe-virtiofs-ci.py
+      - name: Independently verify actual media evidence
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
+        run: python3 scripts/verify_media_evidence.py --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/media-evidence-verification.json
       - name: Verify original API-recorded evidence
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: python3 scripts/verify-evidence.py --root evidence --profile core --commit "$GITHUB_SHA" | tee evidence/video-evidence-verification.json

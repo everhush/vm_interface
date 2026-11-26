@@ -2,34 +2,50 @@
 import hashlib,http.client,json,os,sys,time,urllib.request,urllib.error,uuid
 from pathlib import Path
 from media_http import binary_request
+from evidence_frames import ocr
 base=os.environ.get("API_URL","http://127.0.0.1:3000/api/v1")
 a,b=os.environ["TOKEN_A"],os.environ["TOKEN_B"]
 def key(): return uuid.uuid4().hex
+mode=sys.argv[2] if len(sys.argv)>2 else "direct"
+assert mode in ("direct","resumable","dual","url")
+trace=Path("evidence/media-"+mode+"-http.jsonl")
+trace.write_text("")
+def record(method,path,token,expected,status,raw,transport=None):
+    entry={"method":method,"path":path,"actor":"owner" if token==a else "foreign",
+           "expected":expected,"status":status}
+    if raw is not None:
+        entry.update(bodyBytes=len(raw),bodySha256=hashlib.sha256(raw).hexdigest())
+    if transport is not None:
+        entry["transport"]=transport
+    with trace.open("a") as stream:stream.write(json.dumps(entry)+"\n")
+    print(method,path,entry["actor"],"expected",expected,"actual",status,flush=True)
 def call(method,path,token=a,data=None,idem=None,expected=200,raw=None,binary=False,extra=None):
     headers={"Authorization":"Bearer "+token,"Connection":"close"}
     if idem: headers["Idempotency-Key"]=idem
     if data is not None: headers["Content-Type"]="application/json"
     if raw is not None: headers["Content-Type"]="application/octet-stream"
     if extra: headers.update(extra)
-    if raw is not None:
-        status,payload=binary_request(base+path,method,headers,raw)
-        assert status==expected,(method,path,status,payload[:500])
-        return payload if binary else json.loads(payload)
-    req=urllib.request.Request(base+path,data=json.dumps(data).encode() if data is not None else None,headers=headers,method=method)
-    for attempt in range(8):
-        try:
-            with urllib.request.urlopen(req,timeout=240) as res: status,payload=res.status,res.read()
-            break
-        except urllib.error.HTTPError as exc:
-            status,payload=exc.code,exc.read()
-            break
-        except (urllib.error.URLError,ConnectionError,http.client.RemoteDisconnected):
-            if method!="GET" or attempt==7:raise
-            time.sleep(2)
+    try:
+        if raw is not None:
+            status,payload=binary_request(base+path,method,headers,raw)
+        else:
+            req=urllib.request.Request(base+path,data=json.dumps(data).encode() if data is not None else None,headers=headers,method=method)
+            for attempt in range(8):
+                try:
+                    with urllib.request.urlopen(req,timeout=240) as res: status,payload=res.status,res.read()
+                    break
+                except urllib.error.HTTPError as exc:
+                    status,payload=exc.code,exc.read()
+                    break
+                except (urllib.error.URLError,ConnectionError,http.client.RemoteDisconnected):
+                    if method!="GET" or attempt==7:raise
+                    time.sleep(2)
+    except Exception as exc:
+        record(method,path,token,expected,None,raw,type(exc).__name__)
+        raise
+    record(method,path,token,expected,status,raw)
     assert status==expected,(method,path,status,payload[:500])
     return payload if binary else json.loads(payload)
-mode=sys.argv[2] if len(sys.argv)>2 else "direct"
-assert mode in ("direct","resumable","dual","url")
 disk=Path(sys.argv[1]).read_bytes()
 assert 512<=len(disk)<=64*1024*1024
 fmt="qcow2" if disk.startswith(b"QFI\xfb") else "raw"
@@ -151,11 +167,18 @@ try:
         if (call("GET",path).get("instance") or {}).get("status",{}).get("phase")=="Running":break
         time.sleep(3)
     else: raise AssertionError("Imported VM did not run")
-    # Actual API screenshot from imported disk; retain boot display evidence.
-    png=call("GET",path+"/screenshot",binary=True)
-    assert png.startswith(b"\x89PNG\r\n\x1a\n") and len(png)>100
-    Path("evidence/imported-disk-"+mode+"-display.png").write_bytes(png)
-    Path("evidence/media-"+mode+"-verification.json").write_text(json.dumps({"scope":"real-api-upload","mode":mode,"format":fmt,"bytes":len(disk),"sha256":digest,"verifiedCDI":True,"badDigestDenied":True,"crossAccountDenied":True,"idempotent":True,"screenshotSha256":hashlib.sha256(png).hexdigest(),"guestLoginVerified":False},indent=2))
+    # Running VMI and a valid PNG are not a guest boot proof.
+    screen_path=Path("evidence/imported-disk-"+mode+"-display.png")
+    deadline=time.monotonic()+240
+    while time.monotonic()<deadline:
+        png=call("GET",path+"/screenshot",binary=True)
+        assert png.startswith(b"\x89PNG\r\n\x1a\n") and len(png)>100
+        screen_path.write_bytes(png)
+        if "cirroslogin" in ocr(screen_path):break
+        time.sleep(3)
+    else:raise AssertionError("Imported disk did not reach visible CirrOS login")
+    report={"scope":"real-api-upload","mode":mode,"format":fmt,"bytes":len(disk),"sha256":digest,"verifiedCDI":True,"badDigestDenied":True,"crossAccountDenied":True,"idempotent":True,"screenshotSha256":hashlib.sha256(png).hexdigest(),"guestLoginVerified":True,
+            "commit":os.environ["GITHUB_SHA"],"runId":os.environ["GITHUB_RUN_ID"]}
     if artifact:
         # Reuse the exact account artifact into another independent VM while
         # retaining the original PVC. Compare actual bound claim identities.
@@ -189,3 +212,8 @@ try:
 finally:
     call("DELETE",path+"?deleteDisks=true",idem=key(),expected=202)
     if artifact:call("DELETE","/media-artifacts/"+artifact,idem=key(),expected=202)
+
+# Publish completed evidence only after cleanup succeeds. Partial traces/screens
+# remain available on failure and are not represented as a pass.
+report["traceSha256"]=hashlib.sha256(trace.read_bytes()).hexdigest()
+Path("evidence/media-"+mode+"-verification.json").write_text(json.dumps(report,indent=2))
