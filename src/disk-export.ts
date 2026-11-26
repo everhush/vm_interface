@@ -2,8 +2,9 @@ import {request} from "node:https";
 import {Readable,Transform} from "node:stream";
 import {ApiError,kube,owned,vmiPath,dvPath,pvcPath,type Resource} from "./kube";
 import {readDataDisks,dataDiskClaim,dataDiskNamePattern} from "./data-disk-layout";
-import {hasOwner} from "./storage";
+import {hasOwner,managedDisks} from "./storage";
 import {mediaStatus} from "./media";
+import {systemMaxGiB} from "./media-config";
 const ns=()=>process.env.VM_NAMESPACE||"vm-interface";
 const exportPath=(id="")=>"/apis/export.kubevirt.io/v1/namespaces/"+ns()+"/virtualmachineexports"+(id?"/"+id:"");
 const exportName=/^vx-[a-f0-9]{32}$/;
@@ -18,9 +19,26 @@ export function assertCold(vm:Resource,vmi:Resource|null){
  const spec=vm.spec as {runStrategy?:string}|undefined;
  if(!vm.metadata?.uid||vm.metadata.deletionTimestamp||vmi||spec?.runStrategy!=="Halted"||status?.ready||status?.created||status?.stateChangeRequests?.length)throw new ApiError(409,"Export requires a halted VM and converged lifecycle");
 }
+// Dots cannot occur in independent disk names, so reserved selectors cannot
+// shadow an existing named data disk.
+export function exportClaim(id:string,disk:string){
+ if(!/^vm-[a-f0-9]{32}$/.test(id))throw new ApiError(422,"Invalid VM identifier");
+ if(disk==="system.disk")return id+"-boot";
+ if(disk==="exchange.disk")return id+"-exchange";
+ if(!dataDiskNamePattern.test(disk))throw new ApiError(422,"Invalid disk identifier");
+ return dataDiskClaim(id,disk);
+}
+export function exportSelector(id:string,claim:string){
+ if(claim===id+"-boot")return "system.disk";
+ if(claim===id+"-exchange")return "exchange.disk";
+ const prefix=id+"-data-";
+ if(!claim.startsWith(prefix)||!dataDiskNamePattern.test(claim.slice(prefix.length)))throw new ApiError(409,"Export source invalid");
+ return claim.slice(prefix.length);
+}
 export function exportManifest(id:string,account:string,vmUid:string,disk:string,pvcUid:string,name:string){
- if(!/^vm-[a-f0-9]{32}$/.test(id)||!dataDiskNamePattern.test(disk)||!exportName.test(name))throw new ApiError(422,"Invalid disk or export identifier");
- return {apiVersion:"export.kubevirt.io/v1",kind:"VirtualMachineExport",metadata:{name,labels:{[computerLabel]:id,[accountLabel]:account,[exportLabel]:"true"},annotations:{"vm-interface.io/pvc-uid":pvcUid},ownerReferences:[{apiVersion:"kubevirt.io/v1",kind:"VirtualMachine",name:id,uid:vmUid,controller:false,blockOwnerDeletion:false}]},spec:{source:{apiGroup:"",kind:"PersistentVolumeClaim",name:dataDiskClaim(id,disk)},tokenSecretRef:tokenSecret,ttlDuration:"15m0s"}};
+ if(!exportName.test(name))throw new ApiError(422,"Invalid export identifier");
+ const claim=exportClaim(id,disk);
+ return {apiVersion:"export.kubevirt.io/v1",kind:"VirtualMachineExport",metadata:{name,labels:{[computerLabel]:id,[accountLabel]:account,[exportLabel]:"true"},annotations:{"vm-interface.io/pvc-uid":pvcUid},ownerReferences:[{apiVersion:"kubevirt.io/v1",kind:"VirtualMachine",name:id,uid:vmUid,controller:false,blockOwnerDeletion:false}]},spec:{source:{apiGroup:"",kind:"PersistentVolumeClaim",name:claim},tokenSecretRef:tokenSecret,ttlDuration:"15m0s"}};
 }
 export async function requireNoExports(id:string){
  const result=await kube("GET",exportPath()+"?labelSelector="+encodeURIComponent(computerLabel+"="+id+","+exportLabel+"=true")) as {items?:Resource[]};
@@ -28,21 +46,27 @@ export async function requireNoExports(id:string){
  if(result.items.length)throw new ApiError(409,"Close the offline export and wait for exporter deletion before modifying the VM");
 }
 async function diskTarget(id:string,account:string,disk:string,vm:Resource){
- if(!dataDiskNamePattern.test(disk))throw new ApiError(404,"Disk not found");
- const d=readDataDisks(vm,id).find(v=>v.name===disk);
- if(!d)throw new ApiError(404,"Disk not found");
- const claim=dataDiskClaim(id,disk),dv=await optional(dvPath(claim)),pvc=await optional(pvcPath(claim));
- if(!dv?.metadata?.uid||!pvc?.metadata?.uid||dv.metadata.deletionTimestamp||pvc.metadata.deletionTimestamp||!hasOwner(dv,"VirtualMachine",vm.metadata?.uid)||!hasOwner(pvc,"DataVolume",dv.metadata.uid)||dv.metadata.labels?.[accountLabel]!==account||(dv.status as {phase?:string}|undefined)?.phase!=="Succeeded"||(pvc.status as {phase?:string}|undefined)?.phase!=="Bound")throw new ApiError(409,"Owned populated disk required for export");
- if(d.media&&!(await mediaStatus(id,account,`data-${disk}`))?.ready)throw new ApiError(409,"Media transfer not verified");
- return {claim,pvcUid:pvc.metadata.uid,sizeGiB:d.sizeGiB};
+ const claim=exportClaim(id,disk),ref=managedDisks(vm,id).find(d=>d.name===claim);
+ if(!ref)throw new ApiError(404,"Disk not found");
+ if(ref.mode==="virtiofs")throw new ApiError(422,"VirtioFS is a shared filesystem, not a raw disk; use the published file exchange API");
+ const d=ref.kind==="data"?readDataDisks(vm,id).find(v=>v.name===disk):undefined;
+ const templates=(vm.spec as {dataVolumeTemplates?:{metadata?:{name?:string};spec?:{storage?:{resources?:{requests?:{storage?:string}}}}}[]})?.dataVolumeTemplates??[];
+ const size=templates.find(t=>t.metadata?.name===claim)?.spec?.storage?.resources?.requests?.storage;
+ const sizeGiB=d?.sizeGiB??(typeof size==="string"&&/^[1-9][0-9]*Gi$/.test(size)?Number(size.slice(0,-2)):0);
+ if(!Number.isSafeInteger(sizeGiB)||sizeGiB<1||sizeGiB>systemMaxGiB)throw new ApiError(409,"Disk capacity not verified");
+ const dv=await optional(dvPath(claim)),pvc=await optional(pvcPath(claim));
+ const dvStorage=(dv?.spec as {storage?:{resources?:{requests?:{storage?:string}}}}|undefined)?.storage;
+ if(!dv?.metadata?.uid||!pvc?.metadata?.uid||dv.metadata.name!==claim||pvc.metadata.name!==claim||dv.metadata.deletionTimestamp||pvc.metadata.deletionTimestamp||!hasOwner(dv,"VirtualMachine",vm.metadata?.uid)||!hasOwner(pvc,"DataVolume",dv.metadata.uid)||dv.metadata.labels?.[accountLabel]!==account||dv.metadata.labels?.[computerLabel]!==id||dvStorage?.resources?.requests?.storage!==sizeGiB+"Gi"||(dv.status as {phase?:string}|undefined)?.phase!=="Succeeded"||(pvc.status as {phase?:string}|undefined)?.phase!=="Bound")throw new ApiError(409,"Owned populated disk required for export");
+ if(d?.media&&!(await mediaStatus(id,account,`data-${disk}`))?.ready)throw new ApiError(409,"Media transfer not verified");
+ if(ref.kind==="boot"){const state=await mediaStatus(id,account,"boot");if(state&&!state.ready)throw new ApiError(409,"Boot media transfer not verified")}
+ return {claim,pvcUid:pvc.metadata.uid,sizeGiB};
 }
 async function ownedExport(id:string,account:string,name:string){
  const vm=await owned(id,account);
  if(!exportName.test(name))throw new ApiError(404,"Export not found");
  const exp=await kube("GET",exportPath(name)) as Resource,s=exp.spec as ExportSpec|undefined;
- if(!exp.metadata?.uid||exp.metadata.name!==name||!hasOwner(exp,"VirtualMachine",vm.metadata?.uid)||exp.metadata.labels?.[accountLabel]!==account||exp.metadata.labels?.[computerLabel]!==id||exp.metadata.labels?.[exportLabel]!=="true"||s?.tokenSecretRef!==tokenSecret||s.source?.kind!=="PersistentVolumeClaim"||(s.source.apiGroup??"")!==""||!s.source.name?.startsWith(id+"-data-"))throw new ApiError(404,"Export not found");
- const disk=s.source.name.slice((id+"-data-").length);
- if(!dataDiskNamePattern.test(disk))throw new ApiError(409,"Export source invalid");
+ if(!exp.metadata?.uid||exp.metadata.name!==name||!hasOwner(exp,"VirtualMachine",vm.metadata?.uid)||exp.metadata.labels?.[accountLabel]!==account||exp.metadata.labels?.[computerLabel]!==id||exp.metadata.labels?.[exportLabel]!=="true"||s?.tokenSecretRef!==tokenSecret||s.source?.kind!=="PersistentVolumeClaim"||(s.source.apiGroup??"")!==""||typeof s.source.name!=="string")throw new ApiError(404,"Export not found");
+ const disk=exportSelector(id,s.source.name);
  return {vm,exp,disk};
 }
 export async function createDiskExport(id:string,account:string,disk:string,opId:string){
@@ -53,10 +77,10 @@ export async function createDiskExport(id:string,account:string,disk:string,opId
  const manifest=exportManifest(id,account,vm.metadata!.uid!,disk,t.pvcUid,name);
  await kube("POST",exportPath()+"?dryRun=All",manifest);
  await kube("POST",exportPath(),manifest);
- return {id,exportId:name,disk,ttlSeconds:900,format:"raw",warning:"Offline data disk only; wait for ready state before download"};
+ return {id,exportId:name,disk,ttlSeconds:900,format:"raw",warning:"Offline raw disk only; wait for ready state before download"};
 }
 export function exportEndpoint(name:string,namespace:string,claim:string,status:ExportStatus){
- if(!exportName.test(name)||!/^[a-z0-9-]{1,63}$/.test(namespace)||!/^vm-[a-f0-9]{32}-data-[a-z0-9](?:[a-z0-9-]{0,14}[a-z0-9])?$/.test(claim))throw new ApiError(409,"Invalid export identity");
+ if(!exportName.test(name)||!/^[a-z0-9-]{1,63}$/.test(namespace)||!/^vm-[a-f0-9]{32}-(?:boot|exchange|data-[a-z0-9](?:[a-z0-9-]{0,14}[a-z0-9])?)$/.test(claim))throw new ApiError(409,"Invalid export identity");
  const host="virt-export-"+name+"."+namespace+".svc",path="/volumes/"+claim+"/disk.img";
  const links=status.links?.internal,raw=links?.volumes?.find(v=>v.name===claim)?.formats?.find(f=>f.format==="raw");
  if(status.phase!=="Ready"||status.serviceName!=="virt-export-"+name||status.tokenSecretRef!==tokenSecret||raw?.url!=="https://"+host+path||!links?.cert||links.cert.length>32768||!links.cert.includes("-----BEGIN CERTIFICATE-----"))throw new ApiError(409,"Verified internal native raw export endpoint is not ready");
@@ -91,6 +115,7 @@ export async function downloadDiskExport(id:string,account:string,name:string,si
    let bytes=0;
    const bounded=new Transform({transform(chunk:Buffer,_encoding,callback){bytes+=chunk.length;if(bytes>length)callback(new Error("Export exceeds declared length"));else callback(null,chunk)},flush(callback){callback(bytes===length?undefined:new Error("Incomplete export"))}});
    res.on("error",e=>bounded.destroy(e));
+   res.on("aborted",()=>bounded.destroy(new Error("Export stream aborted")));
    bounded.on("close",()=>res.destroy());
    res.pipe(bounded);
    resolve(new Response(Readable.toWeb(bounded) as ReadableStream<Uint8Array>,{headers:{"content-type":"application/octet-stream","content-length":String(length),"content-disposition":"attachment; filename=\""+t.claim+".raw\"","cache-control":"no-store","x-content-type-options":"nosniff"}}));

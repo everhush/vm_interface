@@ -27,11 +27,13 @@ spec:
   - expression: >-
       object.spec.source.kind == 'PersistentVolumeClaim' &&
       (!has(object.spec.source.apiGroup) || object.spec.source.apiGroup == '') &&
-      object.spec.source.name.startsWith(object.metadata.labels['vm-interface.io/computer'] + '-data-') &&
-      object.spec.source.name.matches('^vm-[a-f0-9]{32}-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$') &&
+      (object.spec.source.name == object.metadata.labels['vm-interface.io/computer'] + '-boot' ||
+       object.spec.source.name == object.metadata.labels['vm-interface.io/computer'] + '-exchange' ||
+       (object.spec.source.name.startsWith(object.metadata.labels['vm-interface.io/computer'] + '-data-') &&
+        object.spec.source.name.matches('^vm-[a-f0-9]{32}-data-[a-z0-9]([a-z0-9-]{0,14}[a-z0-9])?$'))) &&
       object.spec.tokenSecretRef == 'vm-api-export' &&
       object.spec.ttlDuration == '15m0s'
-    message: "Only bounded offline data disk exports with the dedicated token are permitted"
+    message: "Only bounded offline managed disk exports with the dedicated token are permitted"
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
