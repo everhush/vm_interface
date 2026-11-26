@@ -1,0 +1,35 @@
+name: Pinned Android native inputs (no KVM)
+on:
+  push:
+    branches: ['prep/android-prepared-ci']
+  workflow_dispatch:
+permissions:
+  contents: read
+  attestations: read
+concurrency:
+  group: vm-interface-android-prepared-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  prepare:
+    if: github.repository == 'xad3play/vm_interface'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install image inspection tool only if absent
+        run: |
+          command -v qemu-img >/dev/null || { sudo timeout 240s apt-get update -qq && sudo timeout 240s apt-get install -y --no-install-recommends qemu-utils; }
+      - name: Verify actual pinned two-disk release and signed challenge APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash scripts/qualify-android-media.sh qualification/android --retain-disks
+          python3 scripts/prepared_android.py qualification/android --preflight-only | tee qualification/android/preflight.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verified-android-prepared-inputs
+          path: |
+            qualification/android/*
+            !qualification/android/disks/**
+          retention-days: 30

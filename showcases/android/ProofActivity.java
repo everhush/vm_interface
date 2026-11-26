@@ -13,9 +13,12 @@ import android.widget.TextView;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.io.OutputStream;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 
 public class ProofActivity extends Activity {
-  private static final byte[] RESULT="VM Interface Android APK functional proof\n".getBytes(StandardCharsets.UTF_8);
+  private static final String PREFIX="VM Interface Android APK functional proof\nchallenge-sha256:";
+  private static final int CHALLENGE_BYTES=4096;
   private TextView status;
   private Button compute;
   private Uri directory;
@@ -46,20 +49,41 @@ public class ProofActivity extends Activity {
         ContentResolver resolver=getContentResolver();
         Uri parent=DocumentsContract.buildDocumentUriUsingTree(directory,DocumentsContract.getTreeDocumentId(directory));
         Uri children=DocumentsContract.buildChildDocumentsUriUsingTree(directory,DocumentsContract.getTreeDocumentId(directory));
-        try(Cursor c=resolver.query(children,new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME},null,null,null)){
+        String challengeId=null;
+        try(Cursor c=resolver.query(children,new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME,DocumentsContract.Document.COLUMN_DOCUMENT_ID},null,null,null)){
           if(c==null)throw new Exception("Directory not readable");
           while(c.moveToNext()){
             String name=c.getString(0);
             if("out-result.txt".equals(name)||"out-result.txt.sha256".equals(name))throw new Exception("Stale result");
+            if("in-challenge.bin".equals(name)){
+              if(challengeId!=null)throw new Exception("Duplicate challenge");
+              challengeId=c.getString(1);
+            }
           }
         }
-        String hash=digest(RESULT);
-        write(resolver,parent,"out-result.txt",RESULT);
+        if(challengeId==null)throw new Exception("Missing uploaded challenge");
+        Uri challenge=DocumentsContract.buildDocumentUriUsingTree(directory,challengeId);
+        byte[] input=readChallenge(resolver,challenge);
+        byte[] result=(PREFIX+digest(input)+"\n").getBytes(StandardCharsets.UTF_8);
+        String hash=digest(result);
+        write(resolver,parent,"out-result.txt",result);
         write(resolver,parent,"out-result.txt.sha256",(hash+"\n").getBytes(StandardCharsets.US_ASCII));
         status.setText("APKCOMPLETE "+abi+"\n"+hash);
       } catch(Exception e){status.setText("EXPORT FAILED");}
     });
     setContentView(layout);
+  }
+  private static byte[] readChallenge(ContentResolver resolver,Uri uri)throws Exception{
+    try(InputStream in=resolver.openInputStream(uri);ByteArrayOutputStream out=new ByteArrayOutputStream(CHALLENGE_BYTES)){
+      if(in==null)throw new Exception("Missing challenge stream");
+      byte[] buffer=new byte[1024];int n;
+      while((n=in.read(buffer))!=-1){
+        if(n<=0||out.size()+n>CHALLENGE_BYTES)throw new Exception("Challenge size exceeded");
+        out.write(buffer,0,n);
+      }
+      if(out.size()!=CHALLENGE_BYTES)throw new Exception("Wrong challenge size");
+      return out.toByteArray();
+    }
   }
   private static void write(ContentResolver resolver,Uri parent,String name,byte[] bytes)throws Exception{
     Uri dest=DocumentsContract.createDocument(resolver,parent,"application/octet-stream",name);

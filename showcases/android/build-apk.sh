@@ -17,4 +17,4 @@ keytool -genkeypair -keyalg RSA -keysize 2048 -validity 365 -alias proof -dname 
 "$bt/apksigner" sign --ks "$work/test.p12" --ks-pass pass:disposable-test --key-pass pass:disposable-test --out "$out" "$work/aligned.apk"
 "$bt/apksigner" verify --verbose "$out"
 sha256sum "$out"
-printf 'VM Interface Android APK functional proof\n' | sha256sum
+echo 'Proof output digest is bound to fresh API-uploaded challenge at runtime.'

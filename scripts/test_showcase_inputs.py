@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from showcase_inputs import load_scenario
+from android_fixture import ANDROID_RESULT_MODE,android_result
 
 class ShowcaseInputsTest(unittest.TestCase):
     def check(self, profile, scenario):
@@ -18,7 +19,7 @@ class ShowcaseInputsTest(unittest.TestCase):
                 "softwareSetup":[{"human":"Install uploaded fixture and select authorized exchange directory"}] if profile=="android" else [],
                 "application":[{"click":[12,34]},{"wait":{"text":"Done","seconds":10}}],
                 "beforeMarker":"Ready","afterMarker":"7-Zip" if profile=="windows" else "APK COMPLETE arm64-v8a",
-                "resultName":"result.txt","expectedResultSha256":hashlib.sha256(result).hexdigest()}
+                "resultName":"result.txt","expectedResultSha256":hashlib.sha256(result).hexdigest() if profile=="windows" else ANDROID_RESULT_MODE}
 
     def test_accepts_structural_fixtures(self):
         for profile in ("windows","android"):
@@ -41,3 +42,9 @@ class ShowcaseInputsTest(unittest.TestCase):
         sample["expectedResultSha256"]="0"*64
         with self.assertRaises(ValueError):
             self.check("android",sample)
+
+    def test_android_output_is_bound_to_exact_random_input(self):
+        a,b=bytes(4096),bytes([1])*4096
+        self.assertNotEqual(android_result(a),android_result(b))
+        self.assertIn(hashlib.sha256(a).hexdigest().encode(),android_result(a))
+        with self.assertRaises(ValueError):android_result(a[:-1])

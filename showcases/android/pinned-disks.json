@@ -1,0 +1,14 @@
+{
+  "vda.qcow2": {
+    "bytes": 2255945728,
+    "sha256": "c029184fe55eeb83556067ce64f3a6ec3efee71f4ffeff491f27944a1b22c7a6",
+    "virtualBytes": 5368709120,
+    "sizeGiB": 6
+  },
+  "vdb.qcow2": {
+    "bytes": 196864,
+    "sha256": "de001102cbc8ff7aa8eb6c69d750cf22b94104935a0de6277ec5f24509927745",
+    "virtualBytes": 17179869184,
+    "sizeGiB": 18
+  }
+}

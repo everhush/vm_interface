@@ -6,6 +6,8 @@ import json
 import subprocess
 from pathlib import Path
 from evidence_frames import verify_marker_frames, ocr
+from android_fixture import ANDROID_RESULT_MODE,android_result
+from showcase_inputs import load_scenario
 from linux_showcase_fixture import package, verify_archive, verify_platform
 
 
@@ -75,8 +77,15 @@ def verify_folder(folder, profile):
     else:
         check(proof['profile'] == profile and proof['architecture'] == ('amd64' if profile == 'windows' else 'arm64'), 'Wrong showcase profile')
         check(proof['screenMarkersVerified'] and proof['coldResizeAndFilePersistence'], 'Missing showcase assertions')
-        expected = (b'VM Interface Windows 7-Zip functional proof\n' if profile == 'windows'
-                    else b'VM Interface Android APK functional proof\n')
+        if profile=='windows':
+            expected=b'VM Interface Windows 7-Zip functional proof\n'
+        else:
+            challenge=(folder/'challenge.bin').read_bytes()
+            check(proof['resultMode']==ANDROID_RESULT_MODE and proof['challengeBytes']==len(challenge) and file_hash(folder/'challenge.bin')==proof['challengeSha256'],'Missing exact Android challenge proof')
+            check(file_hash(folder/'proof.apk')==proof['softwareSha256'] and file_hash(folder/'scenario.json')==proof['scenarioSha256'],'Android software or scenario mismatch')
+            load_scenario(folder/'scenario.json','android')
+            check('upload challenge' in phases,'Missing challenge upload')
+            expected=android_result(challenge)
         check((folder/'guest-result.bin').read_bytes() == expected, 'Unexpected native result bytes')
         check(file_hash(folder/'guest-result.bin') == proof['outputSha256'], 'Output hash mismatch')
         check(file_hash(trace) == proof['traceSha256'], 'Trace checksum mismatch')

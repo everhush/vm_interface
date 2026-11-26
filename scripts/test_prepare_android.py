@@ -12,6 +12,8 @@ def header(backing=0):
     data[:4] = b'QFI\xfb'
     struct.pack_into('>I',data,4,3)
     struct.pack_into('>Q',data,8,backing)
+    struct.pack_into('>I',data,20,16)
+    struct.pack_into('>I',data,100,104)
     struct.pack_into('>Q',data,24,1024**3)
     return bytes(data)
 
