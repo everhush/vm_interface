@@ -46,6 +46,7 @@ jobs:
           bash scripts/provision-ci.sh
           python3 scripts/check-runner-space.py after-provision 12
       - name: Build and deploy
+        id: deploy
         shell: bash
         run: |
           set -euo pipefail
@@ -72,36 +73,52 @@ jobs:
           kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
           python3 scripts/check-rbac-ci.py
       - name: API smoke and tenant isolation
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-smoke.py
       - name: Persistent system and exchange lifecycle
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-persistent.py
       - name: Independent data disk lifecycle, media and native export
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-data-disks.py
       - name: Install locked client dependencies and evidence tools
+        id: client_tools
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: |
           npm ci --no-audit --no-fund
           bash scripts/install-evidence-tools.sh
       - name: Actual VNC transport
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-vnc.ts
       - name: Original API control recording
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-api-control-proof.py
       - name: Input ownership, pointer and keyboard isolation
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-input.ts
       - name: Private network isolation and tunnel
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-network.ts
       - name: Recording API lifecycle and authorization
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-recording.ts
       - name: Actual guest VirtioFS exchange and published bundle
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-exchange.py
       - name: Linux installation, archive, native clone and original recording
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-api-functional-proof.py
       - name: Idle-stop semantics
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-idle.py
       - name: Actual CDI disk import
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh bash scripts/e2e-media-ci.sh
       - name: Actual authorized ISO import and boot configuration
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh bash scripts/e2e-iso-ci.sh
       - name: Verify durable API recovery across deployment restart
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: |
           set -euo pipefail
           kubectl -n vm-interface port-forward svc/vm-api 3000:3000 > /tmp/recovery-port.log 2>&1 &
@@ -118,11 +135,13 @@ jobs:
           curl --retry 20 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:3000/api/v1/health
           python3 scripts/e2e-recovery.py after
       - name: VirtioFS guest compatibility probe (infrastructure only)
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: |
           set -euo pipefail
           if ! command -v skopeo >/dev/null; then sudo apt-get update && sudo apt-get install -y skopeo; fi
           python3 scripts/probe-virtiofs-ci.py
       - name: Verify original API-recorded evidence
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: python3 scripts/verify-evidence.py --root evidence --profile core | tee evidence/video-evidence-verification.json
       - name: Diagnostics (no secret or implicit guest screen collection)
         if: always()

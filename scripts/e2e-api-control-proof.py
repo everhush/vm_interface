@@ -198,8 +198,13 @@ def main():
         before = OUT/"before.png"
         def ready():
             normalized, text = screen(path, before)
-            return bool(re.search(r"login\s*:", text)) and first not in normalized and second not in normalized
-        wait(ready, 180, "No real login prompt")
+            # The pinned CirrOS kernel emits an asynchronous entropy message
+            # onto the login tty. Wait for it BEFORE the consented input test.
+            # Run 45770716860 retained the interrupted marker in a real PNG.
+            return (bool(re.search(r"login\s*:", text)) and
+                    "nonblockingpoolisinitialized" in normalized and
+                    first not in normalized and second not in normalized)
+        wait(ready, 240, "No real login prompt with initialized entropy pool")
         key = call("POST", "/keys", body={"label":"api-control-proof", "permission":"manage",
                    "ttlSeconds":600}, expected=201, phase="controller key")
         key_id = key["id"]
