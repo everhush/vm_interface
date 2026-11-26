@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "notes": "Release-asset sizes and SHA256 from GitHub publisher release metadata. Installer is exact git commit content, SHA256 independently computed. Integrity pins are not independent publisher signature verification.",
+  "assets": [
+    {
+      "name": "install.sh",
+      "url": "https://raw.githubusercontent.com/k3s-io/k3s/b3bd2818fe9d5bee0f257143af6cf41337f21b7b/install.sh",
+      "bytes": 36455,
+      "sha256": "40b487f0d8ef4f5d1bf422e7bb6228cc7789c40ecc66c5ab067d396bbee9816e",
+      "architecture": "all"
+    },
+    {
+      "name": "k3s-amd64",
+      "url": "https://github.com/k3s-io/k3s/releases/download/v1.34.13%2Bk3s1/k3s",
+      "bytes": 78348450,
+      "sha256": "b9a7c47aab81db66d0253378ddea0d06f8a6dca4dace7a26db3f00fa2f0e3717",
+      "architecture": "x86_64"
+    },
+    {
+      "name": "k3s-arm64",
+      "url": "https://github.com/k3s-io/k3s/releases/download/v1.34.13%2Bk3s1/k3s-arm64",
+      "bytes": 70910114,
+      "sha256": "bad32c0c798bce0e883216ed755bbfb3c6a9fbd9b9f1dee32a6be16d256ad033",
+      "architecture": "aarch64"
+    },
+    {
+      "name": "kubevirt-operator.yaml",
+      "url": "https://github.com/kubevirt/kubevirt/releases/download/v1.9.0/kubevirt-operator.yaml",
+      "bytes": 496820,
+      "sha256": "f11307caafc3c23ffedf9887d8beb5a4419e2694da242fa68f63d1ec820de2e0",
+      "architecture": "all"
+    },
+    {
+      "name": "kubevirt-cr.yaml",
+      "url": "https://github.com/kubevirt/kubevirt/releases/download/v1.9.0/kubevirt-cr.yaml",
+      "bytes": 322,
+      "sha256": "43106136dbce3312bdbfdeae612aacafc6c12da518d233f90645b4685d84a2af",
+      "architecture": "all"
+    },
+    {
+      "name": "cdi-operator.yaml",
+      "url": "https://github.com/kubevirt/containerized-data-importer/releases/download/v1.66.0/cdi-operator.yaml",
+      "bytes": 357645,
+      "sha256": "f81f2730f3404649196e9777b67a3c69fd6ea5d9eb60775dfd97ac90d2edf8e7",
+      "architecture": "all"
+    },
+    {
+      "name": "cdi-cr.yaml",
+      "url": "https://github.com/kubevirt/containerized-data-importer/releases/download/v1.66.0/cdi-cr.yaml",
+      "bytes": 283,
+      "sha256": "a497f90de608c1df26f9ee4095289373f17132d74a2042ca03e00c17c964f8a7",
+      "architecture": "all"
+    },
+    {
+      "name": "cnpg.yaml",
+      "url": "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.30.0/cnpg-1.30.0.yaml",
+      "bytes": 1262410,
+      "sha256": "f8bede43fe4ee0d478c2355b204a36876b2ae4faac60f2a9452280b293da3b88",
+      "architecture": "all"
+    }
+  ]
+}
