@@ -63,13 +63,18 @@ export async function requireMediaReady(id:string,account:string){
   if(state&&!state.ready)throw new ApiError(409,"Declared media is not verified and imported");
  }
 }
-export function validMediaHeader(format:Metadata["format"],header:Buffer):boolean{
+export function validMediaHeader(format:Metadata["format"],header:Buffer,maxVirtualBytes=64*1024**3):boolean{
  if(format==="qcow2"){
   if(header.length<72||header.readUInt32BE(0)!==0x514649fb)return false;
   const version=header.readUInt32BE(4);
   // Reject backing chains, encryption and external data before CDI sees bytes.
   if(![2,3].includes(version)||header.readBigUInt64BE(8)!==0n||header.readUInt32BE(16)!==0||header.readUInt32BE(32)!==0)return false;
-  if(version===3&&(header.length<104||(header.readBigUInt64BE(72)&4n)!==0n))return false;
+  const clusterBits=header.readUInt32BE(20),virtualBytes=header.readBigUInt64BE(24);
+  if(!Number.isSafeInteger(maxVirtualBytes)||maxVirtualBytes<512||clusterBits<9||clusterBits>21||virtualBytes<512n||virtualBytes%512n!==0n||virtualBytes>BigInt(maxVirtualBytes))return false;
+  // Reject corrupt, dirty, external-data and unknown incompatible features.
+  // A clean standalone QCOW2 v3 may use the optional compression-type bit (3)
+  // or extended L2 entries (4); CDI/qemu must still validate the complete image.
+  if(version===3&&(header.length<104||header.readUInt32BE(100)<104||header.readUInt32BE(100)>2**clusterBits||(header.readBigUInt64BE(72)&~24n)!==0n))return false;
   return true;
  }
  if(format==="iso"){
@@ -79,7 +84,16 @@ export function validMediaHeader(format:Metadata["format"],header:Buffer):boolea
  // Raw disk is not universally bootable. Reject obvious QCOW2 and ISO headers.
  return header.length>=512&&header.readUInt32BE(0)!==0x514649fb&&!validMediaHeader("iso",header);
 }
-async function stage(body:ReadableStream<Uint8Array>,path:string,metadata:Metadata){
+export function mediaCapacityBytes(dv:Resource,metadata:Metadata){
+ const reserved=(dv.spec as {storage?:{resources?:{requests?:{storage?:string}}}}|undefined)?.storage?.resources?.requests?.storage;
+ if(typeof reserved!=="string"||!/^([1-9]|[1-5][0-9]|6[0-4])Gi$/.test(reserved))throw new ApiError(409,"Media disk reservation unavailable");
+ const capacity=Number(reserved.slice(0,-2))*1024**3;
+ // The uploaded stream must fit staging and logical disk reservations;
+ // for QCOW2, compressed file length is not virtual capacity.
+ if(metadata.bytes>capacity)throw new ApiError(422,"Media bytes exceed reserved disk capacity");
+ return capacity;
+}
+async function stage(body:ReadableStream<Uint8Array>,path:string,metadata:Metadata,maxVirtualBytes:number){
  const fd=await open(path,"wx",0o600),reader=body.getReader();
  const hash=createHash("sha256");let size=0,head=Buffer.alloc(0);
  const deadline=Date.now()+180000;
@@ -95,7 +109,7 @@ async function stage(body:ReadableStream<Uint8Array>,path:string,metadata:Metada
    let off=0;while(off<bytes.length){const w=await fd.write(bytes,off,bytes.length-off);if(!w.bytesWritten)throw new ApiError(502,"Stage write failed");off+=w.bytesWritten}
   }
   if(Date.now()>deadline||size!==metadata.bytes||hash.digest("hex")!==metadata.sha256)throw new ApiError(422,"Media byte length or SHA256 mismatch");
-  if(!validMediaHeader(metadata.format,head))throw new ApiError(422,"Declared media format does not match bytes");
+  if(!validMediaHeader(metadata.format,head,maxVirtualBytes))throw new ApiError(422,"Media format, standalone header or virtual capacity does not match reservation");
   await fd.sync();
  }catch(e){await reader.cancel().catch(()=>{});throw e}
  finally{clearTimeout(timer);reader.releaseLock();await fd.close()}
@@ -156,7 +170,7 @@ export async function uploadMedia(id:string,account:string,slot:Slot,body:Readab
   if(t.metadata.bytes>directMaxBytes)throw new ApiError(413,"Use resumable chunk upload for large media");
   const fs=await statfs(stageDir);
   if(fs.bavail*fs.bsize<t.metadata.bytes+64*MiB)throw new ApiError(409,"Insufficient physical staging space");
-  await stage(body,path,t.metadata);
+  await stage(body,path,t.metadata,mediaCapacityBytes(t.dv!,t.metadata));
   return await sendVerified(id,account,slot,t,path,opId);
  }finally{await unlink(path).catch(()=>{});inFlight--}
 }
@@ -165,6 +179,7 @@ export async function uploadMediaChunk(id:string,account:string,slot:Slot,offset
  if(t.ready)throw new ApiError(409,"Media already imported");
  const st=stageTarget(id,account,t);
  if(!st)throw new ApiError(409,"Media target identity unavailable");
+ mediaCapacityBytes(t.dv!,t.metadata);
  return appendStage(st,offset,bytes,sha256);
 }
 export async function commitMediaStage(id:string,account:string,slot:Slot,opId:string){
@@ -175,7 +190,8 @@ export async function commitMediaStage(id:string,account:string,slot:Slot,opId:s
   if(t.ready){await discardStage(id,account,slot);return {slot,sha256:t.metadata.sha256,bytes:t.metadata.bytes,phase:t.phase,alreadyImported:true}}
   const st=stageTarget(id,account,t);
   if(!st)throw new ApiError(409,"Media target identity unavailable");
-  const verified=await verifiedStage(st,head=>validMediaHeader(t.metadata.format,head));
+  const capacity=mediaCapacityBytes(t.dv!,t.metadata);
+  const verified=await verifiedStage(st,head=>validMediaHeader(t.metadata.format,head,capacity));
   const result=await sendVerified(id,account,slot,t,verified.path,opId);
   // Successful submission means CDI has accepted the bytes. If the response
   // is lost, preserve the stage for explicit inspection; never auto-replay.
