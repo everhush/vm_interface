@@ -172,8 +172,22 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
       - name: Private network isolation and tunnel
+        id: network_proof
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-network.ts
+      - name: Retain network partial evidence immediately on failed stage
+        if: ${{ !cancelled() && steps.network_proof.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-partial-evidence
+          path: |
+            evidence/network-http.jsonl
+            evidence/network-guest-response.txt
+            evidence/network-relay-response.txt
+            evidence/network-verification.json
+            evidence/api-test-stages.txt
+          if-no-files-found: warn
+          retention-days: 7
       - name: Recording API lifecycle and authorization
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-recording.ts
