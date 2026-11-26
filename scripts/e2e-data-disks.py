@@ -21,6 +21,16 @@ def call(method,path,data=None,token=a,idem=None,expected=200):
     except urllib.error.HTTPError as exc: status,result=exc.code,json.load(exc)
     if status!=expected: raise ResponseMismatch(method,path,status,result)
     return result
+def export_length(res,claim,capacity):
+    value=res.headers["X-VM-Export-Bytes"]
+    assert value and value.isascii() and value.isdecimal() and not value.startswith("0"),dict(res.headers)
+    length=int(value)
+    assert 0<length<=capacity*1024**3
+    framing=res.headers["Content-Length"]
+    if framing is not None: assert framing==value
+    assert res.headers["Content-Type"].split(";")[0]=="application/octet-stream"
+    assert res.headers["Content-Disposition"]=='attachment; filename="'+claim+'.raw"'
+    return length
 def wait(fn,seconds=420):
     end=time.monotonic()+seconds
     while time.monotonic()<end:
@@ -152,7 +162,7 @@ try:
     wait(lambda:call("GET",ep)["ready"])
     req=urllib.request.Request(base+ep+"/file",headers={"Authorization":"Bearer "+a})
     with urllib.request.urlopen(req,timeout=180) as res:
-        length=int(res.headers["Content-Length"]); prefix=res.read(len(payload)); total=len(prefix); h=hashlib.sha256(prefix)
+        length=export_length(res,vm+"-data-imported",1); prefix=res.read(len(payload)); total=len(prefix); h=hashlib.sha256(prefix)
         assert prefix==payload
         while chunk:=res.read(1024*1024): total+=len(chunk); h.update(chunk)
         assert total==length and length<=1024**3
@@ -172,9 +182,7 @@ try:
         wait(lambda:call("GET",ep)["ready"])
         req=urllib.request.Request(base+ep+"/file",headers={"Authorization":"Bearer "+a})
         with urllib.request.urlopen(req,timeout=180) as res:
-            length=int(res.headers["Content-Length"])
-            assert 0<length<=capacity*1024**3
-            assert vm+claim_suffix+".raw" in res.headers["Content-Disposition"]
+            length=export_length(res,vm+claim_suffix,capacity)
             h=hashlib.sha256();total=0
             while chunk:=res.read(1024*1024): h.update(chunk);total+=len(chunk)
             assert total==length
