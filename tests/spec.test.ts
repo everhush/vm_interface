@@ -46,3 +46,10 @@ test("authorized ARM64 share tag preserves the platform exchange claim",()=>{
  assert.equal(computerSpec.safeParse({...value,storage:{...value.storage,exchangeMode:"block"}}).success,false);
  assert.equal(computerSpec.safeParse({...value,storage:{...value.storage,exchangeTag:"host"}}).success,false);
 });
+
+test("inline cloud-init matches pinned KubeVirt UTF-8 byte limit",()=>{
+ const fedora={...sample,image:"fedora-exchange-test",memoryMiB:1536,storage:{systemGiB:4,exchangeGiB:1,exchangeMode:"virtiofs"}};
+ assert.equal(computerSpec.safeParse({...fedora,cloudInit:"a".repeat(2048)}).success,true);
+ assert.equal(computerSpec.safeParse({...fedora,cloudInit:"a".repeat(2049)}).success,false);
+ assert.equal(computerSpec.safeParse({...fedora,cloudInit:"é".repeat(1025)}).success,false);
+});

@@ -19,7 +19,8 @@ try:
     assert listed()["status"].get("ready") is True,"Active grant did not protect VM"
     call("DELETE",path+"/console-tickets/"+ticket["id"])
     wait(lambda:listed()["status"].get("printableStatus")=="Stopped",210,"Idle policy did not stop")
-    assert call("GET",path)["instance"] is None
+    # PrintableStatus can precede final VMI deletion.
+    wait(lambda:call("GET",path)["instance"] is None,120,"Idle stop VMI deletion did not converge")
     assert any(e["actor"]=="system" and e["group"]=="stop" and e["computerId"]==id for e in call("GET","/audit"))
     assert all(e["computerId"]!=id for e in call("GET","/audit",B))
     (h["OUT"]/"verification.json").write_text(json.dumps({"activeGrantProtected":True,"idleStopped":True,"vmRetained":True,"accountAuditIsolated":True},indent=2))

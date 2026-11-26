@@ -28,7 +28,7 @@ export const computerSpec = z.strictObject({
   bootBus:z.enum(["virtio","sata"]).optional(),
   network:z.enum(["isolated","private"]).optional(),
   storage:storageSpec.optional(),
-  cloudInit:z.string().min(1).max(8192).optional(),
+  cloudInit:z.string().min(1).max(2048).refine(value=>Buffer.byteLength(value,"utf8")<=2048,"KubeVirt inline cloud-init is limited to 2048 UTF-8 bytes").optional(),
   idleStopSeconds:z.number().int().min(60).max(86400).optional()
 }).superRefine((s,ctx)=>{
  if(s.image==="fedora-exchange-test"&&(!s.storage||s.storage.systemGiB<4||s.memoryMiB<1536||s.storage.exchangeMode!=="virtiofs"))ctx.addIssue({code:"custom",path:["storage"],message:"Fedora test requires >=4GiB boot, >=1536MiB RAM and VirtioFS"});
@@ -77,7 +77,7 @@ export function vmManifest(id:string,account:string,s:ComputerSpec){
  const cloud=s.cloudInit?[{name:"cloudinit",cloudInitNoCloud:{userData:s.cloudInit}}]:[];
  const cloudDisks=s.cloudInit?[{name:"cloudinit",disk:{bus:"virtio"}}]:[];
  return {apiVersion:"kubevirt.io/v1",kind:"VirtualMachine",metadata:{name:id,labels:{"vm-interface.io/account":account},...(s.idleStopSeconds?{annotations:{"vm-interface.io/idle-stop-seconds":String(s.idleStopSeconds)}}:{})},spec:{
-  runStrategy:"Halted",...(persistent?{dataVolumeTemplates:templates}:{}),template:{metadata:{labels:{"vm-interface.io/account":account,"vm-interface.io/computer":id},...((shared||s.media)?{annotations:{...(shared?{"vm-interface.io/exchange-gib":String(persistent!.exchangeGiB),"vm-interface.io/exchange-tag":exchangeTag}:{}),...(s.media?{"vm-interface.io/media":JSON.stringify(s.media),"vm-interface.io/media-slot":installer?"installer":"boot"}:{}),...(s.auxiliaryDisk?{"vm-interface.io/auxiliary-media":JSON.stringify(s.auxiliaryDisk.media)}:{})}}:{})},spec:{
+  runStrategy:"Halted",...(persistent?{dataVolumeTemplates:templates}:{}),template:{metadata:{labels:{"vm-interface.io/account":account,"vm-interface.io/computer":id,...(s.network==="private"?{"vm-interface.io/private-network":"true"}:{})},...((shared||s.media)?{annotations:{...(shared?{"vm-interface.io/exchange-gib":String(persistent!.exchangeGiB),"vm-interface.io/exchange-tag":exchangeTag}:{}),...(s.media?{"vm-interface.io/media":JSON.stringify(s.media),"vm-interface.io/media-slot":installer?"installer":"boot"}:{}),...(s.auxiliaryDisk?{"vm-interface.io/auxiliary-media":JSON.stringify(s.auxiliaryDisk.media)}:{})}}:{})},spec:{
    architecture:s.architecture,nodeSelector:{"kubernetes.io/arch":s.architecture,"kubevirt.io/schedulable":"true"},
    domain:{cpu:{cores:s.cpu},resources:{requests:{memory:s.memoryMiB+"Mi"}},...(s.firmware==="uefi"?{firmware:{bootloader:{efi:{secureBoot:false}}}}:{}),devices:{disks:[...disks,...mediaDisks,...cloudDisks],autoattachPodInterface:s.network==="private",...(s.network==="private"?{interfaces:[{name:"private",masquerade:{},model:"virtio"}]}:{}),...(shared?{filesystems:[{name:exchangeTag,virtiofs:{}}],rng:{}}:{})}},
    networks:s.network==="private"?[{name:"private",pod:{}}]:[],volumes:[...volumes,...mediaVolumes,...cloud]
