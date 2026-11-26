@@ -12,6 +12,21 @@ mkdir -p "$HOME/.kube"
 sudo cp /etc/rancher/k3s/k3s.yaml "$HOME/.kube/config"
 sudo chown "$(id -u):$(id -g)" "$HOME/.kube/config"
 chmod 600 "$HOME/.kube/config"
+# A successful systemd start does not imply kubelet node registration.
+# An empty list makes kubectl wait --all exit immediately rather than wait.
+registered=false
+for attempt in $(seq 1 60); do
+  if [ -n "$(kubectl get nodes -o name --request-timeout=5s 2>/dev/null || true)" ]; then
+    registered=true
+    break
+  fi
+  sleep 3
+done
+if [ "$registered" != true ]; then
+  sudo journalctl -u k3s --no-pager -n 100 >&2
+  echo "No node registered within 180 seconds" >&2
+  exit 1
+fi
 kubectl wait node --all --for=condition=Ready --timeout=180s
 KV=v1.9.0
 CDI=v1.66.0
@@ -44,7 +59,7 @@ kubectl apply -f "https://github.com/kubevirt/containerized-data-importer/releas
 kubectl wait cdi cdi --for=condition=Available --timeout=600s
 kubectl apply --server-side -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/v1.30.0/releases/cnpg-1.30.0.yaml
 kubectl -n cnpg-system rollout status deployment/cnpg-controller-manager --timeout=300s
-kubectl apply -f infra/namespace.yaml
+python3 scripts/device_profile.py namespace "${VM_DEVICE_PROFILE:-core}" | kubectl apply -f -
 kubectl apply -f infra/exchange-policy.yaml
 kubectl apply -f infra/disk-export-policy.yaml
 kubectl -n vm-interface wait cluster vm-db --for=condition=Ready --timeout=600s
