@@ -1,6 +1,7 @@
 /** Product API-only native guest HTTP application and private tunnel test. */
 import assert from "node:assert/strict";
-import {readFileSync,writeFileSync} from "node:fs";
+import {readFileSync,writeFileSync,appendFileSync} from "node:fs";
+import {createHash} from "node:crypto";
 import {randomUUID} from "node:crypto";
 import {WebSocket,createWebSocketStream} from "ws";
 import {startGuestRelay} from "./guest-tcp-relay";
@@ -11,10 +12,26 @@ const a=process.env.TOKEN_A,b=process.env.TOKEN_B;
 assert.ok(a&&b);
 const ca=readFileSync(process.env.CONSOLE_CA_PATH||"/tmp/console-tls.crt");
 const delay=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
+const tracePath="evidence/network-http.jsonl";
+writeFileSync(tracePath,"");
+function log(entry:Record<string,unknown>){
+ appendFileSync(tracePath,JSON.stringify(entry)+"\n");
+ console.log("Network proof",JSON.stringify(entry));
+}
 async function call(method:string,path:string,token:string,body?:unknown,expected=200){
- const r=await fetch(base+path,{method,headers:{authorization:"Bearer "+token,"content-type":"application/json","idempotency-key":randomUUID()},...(body!==undefined?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)});
- assert.equal(r.status,expected,method+" "+path);
- return r.json();
+ for(let i=0;i<8;i++){
+  let r:Response;
+  try{r=await fetch(base+path,{method,headers:{connection:"close",authorization:"Bearer "+token,"content-type":"application/json","idempotency-key":randomUUID()},...(body!==undefined?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)})}
+  catch(e){
+   log({method,path,actor:token===a?"owner":"foreign",expected,transport:e instanceof Error?e.name:"unknown"});
+   if(method!=="GET"||i===7)throw e;
+   await delay(2000);continue;
+  }
+  log({method,path,actor:token===a?"owner":"foreign",expected,status:r.status});
+  assert.equal(r.status,expected,method+" "+path);
+  return r.json();
+ }
+ throw Error("Read transport did not recover");
 }
 function ws(path:string,token:string){
  const s=new WebSocket(gateway+path,["binary","vm-network."+token],{ca,handshakeTimeout:15000,maxPayload:1024*1024,perMessageDeflate:false});
@@ -24,7 +41,7 @@ async function deny(path:string,token:string,status:number){
  const s=ws(path,token);
  try{await new Promise<void>((resolve,reject)=>{
   const timer=setTimeout(()=>reject(Error("Tunnel denial timeout")),20000);
-  s.once("unexpected-response",(_req,res)=>{clearTimeout(timer);res.resume();try{assert.equal(res.statusCode,status);resolve()}catch(e){reject(e)}});
+  s.once("unexpected-response",(_req,res)=>{clearTimeout(timer);res.resume();log({method:"WSS",path,expected:status,status:res.statusCode});try{assert.equal(res.statusCode,status);resolve()}catch(e){reject(e)}});
   s.once("open",()=>{clearTimeout(timer);reject(Error("Unauthorized tunnel opened"))});
   s.once("error",e=>{clearTimeout(timer);reject(e)});
  })}finally{s.terminate()}
@@ -33,7 +50,7 @@ async function open(path:string,token:string){
  const s=ws(path,token);
  try{await new Promise<void>((resolve,reject)=>{
   const timer=setTimeout(()=>reject(Error("Tunnel handshake timeout")),20000);
-  s.once("open",()=>{clearTimeout(timer);resolve()});s.once("error",e=>{clearTimeout(timer);reject(e)});s.once("unexpected-response",(_req,res)=>{clearTimeout(timer);res.resume();reject(Error("Guest tunnel handshake HTTP "+res.statusCode))});
+  s.once("open",()=>{clearTimeout(timer);log({method:"WSS",path,expected:101,status:101});resolve()});s.once("error",e=>{clearTimeout(timer);reject(e)});s.once("unexpected-response",(_req,res)=>{clearTimeout(timer);res.resume();log({method:"WSS",path,expected:101,status:res.statusCode});reject(Error("Guest tunnel handshake HTTP "+res.statusCode))});
  })}catch(e){s.terminate();throw e}
  return s;
 }
@@ -76,6 +93,7 @@ try{
   try{response=await guestHttp(tunnel,grant.token);if(response.includes(marker))break}catch(e){if(i%10===0)console.log("Guest tunnel attempt",i,e instanceof Error?e.message:"unknown")}
   await delay(2000);
  }
+ writeFileSync("evidence/network-guest-response.txt",response);
  assert.ok(response.includes("200 OK")&&response.includes(marker),"Actual guest application did not respond");
  assert.ok(response.includes("cluster-egress-blocked")&&!response.includes("cluster-egress-open"),"Guest could reach cluster API endpoint");
  // The same loopback TCP relay used by the Android client must work
@@ -91,6 +109,7 @@ try{
    socket.on("error",e=>{clearTimeout(timer);reject(e)});
    socket.on("close",()=>{clearTimeout(timer);if(!data.includes(marker)||!data.includes("cluster-egress-blocked"))reject(Error("Guest relay response incomplete"))});
   });
+  writeFileSync("evidence/network-relay-response.txt",actual);
   assert.ok(actual.includes("200 OK")&&actual.includes(marker)&&actual.includes("cluster-egress-blocked"));
  }finally{await adapter.close()}
  await delay(1000);
@@ -105,7 +124,7 @@ try{
  await waitClosed(s);
  const grants=await call("GET",collection,a);
  assert.equal(grants.find((g:{id:string})=>g.id===second.id).active,false);
- writeFileSync("evidence/network-verification.json",JSON.stringify({nativeGuestHttp:true,loopbackTcpRelayVerified:true,marker,clusterApiEgressBlocked:true,crossAccountDenied:true,duplicateConnectionDenied:true,revokedDisconnect:true,stopDisconnect:true},null,2));
+ writeFileSync("evidence/network-verification.json",JSON.stringify({nativeGuestHttp:true,loopbackTcpRelayVerified:true,marker,clusterApiEgressBlocked:true,crossAccountDenied:true,duplicateConnectionDenied:true,revokedDisconnect:true,stopDisconnect:true,commit:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,guestResponseSha256:createHash("sha256").update(readFileSync("evidence/network-guest-response.txt")).digest("hex"),relayResponseSha256:createHash("sha256").update(readFileSync("evidence/network-relay-response.txt")).digest("hex"),traceSha256:createHash("sha256").update(readFileSync(tracePath)).digest("hex")},null,2));
  console.log("Actual private guest HTTP tunnel, default-deny cluster egress and revocation verified");
 }finally{
  for(const s of sockets)s.terminate();

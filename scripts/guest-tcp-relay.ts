@@ -1,7 +1,6 @@
 /** Client-side loopback TCP adapter for one account-authorized WSS grant.
  * No cluster credentials, unauthenticated external listener, or TLS bypass. */
 import {createServer} from "node:net";
-import {pipeline} from "node:stream";
 import {readFileSync} from "node:fs";
 import {pathToFileURL} from "node:url";
 import {WebSocket,createWebSocketStream} from "ws";
@@ -15,14 +14,24 @@ export async function startGuestRelay(address:string,token:string,ca:Buffer){
   if(active){socket.destroy();return}
   socket.pause();
   const ws=new WebSocket(url,["binary","vm-network."+token],{ca,rejectUnauthorized:true,handshakeTimeout:15000,maxPayload:1024*1024,perMessageDeflate:false});
-  let closed=false;
-  const close=()=>{if(closed)return;closed=true;active=undefined;socket.destroy();ws.terminate()};
+  let closed=false,opened=false,drain:ReturnType<typeof setTimeout>|undefined;
+  const close=()=>{if(closed)return;closed=true;if(drain)clearTimeout(drain);active=undefined;socket.destroy();ws.terminate()};
   active=close;
-  socket.on("error",close);socket.on("close",close);ws.on("error",close);ws.on("close",close);
+  socket.on("error",close);socket.on("close",close);ws.on("error",close);
+  ws.on("close",code=>{
+   // Abnormal transport loss/revocation aborts immediately. On a received
+   // close frame, the WS stream will end its TCP writable peer after draining
+   // already-authorized bytes; do not destroy that peer before it flushes.
+   if(!opened||code===1006){close();return}
+   if(!closed)drain=setTimeout(close,3000);
+  });
   ws.on("open",()=>{
    if(closed)return;
+   opened=true;
    const stream=createWebSocketStream(ws);
-   pipeline(socket,stream,close);pipeline(stream,socket,close);
+   stream.on("error",close);
+   socket.pipe(stream,{end:false});
+   stream.pipe(socket);
    socket.resume();
   });
  });

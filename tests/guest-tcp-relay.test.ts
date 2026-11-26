@@ -16,7 +16,15 @@ test("loopback client relay verifies TLS and carries actual binary TCP bytes",as
  const server=createServer({key:readFileSync(key),cert:ca});
  const wss=new WebSocketServer({server,handleProtocols:p=>p.has("binary")?"binary":false});
  let received=false;
- wss.on("connection",(ws,req)=>{assert.equal(req.url,path);assert.ok(req.headers["sec-websocket-protocol"]?.includes("vm-network."+token));ws.on("message",data=>{received=true;ws.send(data)})});
+ const remoteReply=Buffer.alloc(512*1024,0x5a);
+ wss.on("connection",(ws,req)=>{
+  assert.equal(req.url,path);assert.ok(req.headers["sec-websocket-protocol"]?.includes("vm-network."+token));
+  ws.on("message",data=>{
+   received=true;
+   if(data.toString()==="close-after-reply"){ws.send(remoteReply,{binary:true});ws.close(1000)}
+   else ws.send(data)
+  })
+ });
  await new Promise<void>(resolve=>server.listen(0,"127.0.0.1",resolve));
  const bound=server.address();assert.ok(bound&&typeof bound!=="string");
  const url="wss://127.0.0.1:"+bound.port+path;
@@ -31,6 +39,20 @@ test("loopback client relay verifies TLS and carries actual binary TCP bytes",as
    s.on("error",e=>{clearTimeout(timer);reject(e)});
   });
   assert.ok(received);assert.deepEqual(result,data);
+  // Use a fresh local listener (same authorized WSS route); the actual
+  // peer sends binary data immediately followed by a close frame.
+  const draining=await startGuestRelay(url,token,ca);
+  try{
+   const flushed=await new Promise<Buffer>((resolve,reject)=>{
+    const s=connect(draining.port,"127.0.0.1",()=>s.write("close-after-reply"));
+    const timer=setTimeout(()=>{s.destroy();reject(Error("Relay close-drain timeout"))},5000);
+    const chunks:Buffer[]=[];
+    s.on("data",chunk=>chunks.push(chunk));
+    s.on("end",()=>{clearTimeout(timer);resolve(Buffer.concat(chunks))});
+    s.on("error",e=>{clearTimeout(timer);reject(e)});
+   });
+   assert.deepEqual(flushed,remoteReply);
+  }finally{await draining.close()}
  }finally{
   await relay.close();for(const ws of wss.clients)ws.terminate();wss.close();await new Promise<void>(resolve=>server.close(()=>resolve()));rmSync(root,{recursive:true,force:true});
  }
