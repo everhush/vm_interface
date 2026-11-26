@@ -12,11 +12,13 @@
         "actual guest kernel boot screen",
         "Consolidated candidate 0b98f08 static: 62 TS tests, 14 Python tests, lint, typecheck and build",
         "Committed npm lock from reviewed artifact: SHA256 b9ac869b0a9c0cf4f049638a7de49b19ad2b46e6ec69c91629f5840749e623de; locked static 63 TS and 19 Python tests, lint, typecheck, production build.",
-        "Consolidated candidate 48cf699 static CI 45770044021 passed: locked typecheck/lint/build and TS/Python test suites."
+        "Consolidated candidate 48cf699 static CI 45770044021 passed: locked typecheck/lint/build and TS/Python test suites.",
+        "Pinned provisioning asset SHA256/size and K3s/CDI/KubeVirt/CNPG API discovery gates; actual hosted deployment.",
+        "37c26f0: 79 TS + 34 Python tests, typecheck/lint/build passed."
       ],
       "pending": [
-        "native device and operator compatibility",
-        "Review dependency publishers and pinned operator/container supply chain; exact latest core CI."
+        "Final consolidated candidate core KVM CI, native device and operator compatibility.",
+        "Review container publisher provenance separately from integrity pins."
       ],
       "evidence": [
         45542879476,
@@ -24,7 +26,9 @@
         45543719409,
         45625007493,
         45647020596,
-        45770044021
+        45770044021,
+        45784791470,
+        45794567249
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -40,15 +44,16 @@
         "account isolation",
         "desired-resource quotas",
         "idempotency replay",
-        "hashed account keys and scoped permissions"
+        "hashed account keys and scoped permissions",
+        "45780959318: actual API smoke and durable recovery across deployment restart; idempotent replay and same instance UID."
       ],
       "pending": [
-        "static and device validation",
-        "safe cancellation only where existing operation supports it; no generic uncertain replay"
+        "Final consolidated regression and independent device review; cancellation only where supported."
       ],
       "evidence": [
         45542879476,
-        45544070366
+        45544070366,
+        45780959318
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -63,15 +68,16 @@
       "verified": [
         "create/start/stop/restart/delete",
         "cold CPU/RAM",
-        "guest status"
+        "guest status",
+        "45780959318: native create/start/restart/stop, persistent lifecycle."
       ],
       "pending": [
-        "Full static checks and real cold resize, firmware, reset, advanced schema dry-run/replay tests",
-        "Conditional live update/migration/GPU/device support only after eligible qualification; broader native CRD coverage not implemented"
+        "Remaining exact-candidate firmware, cold resize, Linux guest app persistence; conditional live update/migration/GPU only with eligible qualification."
       ],
       "evidence": [
         45542879476,
-        45550528465
+        45550528465,
+        45780959318
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -89,17 +95,20 @@
         "digest-pinned CDI import",
         "Fedora VirtioFS infrastructure mount/read/write",
         "virtio-mem guest driver present (not live resize)",
-        "45770716860: actual persistent system/exchange, independent blank/clone/import and raw disk export with verified imported byte prefix; system and block exchange raw export streamed and hashed. Guest-written clone proof and CSI growth still pending."
+        "45770716860: actual persistent system/exchange, independent blank/clone/import and raw disk export with verified imported byte prefix; system and block exchange raw export streamed and hashed. Guest-written clone proof and CSI growth still pending.",
+        "45780959318: actual independent data-disk lifecycle, import/export, product VirtioFS roundtrip and halted published bundle.",
+        "45784791470: native CSI policy sentinel and recording claim denied, exact PVC UIDs preserved; boot PVC to 8 GiB and exchange guest statvfs 1020702720 to 2077073408 bytes; actual challenge and bundle SHA256."
       ],
       "pending": [
-        "Snapshot/backup only where supported storage path passes conformance",
-        "Native export, independent imports and larger cold clone require real API and byte verification; in-place PVC expansion needs expansion-capable storage and separate guest partition/filesystem growth. Raw system/block exchange export is prepared; full VirtioFS backup and separate retention remain unqualified.",
-        "Real API exchange, import, export, guest clone bytes and native CSI runtime qualification; conditional snapshot/restore remain unqualified. Android exchange mount and SAF need native device."
+        "Linux guest-written clone divergence, exact-candidate media and CSI regression; virtual boot disk/filesystem growth not claimed; conditional snapshots only after storage conformance.",
+        "Native Android exchange and SAF qualification."
       ],
       "evidence": [
         45542879476,
         45544070366,
-        45770716860
+        45770716860,
+        45780959318,
+        45784791470
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -126,17 +135,18 @@
         "RBAC denial",
         "shared read-only RFB frames and ticket revocation",
         "guest-visible WSS human takeover and HTTP batch markers observed in failed-run artifact; regression revalidation required",
-        "45770716860: real RFB observers passed; recording test exposed asynchronous CirrOS kernel log interrupting second marker, no original MP4 certified."
+        "45770716860: real RFB observers passed; recording test exposed asynchronous CirrOS kernel log interrupting second marker, no original MP4 certified.",
+        "45780959318: original API H.264 recording 44.5s, 750335 bytes, SHA256 cee693b3cf74c537bbbf4cc218d31dd7f7e53e1a5492d4bc03785570e3767a9c; decoded exact ordered markers and redacted trace; recording authorization lifecycle passed."
       ],
       "pending": [
-        "consolidated static checks",
-        "real video, pointer and guest app proof; no current platform MP4"
+        "Latest exact-candidate input ownership/takeover, pointer, Linux application recording and full verifier regression."
       ],
       "evidence": [
         45542879476,
         45544070366,
         45548980997,
-        45770716860
+        45770716860,
+        45780959318
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
@@ -151,19 +161,21 @@
         "tenant denial",
         "quota",
         "narrow role",
-        "key and ticket isolation and revocation"
+        "key and ticket isolation and revocation",
+        "45780959318: durable recovery passed."
       ],
       "pending": [
-        "actual network and recovery/idle conformance",
-        "qualified public exposure, failure/node/storage pressure and operational limits incomplete"
+        "Native private network/tunnel, idle convergence regression; public exposure only in eligible qualified environment; failure/node/storage pressure and operational limits."
       ],
       "evidence": [
         45542879476,
-        45544070366
+        45544070366,
+        45780959318
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
-        "private TCP tunnel, redacted audit, idle stop and recovery tests"
+        "private TCP tunnel, redacted audit, idle stop and recovery tests",
+        "Scoped virt-api tunnel ingress, bounded binary relay drain/revocation; actual local WebSocket regression passed on 37c26f0."
       ]
     },
     {
@@ -173,8 +185,8 @@
         "Historical Fedora native VirtioFS infrastructure compatibility; previous Windows media evidence no longer mandatory."
       ],
       "pending": [
-        "Exact candidate Linux application installation, archive, recording, cold resize and reboot persistence in hosted KVM.",
-        "Pinned Fedora image publisher/license metadata review; exact media provenance."
+        "Hosted full Linux application installation, challenge archive, guest-written clone divergence, original API recording and cold resize/restart evidence.",
+        "Guest Fedora version and actual RPM license inventory."
       ],
       "evidence": [
         45624621225,
@@ -184,7 +196,8 @@
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
         "Reproducible client-owned Linux ZIP package; API upload, verified guest install/launch via lease, actual challenge ZIP and SHA256, original API MP4, persistence and cold resize/restart; independent verifier.",
-        "Guest block disk serial, random challenge write, cold CDI clone, independent clone mutation and source preservation; guest Fedora version and actual RPM license inventory."
+        "Guest block disk serial, random challenge write, cold CDI clone, independent clone mutation and source preservation; guest Fedora version and actual RPM license inventory.",
+        "Corrected 2048-byte cloud-init bound and compact launcher; no guest runtime pass yet."
       ]
     },
     {
@@ -194,54 +207,60 @@
         "free ARM host probe only",
         "Actual pinned ARM64 archive download, publisher attestation, QCOW2 inspection and signed proof APK build",
         "Signed APK v2 and concrete scenario structural validation passed; authorized first-run and SAF setup before recorded action.",
-        "45770845250: actual pinned Android archive and signed APK v3 prepared; artifact 15094046905. Guest compatibility unverified."
+        "45770845250: actual pinned Android archive and signed APK v3 prepared; artifact 15094046905. Guest compatibility unverified.",
+        "45782398435: actual pinned media, publisher attestation, signed APK 3.0 and both offline scenario preflights; no guest boot certified."
       ],
       "pending": [
-        "Native UEFI boot compatibility, guest exchange driver/SAF and real execution of the supplied exact-version UI scenario",
-        "native device validation"
+        "Final offline preparation regression; native ARM64 boot/driver/SAF and authorized application execution."
       ],
       "evidence": [
         45543634216,
         45543719409,
         45623125031,
         45645803256,
-        45770845250
+        45770845250,
+        45782398435
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
         "ARM64 gated UEFI disk API, Android signed test APK source/build and UI/file proof runner",
         "pinned ARM64 LineageOS QEMU 23.2 dual-disk release metadata and safe offline archive preparation",
-        "Exact pinned disk manifests and signed challenge-bound APK v3, offline preparation/verification and one-command native-device invocation. 45770330034 running."
+        "Exact pinned disk manifests and signed challenge-bound APK v3, offline preparation/verification and one-command native-device invocation. 45770330034 running.",
+        "Portable signed APK metadata reader tested against actual retained APK; signature recheck before native deployment, isolated authenticated ADB optional route, unrecorded reauthorization checkpoint."
       ]
     },
     {
       "issue": 9,
       "scope": "Complete acceptance and three reviews",
       "verified": [
-        "partial smoke pipelines"
+        "partial smoke pipelines",
+        "37c26f0 static pass; original control MP4, real CSI and partial core evidence independently inspected."
       ],
       "pending": [
-        "Full static checks; remaining mandatory backend implementation gaps; native media and exact UI scenario qualification",
-        "Actual Linux x86_64 and Android ARM64 native showcases, original API MP4 evidence and 3/3 comprehensive reviewed passes"
+        "Full exact-candidate hosted integration before #12; independent device validation only after all feasible implementation checks; 0/3 comprehensive reviewed passes."
       ],
       "evidence": [
         45542879476,
         45543854617,
         45645064773,
         45647020596,
-        45770716860
+        45770716860,
+        45780959318,
+        45784791470,
+        45794567249
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
         "consolidated branch, device docs, evidence verifier and independent static checks",
         "validation-only handoff issue #12; readiness gate remains blocked",
         "Named real API test stages with explicit exit status evidence, no duplicate provision per core run; direct implementation work only, hourly automation paused.",
-        "CI independent post-deployment stages run even after another stage fails, preserving real failure status and collecting more evidence in one provisioned run."
+        "CI independent post-deployment stages run even after another stage fails, preserving real failure status and collecting more evidence in one provisioned run.",
+        "Unified disposable-device and hosted API transports."
       ]
     }
   ],
   "candidateBranch": "implementation/virtualization-backend",
-  "candidateStatus": "native-partial-core-passed-control-fixture-and-csi-probe-corrected",
+  "candidateStatus": "blocked-hosted-core-integration-and-final-candidate-regression",
   "nonKvmLocalEvidence": {
     "scope": "isolated local tests on Node 22 transpiled with TypeScript 5.8 and Python; not full Node 24 build",
     "passed": [
@@ -256,7 +275,8 @@
       "actual Android release archive unavailable locally",
       "No consolidated Node 24 dependency install/typecheck/lint/build result; no candidate workflow run or commit status visible",
       "No authorized real Windows MSI/ISO bytes, xorriso or PowerShell locally; guest mount and exact scenario remain unqualified",
-      "No original API-recorded MP4 in recovered CI artifacts; synthetic verifier fixtures are not product evidence"
+      "No original API-recorded MP4 in recovered CI artifacts; synthetic verifier fixtures are not product evidence",
+      "Historical local limitations above were subsequently superseded for hosted static, actual Android input preparation and original control MP4; exact final native integration remains open."
     ],
     "sourceBlobsVerified": true,
     "candidateCodeCommit": "a4d2dcde025b16c685b605face839a9fdcd8eebf",
@@ -266,10 +286,10 @@
     ],
     "latestCodeReviewed": "6dad51eb4bdf0f236acb295096662053ed91ece4",
     "latestForkCheck": {
-      "run": 45770044021,
-      "commit": "48cf6992d5b8c61b53a2094192aabbb1b0b3e00c",
+      "run": 45795560495,
+      "commit": "f9e35589f59b8815f6feb6993c9493b386b335b5",
       "reported": "success",
-      "effective": "locked full static tests; real KVM and Android media pending"
+      "effective": "locked static suite; not native guest acceptance"
     }
   },
   "ciRepository": "xad3play/vm_interface",
@@ -277,7 +297,7 @@
     "upstream": "imxade/vm_interface",
     "mode": "exact-upstream-ref-sync-only",
     "duplicatePolicy": "cancel superseded same-ref runs",
-    "status": "direct-implementation-core-csi-android-running",
+    "status": "direct-work-core-and-csi-running",
     "historicalCandidate": "e5693ab4bdb8dcbea4f4454203c7d8cabb49b930"
   }
 }
