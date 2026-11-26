@@ -2,9 +2,9 @@ import unittest
 from iso_marker import parse_pgm,crop_for_ocr,exact_marker
 class IsoMarkerTests(unittest.TestCase):
     def test_exact_and_not_fuzzy(self):
-        self.assertTrue(exact_marker("VM INTERFACE ISOBOOTOK"))
-        self.assertFalse(exact_marker("WMINTERFACE ISOBOOTOK"))
-        self.assertFalse(exact_marker("VMINTERFACE ISOBOOTOR"))
+        self.assertTrue(exact_marker("ISO BOOT PROOF PASSED"))
+        self.assertFalse(exact_marker("ISO BOOT PROOF FAILED"))
+        self.assertFalse(exact_marker("ISO BOOT PROOF PASSE"))
     def test_real_pixel_transform(self):
         w,h,pixels=parse_pgm(b"P5\n3 2\n255\n"+bytes([0,0,0,0,255,0]))
         cw,ch,scaled=parse_pgm(crop_for_ocr(w,h,pixels))

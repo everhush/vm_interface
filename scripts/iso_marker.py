@@ -2,7 +2,7 @@
 import re
 import subprocess
 
-MARKER = "VMINTERFACEISOBOOTOK"
+MARKER = "ISOBOOTPROOFPASSED"
 
 def parse_pgm(raw):
     magic, dims, max_value, pixels = raw.split(b"\n", 3)
