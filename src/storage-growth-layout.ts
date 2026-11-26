@@ -66,6 +66,7 @@ export function planGrowth(vm:Resource,id:string,disk:string,pvc:Resource,sizeGi
  const requested=storageQuantityBytes(p.resources?.requests?.storage),target=sizeGiB*1024**3;
  if(requested>target||requested===target&&previous?.sizeGiB!==sizeGiB)throw new ApiError(422,"PVC capacity may not shrink or be reserved retroactively");
  if(previous&&requested<previous.sizeGiB*1024**3&&sizeGiB!==previous.sizeGiB)throw new ApiError(409,"Submit the existing reservation before increasing it");
+ if(previous&&sizeGiB>previous.sizeGiB&&!growthState(vm,claim,pvc)?.pvcCapacityConverged)throw new ApiError(409,"Wait for previous PVC growth convergence");
  const delta=sizeGiB-(previous?.sizeGiB??base.sizeGiB);
  const entries=[...growthReservations(vm.spec).filter(v=>v.claim!==claim),{claim,sizeGiB,pvcUid:pvc.metadata.uid}];
  return {claim,sizeGiB,delta,alreadySubmitted:requested===target,reservationPatch:{metadata:{resourceVersion:expectedResourceVersion},spec:{template:{metadata:{annotations:{[GROWTH_ANNOTATION]:JSON.stringify(entries)}}}}},pvcPatch:{metadata:{resourceVersion:pvc.metadata.resourceVersion},spec:{resources:{requests:{storage:sizeGiB+"Gi"}}}}};
