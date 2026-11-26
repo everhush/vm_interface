@@ -13,6 +13,10 @@ const server=createServer((req,res)=>{
  const bundle=req.method==="GET"&&req.url==="/bundle";
  if(bundling||active>=2||(bundle&&active!==0)){res.writeHead(409);res.end();return}
  active++;if(bundle)bundling=true;
+ let released=false;
+ const release=()=>{if(!released){released=true;active--;if(bundle)bundling=false}};
+ res.once("finish",release);res.once("close",release);
+ res.setTimeout(15000,()=>res.destroy());
  void (async()=>{
   try{
    if(bundle){
@@ -37,7 +41,6 @@ const server=createServer((req,res)=>{
    }
    throw new ApiError(404,"Not found");
   }catch(e){if(!res.headersSent)res.writeHead(e instanceof ApiError?e.status:502,{"content-type":"application/json"});res.end(JSON.stringify({error:"Exchange request failed"}))}
-  finally{active--;if(bundle)bundling=false}
  })();
 });
 server.requestTimeout=15000;server.headersTimeout=5000;
