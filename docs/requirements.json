@@ -124,7 +124,8 @@
         "Bounded halted VirtioFS published file TAR with checksum manifest, complete file validation and lock-serialized capture; not arbitrary filesystem backup/restore.",
         "QCOW2 virtual capacity validation against actual CDI reservation on direct and resumable upload paths; reject corrupt, dirty, backing and external-data images before transmission.",
         "Operator-opt-in CSI PVC expansion: durable quota reservation, cold ownership and PVC UID fence, monotonic exact-version patch and convergence reporting; default local-path refuses; guest capacity is separate.",
-        "Exact real OpenEBS Rawfile LocalPV v0.15.3 chart digest, separate native CSI evaluation lane with API-only guest statvfs and actual byte/PVC identity proof; 45769751635 running."
+        "Exact real OpenEBS Rawfile LocalPV v0.15.3 chart digest, separate native CSI evaluation lane with API-only guest statvfs and actual byte/PVC identity proof; 45769751635 running.",
+        "Client-side authorized HTTPS acquisition: checked public DNS, pinned TCP/TLS hostname, redirect allowlist, digest/size and private content-addressed public cache; actual publisher-pinned CirrOS URL/CDI proof queued for native validation."
       ]
     },
     {
@@ -151,7 +152,8 @@
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
         "API input lease, video capture, actual script-driven proof with original MP4 and trace, standalone verifier",
-        "Independent raw video frame decode, pixel comparison and ordered OCR verification"
+        "Independent raw video frame decode, pixel comparison and ordered OCR verification",
+        "Explicit amd64 Fedora USB tablet and challenge-bound actual evdev pointer proof; static run 45808592805 passed; native qualification pending."
       ]
     },
     {
@@ -234,7 +236,8 @@
       "scope": "Complete acceptance and three reviews",
       "verified": [
         "partial smoke pipelines",
-        "37c26f0 static pass; original control MP4, real CSI and partial core evidence independently inspected."
+        "37c26f0 static pass; original control MP4, real CSI and partial core evidence independently inspected.",
+        "21c2594 core static 45808210022 passed; 8a6322d pointer candidate static 45808592805 passed; neither is a comprehensive native pass."
       ],
       "pending": [
         "Full exact-candidate hosted integration before #12; independent device validation only after all feasible implementation checks; 0/3 comprehensive reviewed passes."
@@ -247,7 +250,9 @@
         45770716860,
         45780959318,
         45784791470,
-        45794567249
+        45794567249,
+        45808210022,
+        45808592805
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
