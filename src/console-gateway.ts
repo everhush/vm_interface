@@ -1,7 +1,7 @@
 import {readFileSync} from "node:fs";
 import {createServer} from "node:https";
 import {createServer as createHttpServer,type IncomingMessage} from "node:http";
-import {batchSpec,validateBatchGeometry,type InputBatch} from "./input-batch";
+import {batchSpec,validateBatchGeometry,pacedInputBatch,type InputBatch} from "./input-batch";
 import type {Duplex} from "node:stream";
 import {WebSocket,WebSocketServer,createWebSocketStream} from "ws";
 import {connect,Framebuffer,RfbServerConnection,encodings,pixelFormats,type RfbClient} from "rfb2";
@@ -188,25 +188,30 @@ async function acceptBatch(id:string,token:string,batch:InputBatch){
    if(cancelled||s.closed)throw new ApiError(502,"Display disconnected");
    validateBatchGeometry(batch,s.frame.width,s.frame.height);
    let generation=0;
-   const allowed=await withInputAuthority(token,id,g.instanceUid,lease=>{
-    if(cancelled||s.closed)throw new ApiError(502,"Display disconnected");
-    // HTTP batches are self-contained: release all previous held input,
-    // transmit under the same fence as RFB and release at batch end.
-    s.input.release(s.client);
-    s.input.select(s.client,{ticketId:g.id,generation:lease.generation,token});
-    try{
-     for(const event of batch.events){
+   try{
+    await pacedInputBatch(batch.events,async(event,index)=>{
+     const allowed=await withInputAuthority(token,id,g.instanceUid,lease=>{
+      if(cancelled||s.closed)throw new ApiError(502,"Display disconnected");
+      if(index===0){
+       s.input.release(s.client);
+       generation=lease.generation;
+       s.input.select(s.client,{ticketId:g.id,generation,token});
+      }
+      if(lease.generation!==generation)throw new ApiError(409,"Input authority changed during batch");
       const accepted=event.type==="key"?s.input.key(s.client,event.keysym,event.down):s.input.pointer(s.client,event.x,event.y,event.buttons,s.frame.width,s.frame.height);
       if(!accepted)throw new ApiError(502,"Input partially submitted");
-     }
-     generation=lease.generation;
-    }finally{s.input.release(s.client)}
-   });
-   if(!allowed)throw new ApiError(409,"Input lease not held");
+     });
+     if(!allowed)throw new ApiError(409,"Input lease not held or changed during batch");
+    });
+   }finally{
+    // The session queue serializes all sink writes. Release only this batch's
+    // held state; no subsequent owner has transmitted while this work ran.
+    if(s.input.owner?.ticketId===g.id&&s.input.owner.generation===generation)s.input.release(s.client);
+   }
    return {accepted:batch.events.length,generation};
   });
   s.queue=work.then(()=>{},()=>{}).finally(()=>{s.queued--});
-  return await within(work,5000,()=>{cancelled=true;closeSession(s)});
+  return await within(work,10000,()=>{cancelled=true;closeSession(s)});
  }finally{
   s.reservations--;s.controlTickets.delete(g.id);
   if(s.viewers.size===0&&s.reservations===0)closeSession(s);

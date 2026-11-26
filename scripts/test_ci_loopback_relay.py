@@ -34,3 +34,25 @@ class RelayTests(unittest.IsolatedAsyncioTestCase):
         finally:
             front.close();backend.close()
             await front.wait_closed();await backend.wait_closed()
+
+    async def test_upstream_response_eof_does_not_hold_slot_for_open_client(self):
+        async def early(r,w):
+            await r.readexactly(1)
+            w.write(b"denied");await w.drain()
+            w.close();await w.wait_closed()
+        backend=await asyncio.start_server(early,"127.0.0.1",0)
+        slots=asyncio.Semaphore(1)
+        front=await asyncio.start_server(lambda r,w:relay(r,w,"127.0.0.1",backend.sockets[0].getsockname()[1],slots),"127.0.0.1",0)
+        try:
+            for _ in range(3):
+                r,w=await asyncio.open_connection("127.0.0.1",front.sockets[0].getsockname()[1])
+                w.write(b"x");await w.drain()
+                self.assertEqual(await asyncio.wait_for(r.read(),3),b"denied")
+                for i in range(30):
+                    if not slots.locked():break
+                    await asyncio.sleep(0.01)
+                self.assertFalse(slots.locked())
+                w.close();await w.wait_closed()
+        finally:
+            front.close();backend.close()
+            await front.wait_closed();await backend.wait_closed()

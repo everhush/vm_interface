@@ -1,19 +1,26 @@
 """API-only installer CD-ROM proof. GRUB boot marker, not OS installation."""
-import hashlib,json,os,re,subprocess,sys,time,urllib.request,urllib.error,uuid
+import hashlib,http.client,json,os,re,subprocess,sys,time,urllib.request,urllib.error,uuid
 from pathlib import Path
 from iso_marker import read_marker
 base=os.environ.get("API_URL","http://127.0.0.1:3000/api/v1")
 a,b=os.environ["TOKEN_A"],os.environ["TOKEN_B"]
 def key(): return uuid.uuid4().hex
 def call(method,path,token=a,data=None,idem=None,expected=200,raw=None,binary=False):
-    h={"Authorization":"Bearer "+token}
+    h={"Authorization":"Bearer "+token,"Connection":"close"}
     if idem: h["Idempotency-Key"]=idem
     if data is not None: h["Content-Type"]="application/json"
     if raw is not None: h["Content-Type"]="application/octet-stream"
     req=urllib.request.Request(base+path,data=raw if raw is not None else json.dumps(data).encode() if data is not None else None,headers=h,method=method)
-    try:
-        with urllib.request.urlopen(req,timeout=240) as res: status,payload=res.status,res.read()
-    except urllib.error.HTTPError as exc: status,payload=exc.code,exc.read()
+    for attempt in range(8):
+        try:
+            with urllib.request.urlopen(req,timeout=240) as res: status,payload=res.status,res.read()
+            break
+        except urllib.error.HTTPError as exc:
+            status,payload=exc.code,exc.read()
+            break
+        except (urllib.error.URLError,ConnectionError,http.client.RemoteDisconnected):
+            if method!="GET" or attempt==7:raise
+            time.sleep(2)
     assert status==expected,(method,path,status,payload[:500])
     return payload if binary else json.loads(payload)
 def wait(fn,timeout,reason):
