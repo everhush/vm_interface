@@ -6,6 +6,7 @@ import {randomUUID} from "node:crypto";
 import {execFileSync} from "node:child_process";
 import {WebSocket,createWebSocketStream} from "ws";
 import {connect,type RfbClient} from "rfb2";
+import {cirrosNormalize as normalize,cirrosReady} from "./cirros-screen";
 
 const base=process.env.API_URL||"http://127.0.0.1:3000/api/v1";
 const gateway=process.env.VNC_URL||"wss://127.0.0.1:3443/api/v1";
@@ -56,9 +57,8 @@ async function connectViewer(path:string,token:string):Promise<Viewer>{
  }catch(e){ws.terminate();throw e}
 }
 async function typeText(v:Viewer,text:string){
- for(const ch of text){v.client.keyEvent(ch.charCodeAt(0),true);v.client.keyEvent(ch.charCodeAt(0),false);await delay(50)}
+ for(const ch of text){v.client.keyEvent(ch.charCodeAt(0),true);await delay(40);v.client.keyEvent(ch.charCodeAt(0),false);await delay(40)}
 }
-const normalize=(s:string)=>s.replace(/[^a-z0-9]/g,"");
 const created=await call("POST","/computers",a,{version:1,name:"ci-input",architecture:"amd64",cpu:1,memoryMiB:512,image:"cirros-smoke"},202);
 const path="/computers/"+created.result.id;
 const viewers:Viewer[]=[];let keyId:string|undefined;
@@ -67,12 +67,10 @@ try{
  let ready=false;
  for(let i=0;i<72;i++){if((await call("GET",path,a)).instance?.status?.phase==="Running"){ready=true;break}await delay(5000)}
  assert.ok(ready);
- // The actual login prompt is the readiness marker. The entropy message
- // is optional (the retained failure screenshot shows a usable prompt without it).
- // Allow a short settling interval; do not enter credentials.
- await awaitScreen(path,"evidence/input-login.png",s=>normalize(s).includes("cirroslogin"),240);
- await delay(6000);
- await awaitScreen(path,"evidence/input-login.png",s=>normalize(s).includes("cirroslogin"),60);
+ // The actual prompt is required; the optional entropy message is not.
+ // Preserve bounded settling and strip only its precise known console interleave.
+ const runningAt=Date.now();
+ await awaitScreen(path,"evidence/input-login.png",s=>cirrosReady(s,Date.now()-runningAt),240);
  const managed=await call("POST","/keys",a,{label:"ci-controller",permission:"manage",ttlSeconds:600},201);keyId=managed.id;
  const automation=await call("POST",path+"/console-tickets",managed.token,{scope:"control-vnc"},201);
  const human=await call("POST",path+"/console-tickets",a,{scope:"control-vnc"},201);
