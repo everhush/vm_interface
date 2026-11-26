@@ -1,7 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {vmManifest,type ComputerSpec} from "../src/spec";
-import {coldDataDiskPatch,readDataDisks,DATA_DISKS_ANNOTATION,dataDiskClaim} from "../src/data-disk-layout";
+import {coldDataDiskPatch,readDataDisks,DATA_DISKS_ANNOTATION,dataDiskClaim,dataDiskSerial} from "../src/data-disk-layout";
 import {dataDiskSpec,dataDiskManifest} from "../src/data-disks";
 import {desiredUsage} from "../src/quota";
 import {managedDisks} from "../src/storage";
@@ -24,6 +24,8 @@ test("create, attach and detach keep reservation and disk identity; only attache
  assert.equal(create.patch.spec.template.spec.volumes.some(x=>x.name==="data-work"),false);
  apply(v,coldDataDiskPatch(v,null,id,{action:"attach",name:"work",expectedResourceVersion:rv}));
  assert.equal(readDataDisks(v,id)[0].attached,true);
+ const attached=(v.spec as {template:{spec:{domain:{devices:{disks:{name:string;serial?:string}[]}}}}}).template.spec.domain.devices.disks.find(d=>d.name==="data-work");
+ assert.equal(attached?.serial,dataDiskSerial("work"));assert.equal(dataDiskSerial("abcdefghijklmnop").length,18);
  assert.equal(desiredUsage(v.spec).storageGiB,5);
  apply(v,coldDataDiskPatch(v,null,id,{action:"detach",name:"work",expectedResourceVersion:rv}));
  assert.equal(readDataDisks(v,id)[0].attached,false);assert.equal(desiredUsage(v.spec).storageGiB,5);
