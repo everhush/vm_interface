@@ -47,11 +47,11 @@ async function deny(path:string,token:string,status:number){
  })}finally{s.terminate()}
 }
 class TunnelHandshakeError extends Error{constructor(readonly status:number){super("Guest tunnel handshake HTTP "+status)}}
-async function open(path:string,token:string){
+async function open(path:string,token:string,phase:"ready"|"reconnect"|"required"="required"){
  const s=ws(path,token);
  try{await new Promise<void>((resolve,reject)=>{
   const timer=setTimeout(()=>reject(Error("Tunnel handshake timeout")),20000);
-  s.once("open",()=>{clearTimeout(timer);log({method:"WSS",path,expected:101,status:101});resolve()});s.once("error",e=>{clearTimeout(timer);reject(e)});s.once("unexpected-response",(_req,res)=>{clearTimeout(timer);res.resume();log({method:"WSS",path,expected:101,status:res.statusCode});reject(new TunnelHandshakeError(res.statusCode??502))});
+  s.once("open",()=>{clearTimeout(timer);log({method:"WSS",path,phase,expected:101,status:101});resolve()});s.once("error",e=>{clearTimeout(timer);reject(e)});s.once("unexpected-response",(_req,res)=>{clearTimeout(timer);res.resume();log({method:"WSS",path,phase,expected:101,status:res.statusCode});reject(new TunnelHandshakeError(res.statusCode??502))});
  })}catch(e){s.terminate();throw e}
  return s;
 }
@@ -59,18 +59,18 @@ async function reopen(path:string,token:string){
  // Only an explicit 409 after this client's known prior connection closed
  // can be retried; other authorization errors remain failures.
  const deadline=Date.now()+6000;
- for(;;){try{return await open(path,token)}catch(e){
+ for(;;){try{return await open(path,token,"reconnect")}catch(e){
   if(!(e instanceof TunnelHandshakeError)||e.status!==409||Date.now()>=deadline)throw e;
   await delay(250);
  }}
 }
 async function guestHttp(path:string,token:string){
- const s=await open(path,token),stream=createWebSocketStream(s);
+ const s=await open(path,token,"ready"),stream=createWebSocketStream(s);
  try{
   stream.write("GET /marker.txt HTTP/1.0\r\nHost: guest\r\nConnection: close\r\n\r\n");
   let result="",size=0;
   const timer=setTimeout(()=>s.terminate(),10000);
-  try{for await(const chunk of stream){size+=chunk.length;if(size>65536)throw Error("Oversized guest response");result+=chunk.toString();if(result.includes(marker)&&(result.includes("cluster-egress-blocked")||result.includes("cluster-egress-open")))break}}
+  try{for await(const chunk of stream){size+=chunk.length;if(size>65536)throw Error("Oversized guest response");result+=chunk.toString()}}
   finally{clearTimeout(timer)}
   return result;
  }finally{stream.destroy();s.terminate()}
@@ -115,7 +115,7 @@ try{
    let data="";
    const timer=setTimeout(()=>{socket.destroy();reject(Error("Guest relay timeout"))},15000);
    socket.on("connect",()=>socket.write("GET /marker.txt HTTP/1.0\r\nHost: guest\r\nConnection: close\r\n\r\n"));
-   socket.on("data",chunk=>{data+=chunk.toString();if(data.length>65536){socket.destroy();clearTimeout(timer);reject(Error("Oversized relay response"))}else if(data.includes(marker)&&data.includes("cluster-egress-blocked")){clearTimeout(timer);resolve(data);socket.destroy()}});
+   socket.on("data",chunk=>{data+=chunk.toString();if(data.length>65536){socket.destroy();clearTimeout(timer);reject(Error("Oversized relay response"))}else if(data.includes(marker+"\ncluster-egress-blocked\n")){clearTimeout(timer);resolve(data);socket.end()}});
    socket.on("error",e=>{clearTimeout(timer);reject(e)});
    socket.on("close",()=>{clearTimeout(timer);if(!data.includes(marker)||!data.includes("cluster-egress-blocked"))reject(Error("Guest relay response incomplete"))});
   });
@@ -134,9 +134,18 @@ try{
  await waitClosed(s);
  const grants=await call("GET",collection,a);
  assert.equal(grants.find((g:{id:string})=>g.id===second.id).active,false);
- writeFileSync("evidence/network-verification.json",JSON.stringify({nativeGuestHttp:true,loopbackTcpRelayVerified:true,marker,clusterApiEgressBlocked:true,crossAccountDenied:true,duplicateConnectionDenied:true,revokedDisconnect:true,stopDisconnect:true,commit:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,guestResponseSha256:createHash("sha256").update(readFileSync("evidence/network-guest-response.txt")).digest("hex"),relayResponseSha256:createHash("sha256").update(readFileSync("evidence/network-relay-response.txt")).digest("hex"),traceSha256:createHash("sha256").update(readFileSync(tracePath)).digest("hex")},null,2));
- console.log("Actual private guest HTTP tunnel, default-deny cluster egress and revocation verified");
+
 }finally{
  for(const s of sockets)s.terminate();
- await call("DELETE",path+"?deleteDisks=true",a,undefined,202);
+ const deleted=await call("DELETE",path+"?deleteDisks=true",a,undefined,202);
+ const deadline=Date.now()+300000;
+ let converged=false;
+ while(Date.now()<deadline){
+  const receipt=await call("GET","/operations/"+deleted.operationId,a);
+  if(receipt.observation?.state==="converged"){converged=true;break}
+  await delay(3000);
+ }
+ assert.ok(converged,"Network fixture deletion did not converge");
 }
+writeFileSync("evidence/network-verification.json",JSON.stringify({nativeGuestHttp:true,loopbackTcpRelayVerified:true,marker,clusterApiEgressBlocked:true,crossAccountDenied:true,duplicateConnectionDenied:true,revokedDisconnect:true,stopDisconnect:true,commit:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,guestResponseSha256:createHash("sha256").update(readFileSync("evidence/network-guest-response.txt")).digest("hex"),relayResponseSha256:createHash("sha256").update(readFileSync("evidence/network-relay-response.txt")).digest("hex"),traceSha256:createHash("sha256").update(readFileSync(tracePath)).digest("hex")},null,2));
+console.log("Actual private guest HTTP tunnel, default-deny cluster egress and revocation verified");

@@ -83,6 +83,7 @@ if [ "$profile" = core ]; then
   stage python3 scripts/e2e-api-control-proof.py
   stage node --import tsx scripts/e2e-input.ts
   stage node --import tsx scripts/e2e-network.ts
+  python3 scripts/verify_network_evidence.py --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/network-independent-verification.json
   stage node --import tsx scripts/e2e-recording.ts
   stage python3 scripts/e2e-exchange.py
   stage python3 scripts/e2e-api-functional-proof.py
