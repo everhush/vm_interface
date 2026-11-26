@@ -54,7 +54,9 @@ export async function configureDataDisk(account:string,id:string,r:DataDiskReque
   await verifiedDisk(id,account,vm,d);
   if(r.action==="attach"&&d.media&&!(await mediaStatus(id,account,`data-${d.name}`))?.ready)throw new ApiError(409,"Import data disk media before attaching");
  }
- const updated=await kube("PATCH",vmPath(id)+(dryRun?"?dryRun=All":""),patch,"application/merge-patch+json") as Resource;
+ let updated:Resource;
+ try{updated=await kube("PATCH",vmPath(id)+(dryRun?"?dryRun=All":""),patch,"application/merge-patch+json") as Resource}
+ catch(e){if(e instanceof ApiError&&e.status===409)throw new ApiError(409,"VM resource version changed before disk reservation");throw e}
  if((r.action==="create"||r.action==="clone"||r.action==="import")&&!dryRun){
   // Reserve quota first. Never silently retry a partially completed create.
   try{await kube("POST",dvPath("").replace(/\/$/,""),dataDiskManifest(id,account,vm.metadata!.uid!,d))}

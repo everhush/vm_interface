@@ -236,16 +236,16 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
    const raw=await boundedText(req,4096);
    let input:unknown;try{input=JSON.parse(raw)}catch{throw new ApiError(400,"Invalid JSON")}
    const parsed=bootSpec.safeParse(input);if(!parsed.success)return json({error:"Invalid boot configuration",issues:parsed.error.issues},422);
-   if(m==="POST")return json(await withVmLock(id,()=>configureBoot(account,id,parsed.data,true)));
-   return json(await mutate(account,key,{action:"boot",id,spec:parsed.data},opId=>withVmLock(id,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid});return configureBoot(account,id,parsed.data)})),202);
+   if(m==="POST")return json(await withVmLock(id,async()=>{await requireNoExports(id);return configureBoot(account,id,parsed.data,true)}));
+   return json(await mutate(account,key,{action:"boot",id,spec:parsed.data},opId=>withVmLock(id,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid});await requireNoExports(id);return configureBoot(account,id,parsed.data)})),202);
   }
   if((m==="PATCH"&&p.length===3&&p[2]==="hardware")||(m==="POST"&&p.length===4&&p[2]==="hardware"&&p[3]==="plan")){
    await owned(id,account);
    const raw=await boundedText(req,4096);
    let input:unknown;try{input=JSON.parse(raw);}catch{throw new ApiError(400,"Invalid JSON");}
    const parsed=hardwareSpec.safeParse(input);if(!parsed.success)return json({error:"Invalid hardware configuration",issues:parsed.error.issues},422);
-   if(m==="POST")return json(await withAccountLock(account,()=>configureHardware(account,id,parsed.data,true),id));
-   return json(await mutate(account,key,{action:"hardware",id,spec:parsed.data},opId=>withAccountLock(account,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid});return configureHardware(account,id,parsed.data)},id)),202);
+   if(m==="POST")return json(await withAccountLock(account,async()=>{await requireNoExports(id);return configureHardware(account,id,parsed.data,true)},id));
+   return json(await mutate(account,key,{action:"hardware",id,spec:parsed.data},opId=>withAccountLock(account,async()=>{const vm=await owned(id,account);if(!vm.metadata?.uid)throw new ApiError(409,"VM identity unavailable");await recordOperationTarget(account,opId,{vmUid:vm.metadata.uid});await requireNoExports(id);return configureHardware(account,id,parsed.data)},id)),202);
   }
   if(m==="DELETE"&&p.length===2){
    const confirm=new URL(req.url).searchParams.get("deleteDisks")==="true";
