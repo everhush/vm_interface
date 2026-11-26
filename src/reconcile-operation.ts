@@ -4,8 +4,9 @@ import {ApiError,kube,vmPath,vmiPath,dvPath,pvcPath,type Resource} from "./kube"
 import {mediaStatus,isMediaSlot} from "./media";
 import {bootPreference,installerTray} from "./boot";
 import {inspectStorage} from "./storage";
+import {growthClaim} from "./storage-growth-layout";
 type Row=typeof operations.$inferSelect;
-type Intent={action?:string;computerId?:string|null;cpu?:number;memoryMiB?:number;slot?:string;first?:string;installerTray?:string;diskName?:string};
+type Intent={action?:string;computerId?:string|null;cpu?:number;memoryMiB?:number;slot?:string;first?:string;installerTray?:string;diskName?:string;growthDisk?:string;sizeGiB?:number};
 type Target={vmUid?:string;previousInstanceUid?:string|null;disks?:string[]};
 type Observation={state:"converged"|"waiting"|"uncertain"|"not-applicable";reason:string;instanceUid?:string|null};
 async function optional(path:string){
@@ -39,7 +40,7 @@ async function inspect(row:Row):Promise<Observation>{
  if(!id||!/^vm-[a-f0-9]{32}$/.test(id)||!action)return observation("not-applicable","No safely reconcilable intent");
  if(row.status==="rejected")return observation("not-applicable","Submission rejected");
  if(row.status==="pending")return observation("waiting","Submission still active");
- if(!["create","start","stop","restart","delete","hardware","boot","media-upload","media-commit","disk-create","disk-clone","disk-import","disk-attach","disk-detach"].includes(action))return observation("not-applicable","Operation requires its feature-specific status endpoint");
+ if(!["create","start","stop","restart","delete","hardware","boot","media-upload","media-commit","disk-create","disk-clone","disk-import","disk-attach","disk-detach","storage-grow"].includes(action))return observation("not-applicable","Operation requires its feature-specific status endpoint");
  const vm=await optional(vmPath(id));
  if(vm&&vm.metadata?.labels?.["vm-interface.io/account"]!==row.account)return observation("uncertain","Computer ownership cannot be established");
  if(action!=="create"&&!target.vmUid&&!["media-upload","media-commit"].includes(action))return observation("uncertain","No pre-mutation target identity recorded");
@@ -55,6 +56,11 @@ async function inspect(row:Row):Promise<Observation>{
   if(!isMediaSlot(intent.slot))return observation("uncertain","Missing valid media slot");
   const m=await mediaStatus(id,row.account,intent.slot);
   return m?.ready?observation("converged","Declared input verified and CDI import succeeded"):observation("waiting","CDI media import not yet verified");
+ }
+ if(action==="storage-grow"){
+  if(!intent.growthDisk||!intent.sizeGiB)return observation("uncertain","Missing growth intent");
+  const s=await inspectStorage(id,row.account),d=s.volumes.find(v=>v.name===growthClaim(id,intent.growthDisk!));
+  return d?.growth?.pvcCapacityConverged&&d.growth.reservedGiB>=intent.sizeGiB?observation("converged","PVC capacity converged; guest disk and filesystem growth not verified"):observation("waiting","Reserved PVC growth not converged");
  }
  if(["disk-create","disk-clone","disk-import","disk-attach","disk-detach"].includes(action)){
   const s=await inspectStorage(id,row.account),disk=s.volumes.find(v=>v.kind==="data"&&v.diskName===intent.diskName);

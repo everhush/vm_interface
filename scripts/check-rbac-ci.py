@@ -38,6 +38,7 @@ def main():
         ("", "pods", "", "create", True),
         ("", "pods", "", "delete", False),
         ("", "persistentvolumeclaims", "", "create", True),
+        ("", "persistentvolumeclaims", "", "patch", False),
         ("upload.cdi.kubevirt.io", "uploadtokenrequests", "", "create", True),
         ("cdi.kubevirt.io", "datavolumes", "", "create", True),
         ("cdi.kubevirt.io", "datavolumes", "", "delete", False),
