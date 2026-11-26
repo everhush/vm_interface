@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {exportManifest,exportEndpoint,assertCold,exportClaim,exportSelector} from "../src/disk-export";
+import {exportManifest,exportEndpoint,assertCold,exportClaim,exportSelector,exportResponseHeaders} from "../src/disk-export";
 const id="vm-"+"a".repeat(32),name="vx-"+"b".repeat(32),claim=id+"-data-work",ns="vm-interface",service="virt-export-"+name;
 test("native export manifest fixes source, owner, token and expiry",()=>{
  const m=exportManifest(id,"alpha","vmuid","work","pvcuid",name);
@@ -29,4 +29,9 @@ test("system and block exchange selectors cannot shadow data disk names",()=>{
  assert.throws(()=>exportSelector(id,"vm-"+"b".repeat(32)+"-boot"));
  assert.throws(()=>exportSelector(id,id+"-installer"));
  assert.throws(()=>exportClaim(id,"system.disk/../other"));
+});
+
+test("native export exposes validated length independently of HTTP framing",()=>{
+ const headers=exportResponseHeaders(claim,1048576);
+ assert.equal(headers["x-vm-export-bytes"],"1048576");assert.equal(headers["content-length"],"1048576");assert.equal(headers["content-disposition"],'attachment; filename="'+claim+'.raw"');assert.equal(headers["cache-control"],"no-store");
 });

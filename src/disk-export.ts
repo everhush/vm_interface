@@ -104,6 +104,9 @@ export async function cancelDiskExport(id:string,account:string,name:string){
  await kube("DELETE",exportPath(name),{propagationPolicy:"Foreground",preconditions:{uid:exp.metadata?.uid}});
  return {id,exportId:name,warning:"Wait for export deletion before starting or modifying the VM"};
 }
+export function exportResponseHeaders(claim:string,length:number){
+ return {"content-type":"application/octet-stream","content-length":String(length),"x-vm-export-bytes":String(length),"content-disposition":"attachment; filename=\""+claim+".raw\"","cache-control":"no-store","x-content-type-options":"nosniff"};
+}
 export async function downloadDiskExport(id:string,account:string,name:string,signal:AbortSignal):Promise<Response>{
  const token=exportToken(),{vm,exp,disk}=await ownedExport(id,account,name);
  assertCold(vm,await optional(vmiPath(id)));
@@ -121,7 +124,7 @@ export async function downloadDiskExport(id:string,account:string,name:string,si
    res.on("aborted",()=>bounded.destroy(new Error("Export stream aborted")));
    bounded.on("close",()=>res.destroy());
    res.pipe(bounded);
-   resolve(new Response(Readable.toWeb(bounded) as ReadableStream<Uint8Array>,{headers:{"content-type":"application/octet-stream","content-length":String(length),"content-disposition":"attachment; filename=\""+t.claim+".raw\"","cache-control":"no-store","x-content-type-options":"nosniff"}}));
+   resolve(new Response(Readable.toWeb(bounded) as ReadableStream<Uint8Array>,{headers:exportResponseHeaders(t.claim,length)}));
   });
   const timer=setTimeout(()=>req.destroy(new Error("Export deadline exceeded")),Math.max(1,Math.min(endpoint.expiry-Date.now(),600000)));
   req.on("close",()=>clearTimeout(timer));req.on("timeout",()=>req.destroy(new Error("Export timed out")));req.on("error",()=>reject(new ApiError(502,"Native export stream unavailable")));req.end();
