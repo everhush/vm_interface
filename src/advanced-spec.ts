@@ -7,7 +7,7 @@ import {computerSpec} from "./spec";
 const field=computerSpec.shape;
 export const advancedComputerSpec=z.strictObject({
  version:field.version,name:field.name,image:field.image,storage:field.storage,
- media:field.media,auxiliaryDisk:field.auxiliaryDisk,bootBus:field.bootBus,
+ media:field.media,auxiliaryDisk:field.auxiliaryDisk,bootBus:field.bootBus,pointerTablet:field.pointerTablet,
  cloudInit:field.cloudInit,idleStopSeconds:field.idleStopSeconds,
  kubevirt:z.strictObject({
   architecture:field.architecture,

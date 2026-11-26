@@ -60,3 +60,14 @@ test("private tunnel ingress label is generated only for explicitly private VM",
  assert.equal(privateVm.spec.template.metadata.labels["vm-interface.io/private-network"],"true");
  assert.equal(isolated.spec.template.metadata.labels["vm-interface.io/private-network"],undefined);
 });
+
+test("explicit USB tablet only on pinned Fedora amd64; caller cannot attach arbitrary HID or host devices",()=>{
+ const fedora={...sample,image:"fedora-exchange-test",memoryMiB:1536,storage:{systemGiB:4,exchangeGiB:1,exchangeMode:"virtiofs"}};
+ const s=computerSpec.parse({...fedora,pointerTablet:"usb"});
+ const m=vmManifest("vm-test","alpha",s);
+ assert.deepEqual(m.spec.template.spec.domain.devices.inputs,[{type:"tablet",bus:"usb",name:"tablet1"}]);
+ assert.equal(vmManifest("vm-test","alpha",computerSpec.parse(fedora)).spec.template.spec.domain.devices.inputs,undefined);
+ assert.equal(computerSpec.safeParse({...sample,pointerTablet:"usb"}).success,false);
+ assert.equal(computerSpec.safeParse({...fedora,pointerTablet:"host"}).success,false);
+ assert.equal(computerSpec.safeParse({...fedora,pointerTablet:"usb",hostDevices:[{}]}).success,false);
+});

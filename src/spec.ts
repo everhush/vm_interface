@@ -26,6 +26,7 @@ export const computerSpec = z.strictObject({
   auxiliaryDisk:z.strictObject({sizeGiB:z.number().int().min(1).max(systemMaxGiB),media:mediaSpec}).optional(),
   firmware:z.enum(["bios","uefi"]).optional(),
   bootBus:z.enum(["virtio","sata"]).optional(),
+  pointerTablet:z.literal("usb").optional(),
   network:z.enum(["isolated","private"]).optional(),
   storage:storageSpec.optional(),
   cloudInit:z.string().min(1).max(2048).refine(value=>Buffer.byteLength(value,"utf8")<=2048,"KubeVirt inline cloud-init is limited to 2048 UTF-8 bytes").optional(),
@@ -33,6 +34,7 @@ export const computerSpec = z.strictObject({
 }).superRefine((s,ctx)=>{
  if(s.image==="fedora-exchange-test"&&(!s.storage||s.storage.systemGiB<4||s.memoryMiB<1536||s.storage.exchangeMode!=="virtiofs"))ctx.addIssue({code:"custom",path:["storage"],message:"Fedora test requires >=4GiB boot, >=1536MiB RAM and VirtioFS"});
  if(s.storage?.exchangeMode==="virtiofs"&&s.image==="cirros-smoke")ctx.addIssue({code:"custom",path:["storage","exchangeMode"],message:"CirrOS smoke profile has no certified VirtioFS driver"});
+ if(s.pointerTablet!==undefined&&(s.architecture!=="amd64"||s.image!=="fedora-exchange-test"))ctx.addIssue({code:"custom",path:["pointerTablet"],message:"USB tablet evaluation is restricted to the pinned amd64 Fedora profile"});
  if(s.cloudInit!==undefined&&s.image!=="fedora-exchange-test")ctx.addIssue({code:"custom",path:["cloudInit"],message:"Guest-native configuration only available for Fedora test"});
  if(s.storage?.exchangeTag!==undefined&&(s.storage.exchangeMode!=="virtiofs"||(s.storage.exchangeTag==="share"&&(s.architecture!=="arm64"||s.image!=="uploaded-disk"))))ctx.addIssue({code:"custom",path:["storage","exchangeTag"],message:"The share mount tag is restricted to uploaded ARM64 VirtioFS disks"});
  const upload=s.image==="uploaded-disk"||s.image==="uploaded-installer";
@@ -79,7 +81,7 @@ export function vmManifest(id:string,account:string,s:ComputerSpec){
  return {apiVersion:"kubevirt.io/v1",kind:"VirtualMachine",metadata:{name:id,labels:{"vm-interface.io/account":account},...(s.idleStopSeconds?{annotations:{"vm-interface.io/idle-stop-seconds":String(s.idleStopSeconds)}}:{})},spec:{
   runStrategy:"Halted",...(persistent?{dataVolumeTemplates:templates}:{}),template:{metadata:{labels:{"vm-interface.io/account":account,"vm-interface.io/computer":id,...(s.network==="private"?{"vm-interface.io/private-network":"true"}:{})},...((shared||s.media)?{annotations:{...(shared?{"vm-interface.io/exchange-gib":String(persistent!.exchangeGiB),"vm-interface.io/exchange-tag":exchangeTag}:{}),...(s.media?{"vm-interface.io/media":JSON.stringify(s.media),"vm-interface.io/media-slot":installer?"installer":"boot"}:{}),...(s.auxiliaryDisk?{"vm-interface.io/auxiliary-media":JSON.stringify(s.auxiliaryDisk.media)}:{})}}:{})},spec:{
    architecture:s.architecture,nodeSelector:{"kubernetes.io/arch":s.architecture,"kubevirt.io/schedulable":"true"},
-   domain:{cpu:{cores:s.cpu},resources:{requests:{memory:s.memoryMiB+"Mi"}},...(s.firmware==="uefi"?{firmware:{bootloader:{efi:{secureBoot:false}}}}:{}),devices:{disks:[...disks,...mediaDisks,...cloudDisks],autoattachPodInterface:s.network==="private",...(s.network==="private"?{interfaces:[{name:"private",masquerade:{},model:"virtio"}]}:{}),...(shared?{filesystems:[{name:exchangeTag,virtiofs:{}}],rng:{}}:{})}},
+   domain:{cpu:{cores:s.cpu},resources:{requests:{memory:s.memoryMiB+"Mi"}},...(s.firmware==="uefi"?{firmware:{bootloader:{efi:{secureBoot:false}}}}:{}),devices:{disks:[...disks,...mediaDisks,...cloudDisks],...(s.pointerTablet?{inputs:[{type:"tablet",bus:"usb",name:"tablet1"}]}:{}),autoattachPodInterface:s.network==="private",...(s.network==="private"?{interfaces:[{name:"private",masquerade:{},model:"virtio"}]}:{}),...(shared?{filesystems:[{name:exchangeTag,virtiofs:{}}],rng:{}}:{})}},
    networks:s.network==="private"?[{name:"private",pod:{}}]:[],volumes:[...volumes,...mediaVolumes,...cloud]
   }}
  }};

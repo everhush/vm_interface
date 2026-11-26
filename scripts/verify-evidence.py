@@ -10,7 +10,7 @@ from evidence_frames import verify_marker_frames, ocr
 from android_fixture import ANDROID_RESULT_MODE,android_result
 from showcase_inputs import load_scenario
 from android_guest_transfer import verify_staged_bundle
-from linux_showcase_fixture import package, verify_archive, verify_platform
+from linux_showcase_fixture import package, verify_archive, verify_platform, verify_pointer_receipt
 
 
 def file_hash(path):
@@ -77,6 +77,11 @@ def verify_folder(folder, profile, expected_commit=None):
         challenge=(folder/'challenge.bin').read_bytes()
         check(file_hash(folder/'challenge.bin')==proof['inputSha256'] and len(challenge)==proof['inputBytes'], 'Challenge mismatch')
         check((folder/'guest-result.bin').read_bytes()==b'guest-result:'+hashlib.sha256(challenge).hexdigest().encode('ascii')+b'\n', 'Wrong guest result')
+        check(proof['guestPointerProof'] is True and file_hash(folder/'pointer-receipt.json')==proof['pointerReceiptSha256'],'Missing guest tablet receipt')
+        verify_pointer_receipt((folder/'pointer-receipt.json').read_bytes(),challenge)
+        check(file_hash(folder/'pointer-ready.png')==proof['pointerReadyScreenshotSha256'] and 'pointerready' in ocr(folder/'pointer-ready.png'),'Missing visible pointer readiness')
+        check(file_hash(folder/'after.png')==proof['pointerDoneScreenshotSha256'] and 'pointerdone' in ocr(folder/'after.png'),'Missing visible pointer completion')
+        check({'observer pointer denied','outside pointer denied','guest pointer action','pointer replay'}<=phases,'Missing pointer API authorization and replay evidence')
         verify_archive((folder/'guest-archive.zip').read_bytes(),challenge)
         check(file_hash(folder/'guest-archive.zip')==proof['archiveSha256'], 'Guest archive hash mismatch')
         check(proof['guestDiskCloneByteProof'] and proof['clonePvcUid'] not in proof['originalPvcUids'].values(), 'Missing distinct data disk clone evidence')
