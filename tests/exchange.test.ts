@@ -4,7 +4,7 @@ import {mkdtemp,writeFile,symlink,rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {createHash} from "node:crypto";
-import {publish,download,listFiles} from "../src/exchange-files";
+import {publish,download,listFiles,exchangeBundle} from "../src/exchange-files";
 import {exchangeFileName,exchangePod,exchangePVC} from "../src/exchange";
 import {computerSpec,vmManifest} from "../src/spec";
 import {desiredUsage} from "../src/quota";
@@ -40,5 +40,43 @@ test("exchange accepts bytes only with checksum and refuses symlinks, traversal 
   await writeFile(join(root,"out-secret.sha256"),digest(data));
   await assert.rejects(()=>download(root,"secret"),{status:404});
   assert.deepEqual((await listFiles(root)).map(x=>x.name),["reply"]);
+ }finally{await rm(root,{recursive:true,force:true})}
+});
+
+test("halted exchange bundle contains exactly safe published bytes and checksum manifest",async()=>{
+ const root=await mkdtemp(join(tmpdir(),"vm-bundle-"));
+ try{
+  const data=Buffer.from([0,255,1,2]);
+  await publish(root,"a".repeat(96),data,digest(data));
+  await writeFile(join(root,"out-result"),data);
+  await writeFile(join(root,"out-result.sha256"),digest(data));
+  await writeFile(join(root,".unpublished"),"private temporary");
+  const b=await exchangeBundle(root),again=await exchangeBundle(root);
+  assert.equal(b.sha256,digest(b.bytes));assert.deepEqual(b,again);
+  const records=new Map<string,Buffer>();
+  for(let i=0;i<b.bytes.length-1024;){
+   const h=b.bytes.subarray(i,i+512),field=(start:number,end:number)=>h.subarray(start,end).toString("ascii").replace(/\0.*$/s,"");
+   const size=parseInt(field(124,136),8),name=field(345,500),sum=parseInt(field(148,156),8);
+   const copy=Buffer.from(h);copy.fill(32,148,156);assert.equal(copy.reduce((n,x)=>n+x,0),sum);
+   records.set((name?name+"/":"")+field(0,100),b.bytes.subarray(i+512,i+512+size));
+   i+=512+Math.ceil(size/512)*512;
+  }
+  assert.deepEqual(records.get("upload/"+"a".repeat(96)),data);assert.deepEqual(records.get("download/result"),data);
+  const manifest=JSON.parse(records.get("manifest.json")!.toString());
+  assert.equal(manifest.scope,"published-exchange-files-only");assert.equal(manifest.files.length,2);
+  assert.ok(manifest.files.every((f:{sha256:string})=>f.sha256===digest(data)));
+  await writeFile(join(root,"out-incomplete"),data);
+  await assert.rejects(()=>exchangeBundle(root),{status:409});
+  await rm(join(root,"out-incomplete"));
+  await symlink("/etc/passwd",join(root,"in-escape"));
+  await assert.rejects(()=>exchangeBundle(root),{status:404});
+ }finally{await rm(root,{recursive:true,force:true})}
+});
+test("exchange bundle refuses oversized output rather than silently truncating",async()=>{
+ const root=await mkdtemp(join(tmpdir(),"vm-bundle-limit-"));
+ try{
+  const data=Buffer.alloc(8*1024*1024);
+  for(let i=0;i<4;i++)await publish(root,"large"+i,data,digest(data));
+  await assert.rejects(()=>exchangeBundle(root),{status:413});
  }finally{await rm(root,{recursive:true,force:true})}
 });

@@ -10,7 +10,7 @@ import {inspectStorage,managedDisks,requireDeleteConfirmation} from "../../../..
 import {hardwareSpec,configureHardware,withVmLock} from "../../../../src/hardware";
 import {bootSpec,configureBoot} from "../../../../src/boot";
 import {dataDiskSpec,configureDataDisk,requireDataDisks} from "../../../../src/data-disks";
-import {createDiskExport,diskExportStatus,cancelDiskExport,downloadDiskExport,requireNoExports} from "../../../../src/disk-export";
+import {createDiskExport,diskExportStatus,cancelDiskExport,downloadDiskExport,requireNoExports,assertCold} from "../../../../src/disk-export";
 import {guestObservation} from "../../../../src/guest";
 import {screenshot} from "../../../../src/screenshot";
 import {displayToken,issueDisplayTicket,lookupDisplayTicket,listDisplayTickets,revokeDisplayTicket} from "../../../../src/console-tickets";
@@ -170,6 +170,14 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
     return json(await mutate(account,key,{action:"media-upload",id,slot:state.slot,sha256:state.metadata.sha256,bytes:state.metadata.bytes},opId=>withVmLock(id,async()=>{await requireNoExports(id);return uploadMedia(id,account,state.slot,body,opId)})),202);
    }
   }
+  if(m==="GET"&&p.length===3&&p[2]==="exchange-bundle")return await withVmLock(id,async()=>{
+   const vm=await owned(id,account);
+   let instance:Resource|null=null;
+   try{instance=await kube("GET",vmiPath(id)) as Resource}catch(e){if(!(e instanceof ApiError)||e.status!==404)throw e}
+   assertCold(vm,instance);
+   await requireNoExports(id);
+   return exchangeRequest(id,account,"GET","/bundle");
+  });
   if(p[2]==="files"){
    await owned(id,account);
    if(m==="GET"&&p.length===3)return await exchangeRequest(id,account,"GET","/files");
@@ -182,9 +190,10 @@ async function handleCore(req:Request,context:{audit?:AuditContext}){
      const key=req.headers.get("idempotency-key");
      if(!req.body)throw new ApiError(400,"Missing file bytes");
      const bytes=await boundedBody(req,8*1024*1024),size=bytes.length;
-     const result=await mutate(account,key,{action:"upload-file",id,name,digest,size},async()=>{
+     const result=await mutate(account,key,{action:"upload-file",id,name,digest,size},()=>withVmLock(id,async()=>{
+      await requireNoExports(id);
       const resp=await exchangeRequest(id,account,"PUT","/files/"+name,bytes,digest);return resp.json();
-     });return json(result,202);
+     }));return json(result,202);
     }
    }
   }
