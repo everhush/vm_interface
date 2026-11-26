@@ -159,3 +159,5 @@ For large-media clients, inspect the target declaration/status first and use an 
 
 ### Recovering a disconnected mutation
 Use `GET /api/v1/operations/by-key` with the same account authorization and original `Idempotency-Key` header to retrieve the durable receipt. Missing returns 404 (including other accounts), invalid key 400. This never executes a mutation. Inspect the receipt and resource state; do not submit a fresh key for an unknown operation. The original key must be retained privately. The receipt lookup and health checks do not certify convergence; use the relevant resource/operation status.
+
+For complete native network proof run `python3 scripts/verify_network_evidence.py --root evidence --commit <approved-sha> --run-id <execution-id>`. Verify both actual guest HTTP response files, exact final trace digest, authorization/duplicate denial and deletion observation; bounded initial guest readiness failures remain visible in the trace. Do not use an incomplete trace or report as acceptance evidence.

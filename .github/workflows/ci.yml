@@ -232,6 +232,9 @@ jobs:
           set -euo pipefail
           if ! command -v skopeo >/dev/null; then sudo apt-get update && sudo apt-get install -y skopeo; fi
           python3 scripts/probe-virtiofs-ci.py
+      - name: Independently verify actual network evidence
+        if: ${{ !cancelled() && steps.network_proof.outcome == 'success' }}
+        run: python3 scripts/verify_network_evidence.py --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/network-independent-verification.json
       - name: Independently verify actual media evidence
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
         run: python3 scripts/verify_media_evidence.py --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/media-evidence-verification.json
