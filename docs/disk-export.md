@@ -13,3 +13,5 @@ The `system.disk` and `exchange.disk` selectors cannot collide with normal data 
 ## Published VirtioFS file bundle
 
 GET `/computers/{id}/exchange-bundle` on a converged halted VM returns an immutable TAR containing only supported flat published inputs and completed, checksum-verified outputs plus a per-entry SHA256 manifest. It rejects incomplete publications, symlinks, hardlinks, oversized data and directory/count overflow instead of silently truncating. Maximum 32 MiB archive and 64 files. The API serializes capture with VM lifecycle and upload operations; the broker constructs the complete bounded archive before responding. This is not a recursive backup of arbitrary guest directories, not a full storage snapshot, and not a restore API. The raw `exchange.disk` selector is refused for VirtioFS. No additional Kubernetes privilege is required.
+
+The `X-VM-Export-Bytes` response header is the validated native payload byte count, independently of HTTP transfer framing. Clients must reject missing or inconsistent counts and truncated or oversized streams. `Content-Length`, when present, must agree; a client may receive chunked framing instead.

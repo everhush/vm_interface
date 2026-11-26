@@ -1,6 +1,8 @@
 import hashlib
 import json
 import tempfile
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from showcase_inputs import load_scenario
@@ -48,3 +50,11 @@ class ShowcaseInputsTest(unittest.TestCase):
         self.assertNotEqual(android_result(a),android_result(b))
         self.assertIn(hashlib.sha256(a).hexdigest().encode(),android_result(a))
         with self.assertRaises(ValueError):android_result(a[:-1])
+
+    def test_generated_scenarios_pass_preflight(self):
+        generator=Path(__file__).with_name("write-showcase-scenario.py")
+        with tempfile.TemporaryDirectory() as root:
+            for profile in ("android","windows"):
+                path=Path(root)/(profile+".json")
+                subprocess.run([sys.executable,str(generator),profile,str(path)],check=True)
+                load_scenario(path,profile)
