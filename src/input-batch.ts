@@ -22,3 +22,11 @@ export async function dispatchBatch(id:string,token:string,batch:InputBatch){
  if(result.accepted!==batch.events.length||!Number.isInteger(result.generation))throw new ApiError(502,"Invalid console acknowledgement");
  return result;
 }
+
+export const INPUT_EVENT_DWELL_MS=40;
+export async function pacedInputBatch<T>(events:readonly T[],send:(event:T,index:number)=>Promise<void>,pause:(ms:number)=>Promise<void> = ms=>new Promise(resolve=>setTimeout(resolve,ms))){
+ for(let i=0;i<events.length;i++){
+  await send(events[i],i);
+  await pause(INPUT_EVENT_DWELL_MS);
+ }
+}

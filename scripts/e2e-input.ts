@@ -67,10 +67,12 @@ try{
  let ready=false;
  for(let i=0;i<72;i++){if((await call("GET",path,a)).instance?.status?.phase==="Running"){ready=true;break}await delay(5000)}
  assert.ok(ready);
- // The pinned CirrOS kernel may print its late entropy initialization
- // directly into the login line. Do not start any input authority assertions
- // until the real display shows that asynchronous message.
- await awaitScreen(path,"evidence/input-login.png",s=>/login\s*:/i.test(s)&&normalize(s).includes("nonblockingpoolisinitialized"),240);
+ // The actual login prompt is the readiness marker. The entropy message
+ // is optional (the retained failure screenshot shows a usable prompt without it).
+ // Allow a short settling interval; do not enter credentials.
+ await awaitScreen(path,"evidence/input-login.png",s=>normalize(s).includes("cirroslogin"),240);
+ await delay(6000);
+ await awaitScreen(path,"evidence/input-login.png",s=>normalize(s).includes("cirroslogin"),60);
  const managed=await call("POST","/keys",a,{label:"ci-controller",permission:"manage",ttlSeconds:600},201);keyId=managed.id;
  const automation=await call("POST",path+"/console-tickets",managed.token,{scope:"control-vnc"},201);
  const human=await call("POST",path+"/console-tickets",a,{scope:"control-vnc"},201);

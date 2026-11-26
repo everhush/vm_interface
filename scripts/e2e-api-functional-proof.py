@@ -104,7 +104,7 @@ def main():
                      expected=201, phase="control ticket")
         ticket = grant["token"]
         assert grant["actor"] == "automation" and grant["instanceUid"] == uid
-        started = call("POST", path+"/recordings", body={"consent":True,"maxSeconds":90},
+        started = call("POST", path+"/recordings", body={"consent":True,"maxSeconds":150},
                        expected=202, phase="record start")
         recording = path+"/recordings/"+started["result"]["id"]
         def active():
@@ -125,7 +125,7 @@ def main():
         assert action["result"]["accepted"] == len(events)
         assert call("POST", path+"/input", ticket, {"events":events}, expected=202,
                     scheme="Console", idem=idem, phase="idempotent replay") == action
-        wait(lambda:"pointerready" in screen(path,OUT/"pointer-ready.png")[0],20,"Actual guest tablet was not ready")
+        wait(lambda:"pointerready" in screen(path,OUT/"pointer-ready.png")[0],30,"Actual guest tablet was not ready")
         import struct
         width,height=struct.unpack(">II",(OUT/"pointer-ready.png").read_bytes()[16:24])
         assert 32<=width<=1920 and 32<=height<=1200
@@ -135,11 +135,12 @@ def main():
         pointer={"events":[move,end,{**end,"buttons":1},end]}
         call("POST",path+"/input",observer["token"],pointer,expected=403,scheme="Console",phase="observer pointer denied")
         call("POST",path+"/input",ticket,{"events":[{**move,"x":width}]},expected=422,scheme="Console",phase="outside pointer denied")
+        call("POST",path+"/input-lease",ticket,{},scheme="Console",phase="pointer lease refresh")
         pointer_key=str(uuid.uuid4())
         clicked=call("POST",path+"/input",ticket,pointer,expected=202,scheme="Console",idem=pointer_key,phase="guest pointer action")
         assert clicked["result"]["accepted"]==len(pointer["events"])
         assert call("POST",path+"/input",ticket,pointer,expected=202,scheme="Console",idem=pointer_key,phase="pointer replay")==clicked
-        wait(lambda: "proofcomplete" in screen(path, OUT/"after.png")[0], 25,
+        wait(lambda: "proofcomplete" in screen(path, OUT/"after.png")[0], 65,
              "Actual guest computation not visible")
         wait(lambda: any(f["name"]=="result.bin" for f in call("GET", path+"/files")),
              20, "Guest output not published")

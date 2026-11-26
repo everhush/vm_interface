@@ -238,7 +238,8 @@
       "verified": [
         "partial smoke pipelines",
         "37c26f0 static pass; original control MP4, real CSI and partial core evidence independently inspected.",
-        "21c2594 core static 45808210022 passed; 8a6322d pointer candidate static 45808592805 passed; neither is a comprehensive native pass."
+        "21c2594 core static 45808210022 passed; 8a6322d pointer candidate static 45808592805 passed; neither is a comprehensive native pass.",
+        "465cfa4 static 45810437981, Android 45810778040 and real CSI 45810766327 passed; full 45813447072 failed input prompt, Linux pointer, CDI rejection transport, ISO transport; original control recording passed. Diagnostic 45808210022 passed input/reset and BIOS+UEFI but Linux and CDI failed."
       ],
       "pending": [
         "Full exact-candidate hosted integration before #12; independent device validation only after all feasible implementation checks; 0/3 comprehensive reviewed passes."
@@ -253,7 +254,11 @@
         45784791470,
         45794567249,
         45808210022,
-        45808592805
+        45808592805,
+        45813447072,
+        45808210022,
+        45810766327,
+        45810778040
       ],
       "status": "candidate-pending-qualification",
       "preparedInCandidate": [
