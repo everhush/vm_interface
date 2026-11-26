@@ -33,3 +33,59 @@ def verify_platform(platform_raw, rpm_raw, version):
         raise ValueError("Invalid guest package/license inventory")
     if not any(row.startswith("fedora-release") for row in rows):
         raise ValueError("Missing Fedora distribution package")
+
+
+CLOUD = r"""#!/bin/bash
+set -eu
+mkdir -p /mnt/exchange
+cat >/usr/local/bin/proof-launch.py <<'PY'
+import hashlib,subprocess,zipfile,time
+from pathlib import Path
+r=Path("/mnt/exchange")
+p=Path("/usr/local/lib/vm-interface-proof/proof.py")
+def sha(b):return hashlib.sha256(b).hexdigest()
+if p.is_file():
+    if sha(p.read_bytes())!="__APP_SHA__":raise SystemExit("bad installed digest")
+    subprocess.run(["/usr/bin/python3","-u",str(p),"--verify-clone"],check=True)
+else:
+    print("proofready",flush=True)
+    print("Type runproof then Enter",flush=True)
+    if input().strip()!="runproof":raise SystemExit("bad command")
+    z=r/"in-proof.zip"
+    if sha(z.read_bytes())!="__PACKAGE_SHA__":raise SystemExit("bad package")
+    with zipfile.ZipFile(z) as a:
+        if a.namelist()!=["proof.py"] or a.testzip()!=None:raise SystemExit("bad ZIP")
+        b=a.read("proof.py")
+    if sha(b)!="__APP_SHA__":raise SystemExit("bad app")
+    p.parent.mkdir(mode=0o755,parents=True,exist_ok=True)
+    with p.open("xb") as s:s.write(b)
+    subprocess.run(["/usr/bin/python3","-u",str(p)],check=True)
+time.sleep(180)
+PY
+cat >/etc/systemd/system/vm-interface-proof.service <<'UNIT'
+[Unit]
+Conflicts=getty@tty1.service
+After=systemd-user-sessions.service
+[Service]
+ExecStartPre=/usr/bin/mount -t virtiofs exchange /mnt/exchange
+ExecStart=/usr/bin/python3 -u /usr/local/bin/proof-launch.py
+StandardInput=tty-force
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable vm-interface-proof.service
+systemctl stop getty@tty1.service
+systemctl start --no-block vm-interface-proof.service
+chvt 1
+"""
+
+def launcher_cloud():
+    value=CLOUD.replace("__PACKAGE_SHA__",digest(package())).replace("__APP_SHA__",digest(APP.encode("utf-8")))
+    if len(value.encode("utf-8"))>2048:raise ValueError("KubeVirt inline cloud-init limit")
+    return value

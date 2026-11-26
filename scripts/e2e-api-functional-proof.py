@@ -11,7 +11,7 @@ import json
 import time
 import uuid
 import secrets
-from linux_showcase_fixture import package, verify_archive
+from linux_showcase_fixture import package, verify_archive, launcher_cloud
 
 h = runpy.run_path(str(Path(__file__).with_name("e2e-api-control-proof.py")), run_name="proof_helpers")
 call, wait, screen, batch = (h[x] for x in ("call", "wait", "screen", "batch"))
@@ -19,70 +19,15 @@ OUT, A, B = h["OUT"], h["A"], h["B"]
 
 # Cloud-init is only the disposable guest launcher. The actual application is
 # uploaded independently via the file API and installed by a visible command.
-CLOUD = r"""#!/bin/bash
-set -eu
-mkdir -p /mnt/exchange
-cat > /usr/local/bin/vm-interface-launcher.py <<'APP'
-import hashlib,os,subprocess,zipfile,time
-from pathlib import Path
-root=Path("/mnt/exchange")
-installed=Path("/usr/local/lib/vm-interface-proof/proof.py")
-if installed.is_file():
-    if hashlib.sha256(installed.read_bytes()).hexdigest()!="__APP_SHA__":
-        raise SystemExit("bad installed digest")
-    subprocess.run(["/usr/bin/python3","-u",str(installed),"--verify-clone"],check=True)
-else:
-    print("proofready",flush=True)
-    print("Type runproof then Enter",flush=True)
-    if input().strip()!="runproof":
-        raise SystemExit("bad command")
-    package=root/"in-proof.zip"
-    if hashlib.sha256(package.read_bytes()).hexdigest()!="__PACKAGE_SHA__":
-        raise SystemExit("bad package")
-    with zipfile.ZipFile(package) as z:
-        if z.namelist()!=["proof.py"] or z.testzip() is not None:
-            raise SystemExit("bad ZIP")
-        app=z.read("proof.py")
-    if hashlib.sha256(app).hexdigest()!="__APP_SHA__":
-        raise SystemExit("bad app")
-    installed.parent.mkdir(mode=0o755,parents=True,exist_ok=True)
-    with installed.open("xb") as f: f.write(app)
-    subprocess.run(["/usr/bin/python3","-u",str(installed)],check=True)
-time.sleep(180)
-APP
-cat > /etc/systemd/system/vm-interface-proof.service <<'UNIT'
-[Unit]
-Description=VM proof
-Conflicts=getty@tty1.service
-After=systemd-user-sessions.service
-[Service]
-Type=simple
-ExecStartPre=/usr/bin/mount -t virtiofs exchange /mnt/exchange
-ExecStart=/usr/bin/python3 -u /usr/local/bin/vm-interface-launcher.py
-StandardInput=tty-force
-StandardOutput=tty
-StandardError=tty
-TTYPath=/dev/tty1
-TTYReset=yes
-TTYVHangup=yes
-[Install]
-WantedBy=multi-user.target
-UNIT
-systemctl daemon-reload
-systemctl enable vm-interface-proof.service
-systemctl stop getty@tty1.service
-systemctl start --no-block vm-interface-proof.service
-chvt 1
-"""
+
 
 def main():
     vm = path = recording = key_id = ticket = None
     lease = False
     try:
-        from linux_showcase_fixture import APP
         software=package()
         software_digest=h["sha"](software)
-        cloud=CLOUD.replace("__PACKAGE_SHA__",software_digest).replace("__APP_SHA__",h["sha"](APP.encode("utf-8")))
+        cloud=launcher_cloud()
         assert len(cloud.encode("utf-8"))<=2048, "KubeVirt inline cloud-init limit"
         spec = {"version":1,"name":"api-functional-proof","architecture":"amd64",
                 "cpu":1,"memoryMiB":1536,"image":"fedora-exchange-test",

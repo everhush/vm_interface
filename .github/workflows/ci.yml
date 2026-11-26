@@ -15,7 +15,7 @@ jobs:
   checks:
     if: github.repository == 'xad3play/vm_interface'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

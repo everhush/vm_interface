@@ -21,3 +21,13 @@ class LinuxFixtureTests(unittest.TestCase):
         verify_platform(platform,rpm,"44")
         with self.assertRaises(ValueError):verify_platform(platform,rpm,"43")
         with self.assertRaises(ValueError):verify_platform(platform,b"fedora-release\t44-1\n","44")
+
+    def test_real_launcher_with_actual_digests_fits_kubevirt(self):
+        from linux_showcase_fixture import launcher_cloud, APP
+        cloud=launcher_cloud()
+        self.assertLessEqual(len(cloud.encode("utf-8")),2048)
+        self.assertIn(digest(package()),cloud)
+        self.assertEqual(cloud.count(digest(APP.encode("utf-8"))),2)
+        python=cloud.split("<<'PY'\n",1)[1].split("\nPY\n",1)[0]
+        compile(python,"guest-launcher.py","exec")
+        self.assertIn('with p.open("xb")',python)

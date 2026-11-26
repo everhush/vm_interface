@@ -8,7 +8,7 @@ cat > "$work/root/boot/grub/grub.cfg" <<'GRUB'
 set timeout=0
 set default=0
 menuentry 'VM Interface ISO boot evidence' {
-  echo VMINTERFACEISOBOOTOK
+  echo ISO BOOT PROOF PASSED
   sleep --interruptible 600
 }
 GRUB
