@@ -8,4 +8,4 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 iso="$(node scripts/fetch-pinned-media.ts virtioISO "$work")"
 winfsp="$(node scripts/fetch-pinned-media.ts winfsp "$work")"
-python3 showcases/windows/build-catalog-iso.py --authorized --iso "$iso" --winfsp "$winfsp" --report "$report" --output "$work/VMDRIVERS.iso" > "$out/driver-iso.json"
+node showcases/windows/build-catalog-iso.ts --authorized --iso "$iso" --winfsp "$winfsp" --report "$report" --output "$work/VMDRIVERS.iso" > "$out/driver-iso.json"
