@@ -15,7 +15,7 @@ test("reject redundant standalone tool configuration and executable paths",()=>{
  assert(migrationViolations("package.json",JSON.stringify({devDependencies:{eslint:"9"}})).length);
  assert(migrationViolations("package.json",JSON.stringify({scripts:{test:"tsx --test tests/*.ts"}})).length);
  assert(migrationViolations("infra/app.yaml",'command: ["node","--import","tsx","src/run.ts"]').length);
- assert(migrationViolations("src/exchange.ts",\x27const env={name:"TSX_DISABLE_CACHE",value:"1"}\x27).length);
+ assert(migrationViolations("src/exchange.ts",'const env={name:"TSX_DISABLE_CACHE",value:"1"}').length);
  assert(migrationViolations("tests/example.test.ts",'import test from "node:test"').length);
  assert.deepEqual(migrationViolations("package.json",JSON.stringify({devDependencies:{vite:"npm:@voidzero-dev/vite-plus-core@8.3.8001","vite-plus":"1.8.0"},scripts:{test:"vp test run"}})),[]);
  assert.deepEqual(migrationViolations("scripts/run.sh","node --import vite-plus/register src/run.ts"),[]);
