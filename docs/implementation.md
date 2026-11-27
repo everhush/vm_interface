@@ -1,5 +1,8 @@
 # Implementation and validation record
 
+> **Historical engineering log:** the entries below preserve the implementation timeline and failures as recorded at the time. Current status: the exact hosted candidate passed on 2026-11-27 and is ready for independent native-device acceptance, not a stable release. See [validation.md](validation.md) and [requirements.json](requirements.json). Commands and pending-status statements in old entries are historical; use the current [device guide](device-validation.md).
+
+
 Baseline: README only, no existing code. Track work through issues #1–#9. Current branch: implementation/virtualization-backend.
 
 ## Initial slice

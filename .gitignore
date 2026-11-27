@@ -4,3 +4,18 @@ dist/
 .vinext/
 .env*
 evidence/
+
+# Local validation outputs and sensitive input material
+__pycache__/
+*.py[cod]
+android-inputs/
+*.qcow2
+*.raw
+*.img
+*.iso
+*.apk
+*.mp4
+*.pem
+*.key
+*.p12
+*.jks

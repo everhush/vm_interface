@@ -1,5 +1,7 @@
 # Device validation handoff
 
+> **Current qualification (2026-11-27):** the hosted core, native CSI evaluation and Android offline preparation all passed on exact commit `7e095afe6274137104f15caf9cbaef7738d6a9ba`. #12 is ready but independent device acceptance remains 0/3. See [validation.md](validation.md). The instructions below are for authorized disposable devices; this is not a certified release.
+
 This candidate consolidates prepared features. **It is not a certified release.** Do not use on production systems. KVM validation on an eligible device is essential, and image-specific Linux/Android qualification plus consolidated static checks remain necessary.
 
 ## 1. Non-virtualization checks
@@ -9,7 +11,7 @@ On a machine with network access, Node.js 24 and Python 3.11+:
 ```sh
 git clone https://github.com/imxade/vm_interface.git
 cd vm_interface
-git checkout implementation/virtualization-backend
+git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba
 bash scripts/device-validate.sh checks
 ```
 
@@ -51,7 +53,7 @@ bash scripts/device-validate.sh core --confirm-disposable
 python3 scripts/verify-evidence.py --root evidence --profile linux
 ```
 
-The client generates an exact reproducible application ZIP, uploads it and a random challenge through the product file API, then sends a visible install/launch command through the leased input API. The guest verifies package digest, installs the application on its system disk, creates and tests an archive of actual challenge bytes, publishes output and checksum, and emits a visible marker during consented recording. The client retrieves original MP4, verifies marker frames, retrieves both result and archive, performs cold CPU/RAM resize and restart, checks new VMI identity and original PVC UIDs, installed app persistence and exact file bytes. The verifier checks software package, challenge, archive and trace independently. No Windows registration or driver files are required. Native runtime qualification pending.
+The client generates an exact reproducible application ZIP, uploads it and a random challenge through the product file API, then sends a visible install/launch command through the leased input API. The guest verifies package digest, installs the application on its system disk, creates and tests an archive of actual challenge bytes, publishes output and checksum, and emits a visible marker during consented recording. The client retrieves original MP4, verifies marker frames, retrieves both result and archive, performs cold CPU/RAM resize and restart, checks new VMI identity and original PVC UIDs, installed app persistence and exact file bytes. The verifier checks software package, challenge, archive and trace independently. No Windows registration or driver files are required. Hosted Fedora x86_64 functional qualification passed; independent device reproduction remains pending.
 
 ## 4. Native Android ARM64
 
@@ -105,7 +107,7 @@ python3 showcases/windows/build-catalog-iso.py --authorized --iso /path/to/virti
 
 Retain the actual output digest, not a digest from a different build (ISO metadata can vary). Add --auxiliary-media /path/to/VMDRIVERS.iso --auxiliary-sha256 <actual-output-sha256> --auxiliary-gib 1 to the Windows command. The image contains bootstrap.ps1, which verifies exact component bytes and signer identities, uses normal signed driver installation and requires the actual API-uploaded challenge before VMDRIVERSREADY. The older MSI packager is retained for historical review only; it is not the qualified input path.
 
-Windows media and scenario are historical/optional. Linux and Android native qualification remains incomplete; issue #12 is not ready.
+Windows media and scenario are historical/optional. Hosted Linux qualification passed; native ARM64 Android and independent device acceptance remain outstanding under ready issue #12.
 
 ### Bundled scenario recipes (prepared, not runtime-qualified)
 Use `python3 scripts/write-showcase-scenario.py windows windows-scenario.json` or `python3 scripts/write-showcase-scenario.py android android-scenario.json` to create the concrete client recipe. Windows uses authorized installation and login checkpoints before recording, then actual 7-Zip GUI evidence. Android requires fixture APK version 3.0, adds a post-upload installation and authorized Storage Access Framework directory selection checkpoint, then clicks the exact unique visible Compute proof label using OCR from actual API screenshots. The APK reads the fresh 4096-byte API-uploaded challenge using the user-granted directory, computes its SHA256 and publishes a challenge-bound result/checksum. Version 2.0 static-output evidence is historical only. No fabricated click coordinates or recording of credentials. These prepared recipes still require guest qualification on the exact media; missing mount/provider or ambiguous OCR is an explicit failure, not a fallback. The new APK must be rebuilt and independently signature-checked; version 1.0 artifact is historical only. The prepared Android client rechecks the actual APK signature and package/version metadata using the authorized portable Java apksigner.jar (set ANDROID_HOME to the SDK containing build-tools 34.0.0, APKSIGNER_JAR to its verified JAR, or use apksigner in PATH) and a bounded standard-library binary-manifest reader; no x86-only aapt2 executable is required on ARM64. The adb-saf launch additionally checks native adb before provisioning. If the guest requires the same test RSA key to be reauthorized after a cold restart, the operator may approve it at an unrecorded checkpoint; authentication and SELinux enforcement must remain enabled.
@@ -120,7 +122,7 @@ The ordinary local-path profile cannot expand PVCs. The API rejects a growth req
 
 To evaluate native growth on an authorized clean cluster, an operator must supply a real, CDI/KubeVirt-compatible CSI StorageClass named `vm-expandable` (filesystem, RWO, actual controller/node expansion support and allowVolumeExpansion: true). Configure the API and reconciler with `VM_STORAGE_CLASS=vm-expandable` before creating test VMs; the selected class is stored in their immutable DataVolume templates. Apply `infra/storage-growth.yaml` only to this qualified evaluation environment: it adds narrow namespace PVC patch RBAC and a mandatory admission fence for monotonic storage-only changes to managed claims. The ordinary installation does not grant PVC patch privileges. Never apply this to a production cluster before independent review and qualification.
 
-Use `POST /computers/{id}/storage/plan` then `PATCH /computers/{id}/storage` with a fresh Idempotency-Key and body `{"disk":"system.disk","sizeGiB":4,"expectedResourceVersion":"<current VM resourceVersion>"}` on a halted, converged VM. Disk selectors are system.disk, exchange.disk (both block and VirtioFS), or a named independent data disk. Storage reports the reservation, whether the exact PVC request was submitted, actual CSI capacity convergence, and explicitly false guest-disk/filesystem growth verification flags. Same PVC UID required; shrinking, unknown claims, foreign account, stale version and exceeding quota are refused. If a reserved submission fails, inspect the current state and resubmit exactly the reserved target with a new key and current version; no automatic destructive rollback, recreation or replay of uncertain writes. Start is blocked until the reserved patch has been submitted; filesystem expansion may complete when mounted. Clone/export wait for capacity convergence. This is native PVC expansion evaluation, not yet verified on a real CSI driver. Guest virtual disk, partition and filesystem capacity must be measured separately.
+Use `POST /computers/{id}/storage/plan` then `PATCH /computers/{id}/storage` with a fresh Idempotency-Key and body `{"disk":"system.disk","sizeGiB":4,"expectedResourceVersion":"<current VM resourceVersion>"}` on a halted, converged VM. Disk selectors are system.disk, exchange.disk (both block and VirtioFS), or a named independent data disk. Storage reports the reservation, whether the exact PVC request was submitted, actual CSI capacity convergence, and explicitly false guest-disk/filesystem growth verification flags. Same PVC UID required; shrinking, unknown claims, foreign account, stale version and exceeding quota are refused. If a reserved submission fails, inspect the current state and resubmit exactly the reserved target with a new key and current version; no automatic destructive rollback, recreation or replay of uncertain writes. Start is blocked until the reserved patch has been submitted; filesystem expansion may complete when mounted. Clone/export wait for capacity convergence. This is native PVC expansion evaluation verified with the pinned eligible CSI driver in hosted CI; independent device qualification remains pending. Guest virtual disk, partition and filesystem capacity must be measured separately.
 
 ### Exact Android device input preparation and invocation
 
@@ -147,7 +149,7 @@ The optional CSI lane installs the fail-closed admission policy and binding sepa
 
 For downloaded hosted CSI growth evidence, run `python3 scripts/verify_csi_evidence.py --root /path/to/artifact --commit <exact-run-commit>`. The verifier checks actual guest challenge and measurement bytes, the published bundle manifest and member hashes, both admission denials, exact PVC/DataVolume identities and capacities, and matching redacted HTTP statuses. It does not certify hardware or claim guest boot disk/filesystem growth.
 
-The Linux application profile requests an explicit USB tablet only in the pinned amd64 Fedora image. It waits for actual guest tablet absolute-axis events and left-button press/release before computing the result; the verifier checks the challenge-bound receipt, original screenshots and authorized API phases. This is a pointer evaluation, not true multitouch or a hardware support claim until real CI passes.
+The Linux application profile requests an explicit USB tablet only in the pinned amd64 Fedora image. It waits for actual guest tablet absolute-axis events and left-button press/release before computing the result; the verifier checks the challenge-bound receipt, original screenshots and authorized API phases. Hosted USB tablet receipt passed on the pinned Fedora profile. This is not true multitouch or a blanket hardware support claim.
 
 ### Authorized public URL acquisition and cache
 

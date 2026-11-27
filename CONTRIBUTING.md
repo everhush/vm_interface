@@ -1,0 +1,11 @@
+# Contributing
+
+VM Interface is an API-first, evaluation-stage open-source project. Read the [README](readme.md), [architecture](docs/architecture.md), [API guide](docs/api.md) and [scope/requirements](docs/product-specification.md) before proposing changes.
+
+1. Branch from the current primary source; make focused, reviewable changes and add regression tests.
+2. Use Node.js 24, Python 3.11+, FFmpeg/ffprobe and Tesseract. Run `bash scripts/device-validate.sh checks` (locked install, typecheck, lint, tests and build).
+3. For virtualization changes reproduce the relevant native test on a fresh authorized disposable KVM host. Follow [device-validation.md](docs/device-validation.md); never run provisioning against a shared or production cluster. Never substitute mocks for claimed native guest success.
+4. Open a pull request describing the behavior, risks, exact tested commit, checks and evidence. Keep authorization, scope, retry and resource cleanup assertions intact. Report unsupported profiles explicitly; do not include unlicensed guest images, credentials, raw guest recordings or sensitive logs.
+5. Contributions must be authorized and compatible with [Apache-2.0](LICENSE); identify third-party material and preserve its terms/attribution. The project does not require copyright assignment.
+
+Maintainer CI uses a synchronized CI-only fork. Its hosted workflows intentionally guard execution to that repository. Do not change the fork independently or weaken that guard to make a green badge. Contributors can run non-KVM checks locally. Independent device acceptance is tracked in #12, not a source-implementation task. Security reports follow [SECURITY.md](SECURITY.md).
