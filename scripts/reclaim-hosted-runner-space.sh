@@ -11,9 +11,7 @@ df -h / > evidence/runner-disk-before.txt
 for path in /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/share/boost; do
   if [ -d "$path" ] && [ ! -L "$path" ]; then sudo rm -rf -- "$path"; fi
 done
-# Only this fresh GitHub-hosted runner; never prune a shared Docker daemon.
-docker image prune --all --force
-docker builder prune --all --force
+# Image construction uses a separate temporary OCI store, never a shared cache.
 sudo apt-get clean
 df -h / > evidence/runner-disk-after.txt
-python3 scripts/check-runner-space.py before-provision 25
+node scripts/check-runner-space.ts before-provision 25

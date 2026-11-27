@@ -19,7 +19,7 @@ This does not require KVM. It runs typecheck/lint/unit/build, Python syntax/unit
 
 ## 2. Dedicated device
 
-Use a **disposable Linux device**, not an existing cluster, shared persistent self-hosted runner or a personal production PC. Review the checkout before running it. Require a matching x86_64 or AArch64 processor, actual /dev/kvm access, Docker, sudo, Node 24, Python 3.11+, FFmpeg/ffprobe, Tesseract, skopeo and distribution packages used by probes. Core preflight requires >=6 GiB RAM and >=35 GiB free root storage; large media profiles require >=12 GiB and >=100 GiB free. These are conservative starting requirements, not guaranteed sufficient. No software fallback or cloud purchase.
+Use a **disposable Linux device**, not an existing cluster, shared persistent self-hosted runner or a personal production PC. Review the checkout before running it. Require a matching x86_64 or AArch64 processor, actual /dev/kvm access, Buildah, sudo, Node 24, Python 3.11+, FFmpeg/ffprobe, Tesseract, skopeo and distribution packages used by probes. Core preflight requires >=6 GiB RAM and >=35 GiB free root storage; large media profiles require >=12 GiB and >=100 GiB free. These are conservative starting requirements, not guaranteed sufficient. No software fallback or cloud purchase.
 
 ```sh
 sudo python3 scripts/device-preflight.py --architecture amd64
@@ -92,13 +92,13 @@ To verify already downloaded evidence independently (no KVM needed): `python3 sc
 
 The LineageOS 23.2 ARM64 bundle from release v2026.10.18 passed publisher-attestation verification, exact archive SHA256 and QCOW2 checks on fork run 45623125031. The signed proof APK was built and checked in the same job. That initial artifact is historical. For the current exact-candidate preparation, use [run 45954551058 and artifact 15177888333](https://github.com/xad3play/vm_interface/actions/runs/45954551058/artifacts/15177888333), the committed pinned manifests, and the [validation record](validation.md). This does not certify boot or the exchange mount.
 
-Use an authorized SDK/image and run the acquisition workflow or reproduce its steps using scripts/fetch-pinned-media.py, scripts/qualify-android-media.sh and the pinned sources. Use vda as --media and vdb as --auxiliary-media with the matching hashes and capacities in the disk manifest (6 GiB and 18 GiB respectively). No bundled NVRAM or unsigned recovery is imported. The ARM64 showcase explicitly selects `storage.exchangeTag: share`, matching the LineageOS virtio-common fstab (`share /mnt/vendor/shared virtiofs`); the backend claim stays account-owned. The source tree is corroboration, not proof that the pinned build mounts or exposes it through SAF. The large-media disposable profile reserves a 20 GiB staging PVC, caps staged data at 16 GiB and verifies API/reconciler settings. Verify native boot, effective tag, and user-authorized SAF read/write without bypassing signatures or SELinux.
+Use an authorized SDK/image and run the acquisition workflow or reproduce its steps using scripts/fetch-pinned-media.ts, scripts/qualify-android-media.sh and the pinned sources. Use vda as --media and vdb as --auxiliary-media with the matching hashes and capacities in the disk manifest (6 GiB and 18 GiB respectively). No bundled NVRAM or unsigned recovery is imported. The ARM64 showcase explicitly selects `storage.exchangeTag: share`, matching the LineageOS virtio-common fstab (`share /mnt/vendor/shared virtiofs`); the backend claim stays account-owned. The source tree is corroboration, not proof that the pinned build mounts or exposes it through SAF. The large-media disposable profile reserves a 20 GiB staging PVC, caps staged data at 16 GiB and verifies API/reconciler settings. Verify native boot, effective tag, and user-authorized SAF read/write without bypassing signatures or SELinux.
 
 ### Windows driver media (offline qualified; guest installation pending)
 
 The official virtio-win 0.1.302-1 ISO is pinned by exact SHA256. The two tested standalone VirtIO MSI files were unsigned and rejected. Do not use them. The signed Windows Server 2022 INF/SYS catalog, independently signed VirtioFS service, and signed WinFsp MSI were verified in fork run 45624621225. Driver ISO construction and full byte readback passed in run 45625087154, artifact 15028411663. These runs do not certify guest installation.
 
-Run scripts/qualify-windows-catalog.ps1 on Windows against the pinned media. Then, on a Linux host with xorriso, fetch the pinned virtioISO and winfsp using scripts/fetch-pinned-media.py and build the authorized driver ISO:
+Run scripts/qualify-windows-catalog.ps1 on Windows against the pinned media. Then, on a Linux host with xorriso, fetch the pinned virtioISO and winfsp using scripts/fetch-pinned-media.ts and build the authorized driver ISO:
 
 ```sh
 python3 showcases/windows/build-catalog-iso.py --authorized --iso /path/to/virtio-win.iso \

@@ -16,6 +16,9 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - name: Install image inspection tool only if absent
         run: |
           command -v qemu-img >/dev/null || { sudo timeout 240s apt-get update -qq && sudo timeout 240s apt-get install -y --no-install-recommends qemu-utils; }

@@ -7,7 +7,7 @@ mkdir -p "$out"
 if [ -e "$out/proof.apk" ] || [ -e "$out/disks" ]; then echo "Refusing to overwrite existing media" >&2; exit 1; fi
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-archive="$(python3 scripts/fetch-pinned-media.py android "$work")"
+archive="$(node scripts/fetch-pinned-media.ts android "$work")"
 gh attestation verify "$archive" --repo jqssun/android-lineage-qemu --format json > "$out/android-attestation.json"
 python3 scripts/prepare_android.py "$archive" "$work/disks" --authorized > "$out/android-disk-manifest.json"
 test -f "$ANDROID_HOME/platforms/android-34/android.jar"

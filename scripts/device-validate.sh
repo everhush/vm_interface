@@ -31,7 +31,7 @@ if [ -d evidence ] && [ -n "$(find evidence -mindepth 1 -print -quit)" ]; then e
 test ! -e /etc/rancher/k3s/k3s.yaml
 test ! -e "$HOME/.kube/config"
 test -z "${KUBECONFIG:-}"
-for cmd in docker node npm python3 curl openssl tesseract ffmpeg ffprobe git skopeo; do command -v "$cmd" >/dev/null; done
+for cmd in buildah node npm python3 curl openssl tesseract ffmpeg ffprobe git skopeo; do command -v "$cmd" >/dev/null; done
 mkdir -p evidence
 if [ "$profile" = core ] || [ "$profile" = linux ]; then
   test "$#" -eq 0
@@ -48,8 +48,7 @@ export VM_DISPOSABLE_DEVICE=true VM_DEVICE_PROFILE="$profile"
 export GITHUB_ACTIONS=true
 export GITHUB_SHA="$(git rev-parse HEAD)" GITHUB_RUN_ID="device-$(date -u +%Y%m%dT%H%M%SZ)-$$"
 bash scripts/provision-ci.sh
-docker build -t vm-interface:ci .
-docker save vm-interface:ci | sudo k3s ctr images import -
+bash scripts/build-oci.sh k3s
 export TOKEN_A="$(openssl rand -hex 32)" TOKEN_B="$(openssl rand -hex 32)"
 kubectl -n vm-interface create secret generic vm-api-test --from-literal=identities="{\"alpha\":\"$TOKEN_A\",\"beta\":\"$TOKEN_B\"}"
 kubectl -n vm-interface create secret generic vm-api-export --from-literal=token="$(openssl rand -hex 32)"
@@ -67,9 +66,9 @@ rm -f "$tls/key"
 chmod 644 "$tls/ca"
 kubectl apply -f infra/app.yaml
 if [ "$profile" = windows ] || [ "$profile" = android ]; then
-  kubectl -n vm-interface patch deployment vm-api --type=strategic -p "$(python3 scripts/device_profile.py deployment "$profile")"
-  kubectl -n vm-interface get deployment vm-api -o json | python3 scripts/device_profile.py verify-deployment "$profile"
-  kubectl -n vm-interface get pvc vm-media-stage -o json | python3 scripts/device_profile.py verify-pvc "$profile"
+  kubectl -n vm-interface patch deployment vm-api --type=strategic -p "$(node scripts/device_profile.ts deployment "$profile")"
+  kubectl -n vm-interface get deployment vm-api -o json | node scripts/device_profile.ts verify-deployment "$profile"
+  kubectl -n vm-interface get pvc vm-media-stage -o json | node scripts/device_profile.ts verify-pvc "$profile"
 fi
 kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
 python3 scripts/check-rbac-ci.py

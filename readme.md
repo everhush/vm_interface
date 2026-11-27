@@ -87,7 +87,7 @@ This uses `npm ci` and runs type checking, lint, TypeScript/Python tests, produc
 
 ### 2. Try the full evaluation on a disposable x86_64 Linux device
 
-**Warning:** the native validation workflow provisions a new K3s cluster, downloads guest images and uses local disks and elevated privileges. Never run it on a personal production workstation, existing cluster or shared persistent runner. Review the scripts first and obtain operator consent. Use a clean source checkout; keep guest media, credentials and other private files outside the Docker build context. Require real `/dev/kvm`, Docker, sudo, Node.js 24, Python 3.11+, curl, OpenSSL, Git, FFmpeg/ffprobe, Tesseract and skopeo. The core preflight requires at least 6 GiB RAM and 35 GiB free root storage; large-media profiles require 12 GiB and 100 GiB. No TCG fallback.
+**Warning:** the native validation workflow provisions a new K3s cluster, downloads guest images and uses local disks and elevated privileges. Never run it on a personal production workstation, existing cluster or shared persistent runner. Review the scripts first and obtain operator consent. Use a clean source checkout; keep guest media, credentials and other private files outside the source checkout and OCI build context. Require real `/dev/kvm`, Buildah, sudo, Node.js 24, Python 3.11+, curl, OpenSSL, Git, FFmpeg/ffprobe, Tesseract and skopeo. The core preflight requires at least 6 GiB RAM and 35 GiB free root storage; large-media profiles require 12 GiB and 100 GiB. No TCG fallback.
 
 ```sh
 # Reproduce the exact hosted-qualified implementation:

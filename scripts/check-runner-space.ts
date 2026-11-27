@@ -1,0 +1,18 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync, statfsSync, writeFileSync } from "node:fs";
+import { strict as assert } from "node:assert";
+const [stage, minimum] = process.argv.slice(2);
+assert(["before-provision","after-provision","after-build"].includes(stage) && /^\d+$/.test(minimum ?? "") && process.argv.length === 4, "Expected stage and minimum GiB");
+const minimumGiB = Number(minimum);
+assert(Number.isSafeInteger(minimumGiB) && minimumGiB > 0);
+const usage = statfsSync("/", {bigint:true});
+const freeBytes = Number(usage.bavail * usage.bsize), totalBytes = Number(usage.blocks * usage.bsize);
+type Node = {metadata:{name:string};status:{conditions:{type:string;status:string}[]}};
+const nodes: Node[] = stage === "before-provision" ? [] : JSON.parse(execFileSync("kubectl",["get","nodes","-o","json"],{encoding:"utf8",timeout:30000})).items;
+const diskPressure = nodes.filter(n=>n.status.conditions.some(c=>c.type==="DiskPressure" && c.status!=="False")).map(n=>n.metadata.name);
+const passed = freeBytes >= minimumGiB * 1024**3 && diskPressure.length === 0;
+const report = {stage,freeBytes,totalBytes,minimumGiB,diskPressure,passed};
+mkdirSync("evidence",{recursive:true});
+writeFileSync("evidence/runner-space-"+stage+".json", JSON.stringify(report,null,2)+"\n");
+console.log(JSON.stringify(report));
+process.exitCode = passed ? 0 : 1;

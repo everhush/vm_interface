@@ -9,7 +9,7 @@ sudo modprobe kvm || true
 mkdir -p evidence
 sources=$(mktemp -d)
 trap 'rm -rf "$sources"' EXIT
-python3 scripts/provision_sources.py --directory "$sources" --evidence evidence/provision-sources.json
+node scripts/provision_sources.ts --directory "$sources" --evidence evidence/provision-sources.json
 case "$(uname -m)" in x86_64) binary=k3s-amd64 ;; aarch64) binary=k3s-arm64 ;; *) exit 1 ;; esac
 sudo install -m 0755 "$sources/$binary" /usr/local/bin/k3s
 export INSTALL_K3S_VERSION='v1.34.13+k3s1'
@@ -63,7 +63,7 @@ kubectl -n kubevirt get kubevirt kubevirt -o jsonpath='{.spec.configuration.deve
 mkdir -p evidence
 # Node labels/device publication may lag behind the handler rollout.
 for attempt in $(seq 1 30); do
-  if kubectl get nodes -o json | python3 scripts/kvm_capacity.py > evidence/kvm-capacity.json; then
+  if kubectl get nodes -o json | node scripts/kvm_capacity.ts > evidence/kvm-capacity.json; then
     cat evidence/kvm-capacity.json
     break
   fi
@@ -78,7 +78,7 @@ kubectl wait cdi cdi --for=condition=Available --timeout=600s
 kubectl apply --server-side -f "$sources/cnpg.yaml"
 await_crd clusters.postgresql.cnpg.io /apis/postgresql.cnpg.io/v1
 kubectl -n cnpg-system rollout status deployment/cnpg-controller-manager --timeout=300s
-python3 scripts/device_profile.py namespace "${VM_DEVICE_PROFILE:-core}" | kubectl apply -f -
+node scripts/device_profile.ts namespace "${VM_DEVICE_PROFILE:-core}" | kubectl apply -f -
 kubectl apply -f infra/exchange-policy.yaml
 kubectl apply -f infra/disk-export-policy.yaml
 kubectl -n vm-interface wait cluster vm-db --for=condition=Ready --timeout=600s

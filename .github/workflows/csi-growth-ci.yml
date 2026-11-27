@@ -21,18 +21,14 @@ jobs:
       - run: bash -n scripts/provision-csi-growth-ci.sh
       - run: python3 -m py_compile scripts/e2e-csi-growth.py
       - run: bash scripts/reclaim-hosted-runner-space.sh
+      - run: bash scripts/install-oci-tools.sh
       - run: bash scripts/provision-ci.sh
       - name: Build and deploy
         shell: bash
         run: |
           set -euo pipefail
-          docker build -t vm-interface:ci .
-          docker save vm-interface:ci | sudo k3s ctr images import -
-          # The deployed image is now in K3s; run public-API clients on the Node 24 host.
-          docker image rm vm-interface:ci
-          docker builder prune --all --force
-          docker image prune --all --force
-          python3 scripts/check-runner-space.py after-build 10
+          bash scripts/build-oci.sh k3s
+          node scripts/check-runner-space.ts after-build 10
           A=$(openssl rand -hex 32); B=$(openssl rand -hex 32)
           echo "::add-mask::$A"; echo "::add-mask::$B"
           echo "TOKEN_A=$A" >> "$GITHUB_ENV"; echo "TOKEN_B=$B" >> "$GITHUB_ENV"

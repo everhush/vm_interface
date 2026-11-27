@@ -11,7 +11,7 @@ $Report = [ordered]@{source=$Url; isoSha256=$null; isoBytes=$null; files=@(); pa
 function Save-Report { $Report | ConvertTo-Json -Depth 8 | Set-Content -Encoding utf8 (Join-Path $Output 'driver-catalog-report.json') }
 try {
   foreach ($Key in @('winfsp','software')) {
-    $File = python scripts/fetch-pinned-media.py $Key $Work
+    $File = node scripts/fetch-pinned-media.ts $Key $Work
     if ($LASTEXITCODE -ne 0) { throw "Pinned download failed: $Key" }
     $Signature = Get-AuthenticodeSignature -LiteralPath $File
     $Report.packages += [ordered]@{key=$Key; sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $File).Hash.ToLowerInvariant(); signatureStatus=[string]$Signature.Status; signerThumbprint=$Signature.SignerCertificate.Thumbprint; signerSubject=$Signature.SignerCertificate.Subject}
