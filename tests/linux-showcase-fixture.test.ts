@@ -4,13 +4,13 @@ import {execFileSync} from "node:child_process";
 import {mkdtempSync,writeFileSync,rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {APP,packageBytes,launcherCloud,verifyArchive,verifyPlatform,verifyPointerReceipt} from "../scripts/linux-showcase-fixture.ts";
+import {APP,packageBytes,launcherCloud,verifyArchive,verifyPlatform,verifyPointerReceipt,runtimeParts,verifyRuntime} from "../scripts/linux-showcase-fixture.ts";
 import {sha} from "../scripts/api-client.ts";
 import {ZipReader} from "../scripts/zip-reader.ts";
 import {storedZip} from "../scripts/zip-writer.ts";
 test("deterministic guest application and bounded launcher",async()=>{
- assert(packageBytes().equals(packageBytes()));const dir=mkdtempSync(join(tmpdir(),"vm-linux-"));try{const p=join(dir,"proof.zip");writeFileSync(p,packageBytes());const z=new ZipReader(p);try{assert.deepEqual(z.entries.map(v=>v.name),["proof.sh"]);assert.equal((await z.buffer(z.entries[0],65536)).toString(),APP);}finally{z.close();}
- const cloud=launcherCloud();assert(Buffer.byteLength(cloud)<=2048&&cloud.includes(sha(packageBytes()))&&cloud.split(sha(Buffer.from(APP))).length===3);execFileSync("bash",["-n"],{input:cloud});execFileSync("bash",["-n"],{input:APP});assert(cloud.includes("set -C"));
+ assert(packageBytes().equals(packageBytes()));const dir=mkdtempSync(join(tmpdir(),"vm-linux-"));try{const p=join(dir,"proof.zip");writeFileSync(p,packageBytes());const z=new ZipReader(p);try{assert.deepEqual(z.entries.map(v=>v.name),["proof.ts","zip-writer.ts"]);assert.equal((await z.buffer(z.entries[0],65536)).toString(),APP.replace('"../zip-writer.ts"','"./zip-writer.ts"'));}finally{z.close();}
+ const runtime=runtimeParts(Buffer.from("test runtime"),"v24.1.0"),cloud=launcherCloud(runtime);assert(Buffer.byteLength(cloud)<=2048&&cloud.includes(sha(packageBytes()))&&cloud.split(runtime.executableSha256).length===3);execFileSync("bash",["-n"],{input:cloud});assert(cloud.includes("set -C")&&cloud.includes("proof.ts"));const challenge=Buffer.from("actual"),receipt=Buffer.from(JSON.stringify({node:runtime.version,architecture:"x64",executableSha256:runtime.executableSha256,challengeSha256:sha(challenge)}));verifyRuntime(receipt,challenge,runtime);assert.throws(()=>verifyRuntime(receipt,Buffer.from("wrong"),runtime));
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 test("exact guest archive bytes",async()=>{const raw=storedZip([["challenge.bin",Buffer.from("actual")]]);await verifyArchive(raw,Buffer.from("actual"));await assert.rejects(verifyArchive(raw,Buffer.from("wrong")));});
