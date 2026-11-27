@@ -6,9 +6,13 @@ import {isMain} from "./tooling.ts";
 export function migrationViolations(path:string,content:string){
  const errors:string[]=[];
  if(/(?:^|\/)(?:Dockerfile(?:\.[^/]*)?|\.dockerignore|docker-compose(?:\.[^/]*)?|compose\.ya?ml|__pycache__)(?:$|\/)|\.(?:py|pyc|pyo)$/i.test(path))errors.push("legacy tracked file");
- if(!/^(?:scripts\/|src\/|app\/|infra\/|showcases\/|\.github\/workflows\/|package\.json$)/.test(path)||!(/\.(?:ts|tsx|sh|ps1|json|ya?ml|m?js)$/.test(path)))return errors;
- if(path==="scripts/check-source-migration.ts")return errors;
+ if(!/^(?:scripts\/|tests\/|src\/|app\/|infra\/|showcases\/|\.github\/workflows\/|package\.json$)/.test(path)||!(/\.(?:ts|tsx|sh|ps1|json|ya?ml|m?js)$/.test(path)))return errors;
+ if(path==="scripts/check-source-migration.ts"||path==="tests/source-migration.test.ts")return errors;
  const checks:[RegExp,string][]=[
+  [/(?:^|[;&|]\s*)[ \t]*(?:sudo[ \t]+)?(?:[^\s;|&]+\/)?python(?:2|3(?:\.\d+)?)?(?=[ \t\r\n;&|]|$)/im,"shell interpreter command"],
+  [/\b(?:execFile(?:Sync)?|spawn(?:Sync)?|execa(?:Sync)?)\s*\(\s*["'\x60](?:[^"'\x60\n]+\/)?python(?:2|3(?:\.\d+)?)?["'\x60]/i,"programmatic interpreter command"],
+  [/\b(?:execFile(?:Sync)?|spawn(?:Sync)?|execa(?:Sync)?)\s*\(\s*["'\x60](?:[^"'\x60\n]+\/)?docker["'\x60]/i,"programmatic daemon command"],
+  [/\b(?:apt(?:-get)?|dnf|yum|apk)\s+[^\r\n;|&]*\b(?:install|add)\s+[^\r\n;|&]*\bpython(?:2|3(?:\.\d+)?)?(?=[\s;|&"'\\]|$)/i,"explicit interpreter package dependency"],
   [/\bpython(?:2|3(?:\.\d+)?)?\s+(?:-\w|[^\s"'\x60]+\.py\b)|\b(?:setup-python|python-version)\b|#![^\n]*\bpython[23]?\b/i,"interpreter invocation or CI dependency"],
   [/\b(?:sudo\s+)?docker\s+(?:buildx|build|run|compose|pull|push|load|save|exec|inspect|system|image|container|network|volume|login|version|info|ps|rm|rmi|tag|start|stop)\b|\bdocker-compose\b|\/var\/run\/docker\.sock|\bDOCKER_HOST\b|\b(?:docker\/setup-buildx-action|docker\/build-push-action|docker\/login-action)\b/i,"daemon-specific tooling"],
   [/\b(?:scripts|showcases)\/[^\s"'\x60]+\.py\b/i,"legacy script reference"]

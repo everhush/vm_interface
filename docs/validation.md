@@ -33,12 +33,7 @@ CSI guest exchange capacity increased from 1,020,702,720 to 2,077,073,408 bytes,
 
 Run [the device guide](device-validation.md) on authorized disposable equipment, not an existing cluster. For the exact hosted implementation use `git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba`. To inspect historical retained core artifacts without KVM, use the verifier in a separate worktree at that historical commit, not the newly migrated TypeScript verifier (which requires a guest Node runtime receipt). Extract the archive into a private directory and run:
 
-```sh
- # Use the verifier from an exact checkout of historical candidate 7e095afe6274137104f15caf9cbaef7738d6a9ba.
-node scripts/verify_media_evidence.ts --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
-node scripts/verify_network_evidence.ts --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
-node scripts/verify_csi_evidence.ts --root /path/to/csi-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba
-```
+Use the historical checkout's own [device guide](https://github.com/imxade/vm_interface/blob/7e095afe6274137104f15caf9cbaef7738d6a9ba/docs/device-validation.md) and its original verifier commands. The current TypeScript scripts are for the migrated source and its matching evidence, not a drop-in verifier for artifacts created before migration.
 
 Verify original artifact hashes and inspect actual guest frames and returned bytes. Artifact verifiers do not independently certify hardware. Private CI access and artifact retention may limit availability; no raw logs, media or guest data are redistributed here. Historical iterations and failures are preserved in [implementation.md](implementation.md). [Machine-readable requirement ledger](requirements.json).
 

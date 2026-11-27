@@ -18,11 +18,23 @@ On an authorized Linux build host with Buildah, Git and the Node package registr
 bash scripts/build-oci.sh archive /tmp/vm-interface.oci.tar
 ```
 
-Publish the OCI archive with an authorized OCI registry client and obtain its verified immutable manifest digest. Use an image matching the managed worker architecture. Do not publish guest disks or credential files.
+Publish only to an operator-authorized existing OCI registry using Skopeo, with explicit repository, tag and an already provisioned registry auth file. No daemon or cloud resource creation is needed. Use an image matching the managed worker architecture. Do not publish guest disks or credential files. The `docker://` spelling below is Skopeo's OCI registry transport name, not a daemon invocation.
 
 ```sh
-node scripts/render-managed-kubernetes.ts --image 'registry.example.org/team/vm-interface@sha256:REPLACE_WITH_64_HEX_DIGEST' --output ./managed-render
+# Set REGISTRY_REPO, TAG and REGISTRY_AUTH_FILE explicitly for your authorized registry.
+test -n "$REGISTRY_REPO" && test -n "$TAG" && test -f "$REGISTRY_AUTH_FILE"
+umask 077
+DIGEST_FILE="$(mktemp)"
+skopeo copy --preserve-digests --dest-authfile "$REGISTRY_AUTH_FILE" \
+  --digestfile "$DIGEST_FILE" oci-archive:/tmp/vm-interface.oci.tar:ci \
+  "docker://$REGISTRY_REPO:$TAG"
+DIGEST="$(cat "$DIGEST_FILE")"
+test "$DIGEST" = "$(skopeo inspect --authfile "$REGISTRY_AUTH_FILE" --format '{{.Digest}}' "docker://$REGISTRY_REPO:$TAG")"
+rm -f "$DIGEST_FILE"
+node scripts/render-managed-kubernetes.ts --image "$REGISTRY_REPO@$DIGEST" --output ./managed-render
 ```
+
+Review the image's registry permissions and provenance before deployment. Remote registry publication and managed-cluster runtime operation require authorized external infrastructure and are not asserted by the hosted K3s tests.
 
 The renderer ties the exact broker image and pull policy to the admission policy, sets the service and guest CSI storage class, and refuses an unpinned image. Review all generated manifests and secret references before use. Keep the generated directory outside commits.
 
