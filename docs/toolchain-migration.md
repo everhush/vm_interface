@@ -1,7 +1,7 @@
 # Kubernetes and Vite+ migration record — issue #13
 
 **Candidate:** [`34652dc2fffd585e8e95aac1a2df63b3552da8f8`](https://github.com/everhush/vm_interface/commit/34652dc2fffd585e8e95aac1a2df63b3552da8f8)  
-**Status:** implementation staged; exact native core and CSI qualification still in progress. This is not an approval to execute issue #12, nor a stable release. The final evidence verdict must be recorded before primary promotion.
+**Status:** implementation staged; exact native core qualification still in progress; CSI and Android preparation passed. This is not an approval to execute issue #12, nor a stable release. The final evidence verdict must be recorded before primary promotion.
 
 ## Source inventory
 
@@ -85,7 +85,7 @@ The former daemon-specific build files are replaced by [daemonless OCI build](..
 | --- | --- | --- |
 | Locked Vite+ static | [46077697248](https://github.com/everhush/vm_interface/actions/runs/46077697248) | PASS: 158/158 tests in 59 files; zero failed/skipped/todo; format, type-aware lint/check, build, loader and source guard passed. |
 | Native core | [46077980605](https://github.com/everhush/vm_interface/actions/runs/46077980605) | In progress; isolated actual KVM and OCI deployment passed. Final verdict pending. |
-| Real CSI expansion | [46078053324](https://github.com/everhush/vm_interface/actions/runs/46078053324) | In progress; KVM, OCI deployment and real driver installation passed. Guest expansion verdict pending. |
+| Real CSI expansion | [46078053324](https://github.com/everhush/vm_interface/actions/runs/46078053324) | PASS: real expandable CSI, actual VirtioFS guest capacity growth, unchanged PVC/DataVolume identities, 206 matching HTTP status pairs and both admission denials. |
 | Android inputs | [46077983994](https://github.com/everhush/vm_interface/actions/runs/46077983994) | PASS: pinned disks, signed APK and both scenario preflights. Native boot and guest compatibility unverified. |
 
 Independently reviewed archived artifact checksums:
@@ -94,6 +94,11 @@ Independently reviewed archived artifact checksums:
 | --- | --- |
 | [Static report 15236116330](https://github.com/everhush/vm_interface/actions/runs/46077697248/artifacts/15236116330) | `14399d6101b3289da5e1cf87e5fa774fa696a271795c4d8d57e371ef06981c97` |
 | [Locked dependencies 15236226055](https://github.com/everhush/vm_interface/actions/runs/46077697248/artifacts/15236226055) | `caa125fb59cc49be4c4a59c364deb45cf9791790c6d1da92c0e160c811b6d38c` |
+| [CSI evidence 15235639964](https://github.com/everhush/vm_interface/actions/runs/46078053324/artifacts/15235639964) | `7f434757b857a2d235692176f870da43085c7e18f933c3c9d7d3e20dcf8b801f` |
 | [Android inputs 15235503423](https://github.com/everhush/vm_interface/actions/runs/46077983994/artifacts/15235503423) | `6d5c29a1e48fb0c787ad97605040208356580f9d446f73be89f3ef17bebba80b` |
+
+Independent CSI review matched the actual guest capacity 1020702720→2077073408 bytes; unchanged boot and exchange PVC and boot DataVolume identities; boot claim 6828998001→8Gi and exchange claim 1Gi→2Gi. The 4096-byte guest challenge, before/after guest measurements and bundle manifest/member SHA-256 values matched; bundle SHA-256 `a91953f13bf58d5f6895600eb65d8343cc141fb64d1013a4f877c2f0e5c92544`. All 206 redacted HTTP status pairs matched, including required ownership/version/shrink denials and both Kubernetes admission denials. Boot virtual disk and guest boot filesystem growth are not claimed.
+
+The core workflow's static report and locked dependencies were independently compared against the standalone static qualification: all 158 test identities/statuses match and the lock bytes are identical (SHA-256 `d011617a998a5deea42f25c0a0ea6eb697e427f520bac2dda68738f6ea9fbc4e`).
 
 The final native evidence must bind to the same candidate and run identities; verify original video, actual guest bytes, storage and network identities, and complete cleanup. Do not mix historical artifacts or count hosted qualification as an independent device review. #12 remains unstarted (0/3). Do not promote the candidate until its final native results and independent artifact review are recorded.

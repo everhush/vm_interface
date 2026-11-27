@@ -1,6 +1,6 @@
 # Device validation handoff
 
-> **Current migration candidate:** `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. Static and Android preparation passed; full native core and CSI are pending. See [the migration record](toolchain-migration.md). Do not start #12 independent acceptance until the issue explicitly approves this candidate. The prior hosted results in [validation.md](validation.md) are historical.
+> **Current migration candidate:** `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. Static checks, real CSI and Android preparation passed; full native core is pending. See [the migration record](toolchain-migration.md). Do not start #12 independent acceptance until the issue explicitly approves this candidate. The prior hosted results in [validation.md](validation.md) are historical.
 
 **This is not a certified release.** Hosted x86_64 and offline Android input checks passed. Independent device acceptance, including native ARM64 guest runtime, remains essential. Run the locked checks on each validation checkout; do not use on production systems.
 
