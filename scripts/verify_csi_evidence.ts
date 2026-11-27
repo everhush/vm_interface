@@ -11,7 +11,7 @@ export const digest=(data:Buffer)=>createHash("sha256").update(data).digest("hex
 export function capacity(value:string){const m=/^([0-9]+)(Gi|Mi)?$/.exec(value);if(!m)throw Error("Unexpected PVC capacity");const n=Number(m[1])*(m[2]==="Gi"?GIB:m[2]==="Mi"?1024**2:1);if(!Number.isSafeInteger(n))throw Error("Unexpected PVC capacity");return n;}
 type PVC={kind:string;name:string;pvcUid:string;pvcPhase:string;capacity:string;dataVolumeUid?:string;mode?:string;growth:{reservedGiB:number;submitted:boolean;pvcCapacityConverged:boolean;guestDiskGrowthVerified:boolean;guestFilesystemGrowthVerified:boolean}};
 type Proof={commit:string;runId:string;original:Record<string,PVC>;expanded:Record<string,PVC>;inputSha256:string;guestBeforeBytes:number;guestAfterBytes:number;actualVirtioFsGrowthVerified:boolean;samePvcIdentities:boolean;crossAccountDenied:boolean;quotaReserved:boolean;virtualBootDiskGrowthVerified:boolean;guestBootFilesystemGrowthVerified:boolean};
-export function tarMembers(data:Buffer){
+export function tarMembers(data:Buffer,maxMember=65536){
  const result=new Map<string,Buffer>();let pos=0;
  const str=(b:Buffer)=>b.toString("utf8").split("\0")[0];
  const oct=(b:Buffer)=>{const s=str(b).trim();assert(/^[0-7]+$/.test(s),"Invalid tar integer");return parseInt(s,8);};
@@ -20,7 +20,7 @@ export function tarMembers(data:Buffer){
   if(h.every(x=>x===0)){assert(data.length-pos>=1024&&data.subarray(pos).every(x=>x===0),"Invalid tar terminator");return result;}
   const expected=oct(h.subarray(148,156)),actual=h.reduce((s,x,i)=>s+(i>=148&&i<156?32:x),0);assert.equal(actual,expected,"Tar checksum mismatch");
   const prefix=str(h.subarray(345,500)),name=(prefix?prefix+"/":"")+str(h.subarray(0,100)),size=oct(h.subarray(124,136));
-  assert((h[156]===0||h[156]===48)&&size<=65536&&!result.has(name)&&pos+512+size<=data.length,"Unexpected bundle members");
+  assert((h[156]===0||h[156]===48)&&size<=maxMember&&!result.has(name)&&pos+512+size<=data.length,"Unexpected bundle members");
   result.set(name,data.subarray(pos+512,pos+512+size));pos+=512+Math.ceil(size/512)*512;
  }
  throw Error("Incomplete tar");
