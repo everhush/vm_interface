@@ -16,7 +16,8 @@ export function serviceIp(document:{spec:{type?:string;externalIPs?:string[];ext
 }
 export class RelaySlots{
  active=0;
- constructor(readonly limit:number){}
+ readonly limit:number;
+ constructor(limit:number){this.limit=limit;}
 }
 export function relay(client:Socket,host:string,port:number,slots:RelaySlots){
  client.on("error",()=>{}); // Isolate aborted connections.

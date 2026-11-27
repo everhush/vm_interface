@@ -75,8 +75,8 @@ node scripts/check-rbac-ci.ts
 export CONSOLE_CA_PATH="$tls/ca" RECOVERY_STATE_PATH="$tls/recovery.json"
 stage() { bash scripts/run-api-tests-ci.sh "$@"; }
 if [ "$profile" = core ]; then
-  stage python3 scripts/e2e-smoke.py
-  stage python3 scripts/e2e-persistent.py
+  stage node scripts/e2e-smoke.ts
+  stage node scripts/e2e-persistent.ts
   stage python3 scripts/e2e-data-disks.py
   stage node --import tsx scripts/e2e-vnc.ts
   stage python3 scripts/e2e-api-control-proof.py
@@ -86,14 +86,14 @@ if [ "$profile" = core ]; then
   stage node --import tsx scripts/e2e-recording.ts
   stage python3 scripts/e2e-exchange.py
   stage python3 scripts/e2e-api-functional-proof.py
-  stage python3 scripts/e2e-idle.py
+  stage node scripts/e2e-idle.ts
   stage bash scripts/e2e-media-ci.sh
   node scripts/verify_media_evidence.ts --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/media-evidence-verification.json
   stage bash scripts/e2e-iso-ci.sh
-  stage python3 scripts/e2e-recovery.py before
+  stage node scripts/e2e-recovery.ts before
   kubectl -n vm-interface rollout restart deployment/vm-api
   kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
-  stage python3 scripts/e2e-recovery.py after
+  stage node scripts/e2e-recovery.ts after
   python3 scripts/probe-virtiofs-ci.py
 elif [ "$profile" = linux ]; then
   stage python3 scripts/e2e-api-functional-proof.py
