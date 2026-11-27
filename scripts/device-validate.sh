@@ -39,7 +39,7 @@ if [ "$profile" = core ] || [ "$profile" = linux ]; then
 else
   sudo "$(command -v node)" scripts/device-preflight.ts --architecture "$architecture" --large-media | tee evidence/device-preflight.json
   test "$#" -gt 0
-  python3 scripts/showcase-native.py "$profile" "$@" --preflight-only | tee evidence/showcase-input-preflight.json
+  node scripts/showcase-native.ts "$profile" "$@" --preflight-only | tee evidence/showcase-input-preflight.json
 fi
 bash scripts/device-validate.sh checks
 export VM_DISPOSABLE_DEVICE=true VM_DEVICE_PROFILE="$profile"
@@ -98,9 +98,9 @@ if [ "$profile" = core ]; then
 elif [ "$profile" = linux ]; then
   stage node scripts/e2e-api-functional-proof.ts
 else
-  stage python3 scripts/showcase-native.py "$profile" "$@"
+  stage node scripts/showcase-native.ts "$profile" "$@"
 fi
-python3 scripts/verify-evidence.py --root evidence --profile "$profile" --commit "$GITHUB_SHA" | tee evidence/device-evidence-verification.json
+node scripts/verify-evidence.ts --root evidence --profile "$profile" --commit "$GITHUB_SHA" | tee evidence/device-evidence-verification.json
 printf '%s\n' "$GITHUB_SHA" > evidence/device-commit.txt
 printf '%s\n' "$GITHUB_RUN_ID" > evidence/device-run-id.txt
 echo 'Selected device workflow passed; independent artifact review remains mandatory.'
