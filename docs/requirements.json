@@ -31,11 +31,12 @@
         45794567249,
         45954535380
       ],
-      "status": "hosted-qualified-independent-acceptance-pending",
+      "status": "migration-requalification-pending",
       "preparedInCandidate": [
         "one-command dedicated device provisioning for x86 and ARM64, host KVM preflight",
         "separate consolidated non-KVM checks workflow"
-      ]
+      ],
+      "historicalStatus": "hosted-qualified-independent-acceptance-pending"
     },
     {
       "issue": 2,
@@ -58,12 +59,13 @@
         45780959318,
         45954535380
       ],
-      "status": "hosted-qualified-independent-acceptance-pending",
+      "status": "migration-requalification-pending",
       "preparedInCandidate": [
         "durable observed operation convergence and restart test",
         "redacted audit, per-account request limits and bounded bodies",
         "Console HTTP input now enforces per-account rate limit, audit and activity tracking"
-      ]
+      ],
+      "historicalStatus": "hosted-qualified-independent-acceptance-pending"
     },
     {
       "issue": 3,
@@ -84,13 +86,14 @@
         45780959318,
         45954535380
       ],
-      "status": "hosted-qualified-independent-acceptance-pending",
+      "status": "migration-requalification-pending",
       "preparedInCandidate": [
         "hard reset, boot-order change, conditional ARM64 UEFI uploaded disk",
         "native QEMU virtio-mem growth/reclaim evidence from 45550528465 (not KubeVirt live resize)",
         "cold boot-order and optical tray control",
         "Strict versioned native KubeVirt subset canonicalized through the same quota and idempotency path"
-      ]
+      ],
+      "historicalStatus": "hosted-qualified-independent-acceptance-pending"
     },
     {
       "issue": 4,
@@ -122,7 +125,7 @@
         45954535380,
         45954542680
       ],
-      "status": "hosted-qualified-independent-acceptance-pending",
+      "status": "migration-requalification-pending",
       "preparedInCandidate": [
         "product VirtioFS, bounded file exchange, authorized direct/resumable CDI imports, conditional Windows/Android exchange profiles",
         "independent auxiliary disk import, quota and transfer status",
@@ -139,7 +142,8 @@
         "Exact real OpenEBS Rawfile LocalPV v0.15.3 chart digest, separate native CSI evaluation lane with API-only guest statvfs and actual byte/PVC identity proof; 45769751635 running.",
         "Client-side authorized HTTPS acquisition: checked public DNS, pinned TCP/TLS hostname, redirect allowlist, digest/size and private content-addressed public cache; actual publisher-pinned CirrOS URL/CDI proof queued for native validation.",
         "Account-owned durable registered images with explicit architecture/license metadata, separate bounded PVC and reservation quota, exact byte/header verification, immutable files, independent same-account CDI imports and deletion/ownership proof. Native qualification pending."
-      ]
+      ],
+      "historicalStatus": "hosted-qualified-independent-acceptance-pending"
     },
     {
       "issue": 5,
@@ -166,12 +170,13 @@
         45846381246,
         45954535380
       ],
-      "status": "hosted-qualified-independent-acceptance-pending",
+      "status": "migration-requalification-pending",
       "preparedInCandidate": [
         "API input lease, video capture, actual script-driven proof with original MP4 and trace, standalone verifier",
         "Independent raw video frame decode, pixel comparison and ordered OCR verification",
         "Explicit amd64 Fedora USB tablet and challenge-bound actual evdev pointer proof; static run 45808592805 passed; native qualification pending."
-      ]
+      ],
+      "historicalStatus": "hosted-qualified-independent-acceptance-pending"
     },
     {
       "issue": 6,
@@ -195,11 +200,12 @@
         45846381246,
         45954535380
       ],
-      "status": "hosted-qualified-independent-acceptance-pending",
+      "status": "migration-requalification-pending",
       "preparedInCandidate": [
         "private TCP tunnel, redacted audit, idle stop and recovery tests",
         "Scoped virt-api tunnel ingress, bounded binary relay drain/revocation; actual local WebSocket regression passed on 37c26f0."
-      ]
+      ],
+      "historicalStatus": "hosted-qualified-independent-acceptance-pending"
     },
     {
       "issue": 7,
@@ -219,12 +225,13 @@
         45837699861,
         45954535380
       ],
-      "status": "hosted-qualified-independent-acceptance-pending",
+      "status": "migration-requalification-pending",
       "preparedInCandidate": [
         "Reproducible client-owned Linux ZIP package; API upload, verified guest install/launch via lease, actual challenge ZIP and SHA256, original API MP4, persistence and cold resize/restart; independent verifier.",
         "Guest block disk serial, random challenge write, cold CDI clone, independent clone mutation and source preservation; guest Fedora version and actual RPM license inventory.",
         "Corrected 2048-byte cloud-init bound and compact launcher; no guest runtime pass yet."
-      ]
+      ],
+      "historicalStatus": "hosted-qualified-independent-acceptance-pending"
     },
     {
       "issue": 8,
@@ -298,18 +305,19 @@
         45954542680,
         45954551058
       ],
-      "status": "hosted-qualified-independent-acceptance-pending",
+      "status": "migration-requalification-pending",
       "preparedInCandidate": [
         "consolidated branch, device docs, evidence verifier and independent static checks",
         "validation-only handoff issue #12; hosted readiness gate passed; independent acceptance not started",
         "Named real API test stages with explicit exit status evidence, no duplicate provision per core run; direct implementation work only, hourly automation paused.",
         "CI independent post-deployment stages run even after another stage fails, preserving real failure status and collecting more evidence in one provisioned run.",
         "Unified disposable-device and hosted API transports."
-      ]
+      ],
+      "historicalStatus": "hosted-qualified-independent-acceptance-pending"
     }
   ],
-  "candidateBranch": "implementation/issue-12-qualification",
-  "candidateStatus": "ready-for-independent-native-device-acceptance",
+  "candidateBranch": "implementation/issue13-exact-final",
+  "candidateStatus": "migration-hosted-core-pending-independent-acceptance-not-started",
   "nonKvmLocalEvidence": {
     "scope": "isolated local tests on Node 22 transpiled with TypeScript 5.8 and Python; not full Node 24 build",
     "passed": [
@@ -341,16 +349,17 @@
       "effective": "locked static suite; not native guest acceptance"
     }
   },
-  "ciRepository": "xad3play/vm_interface",
+  "ciRepository": "everhush/vm_interface",
   "ciRouting": {
-    "upstream": "imxade/vm_interface",
-    "mode": "exact-upstream-ref-sync-only",
-    "duplicatePolicy": "cancel superseded same-ref runs",
-    "status": "hosted-qualification-completed",
-    "historicalCandidate": "e5693ab4bdb8dcbea4f4454203c7d8cabb49b930"
+    "upstream": "everhush/vm_interface",
+    "mode": "public-upstream-explicit-qualification-branches",
+    "duplicatePolicy": "cancel superseded same-ref runs; no scheduled runs",
+    "status": "exact-candidate-core-pending"
   },
-  "hostedQualifiedCommit": "7e095afe6274137104f15caf9cbaef7738d6a9ba",
-  "hostedQualification": {
+  "hostedQualifiedCommit": null,
+  "hostedQualification": null,
+  "historicalHostedQualification": {
+    "repository": "xad3play/vm_interface",
     "date": "2026-11-27",
     "commit": "7e095afe6274137104f15caf9cbaef7738d6a9ba",
     "runs": {
@@ -363,5 +372,32 @@
     "nativeCoreStages": 13,
     "independentDeviceAcceptance": false,
     "docsOnlySuccessorsDoNotChangeEvidenceProvenance": true
+  },
+  "historicalCiRouting": {
+    "upstream": "imxade/vm_interface",
+    "mode": "exact-upstream-ref-sync-only",
+    "duplicatePolicy": "cancel superseded same-ref runs",
+    "status": "hosted-qualification-completed",
+    "historicalCandidate": "e5693ab4bdb8dcbea4f4454203c7d8cabb49b930"
+  },
+  "migrationQualification": {
+    "issue": 13,
+    "commit": "34652dc2fffd585e8e95aac1a2df63b3552da8f8",
+    "staticRun": 46077697248,
+    "coreRun": 46077980605,
+    "csiRun": 46078053324,
+    "androidRun": 46077983994,
+    "staticTests": 158,
+    "testFiles": 59,
+    "failedTests": 0,
+    "skippedOrTodoTests": 0,
+    "coreStatus": "in-progress",
+    "csiStatus": "passed-reviewed",
+    "androidPreparationStatus": "passed-reviewed",
+    "guestAndroidCompatibilityVerified": false,
+    "managedRuntimeCertified": false,
+    "independentDeviceAcceptance": false,
+    "primaryPromotionApproved": false,
+    "sourceInventory": "docs/toolchain-migration.md"
   }
 }
