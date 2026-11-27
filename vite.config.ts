@@ -16,7 +16,7 @@ export default defineConfig({
     rules: { "no-unused-vars": "error", "typescript/no-explicit-any": "error" },
   },
   fmt: {
-    ignorePatterns: ["dist/**", ".vinext/**", ".next/**", "node_modules/**", ".output/**", "evidence/**", "package-lock.json", "docs/**", "LICENSE", "NOTICE", "CHANGELOG.md", "showcases/**"],
+    ignorePatterns: ["dist/**", ".vinext/**", ".next/**", "node_modules/**", ".output/**", "evidence/**", "infra/**", ".github/**", "package-lock.json", "docs/**", "LICENSE", "NOTICE", "CHANGELOG.md", "showcases/**"],
     sortPackageJson: false,
   },
 });

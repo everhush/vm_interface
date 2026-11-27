@@ -15,7 +15,7 @@ export function migrationViolations(path:string,content:string){
  if(!/^(?:scripts\/|tests\/|src\/|app\/|infra\/|showcases\/|\.github\/workflows\/|package\.json$)/.test(path)||!(/\.(?:ts|tsx|sh|ps1|json|ya?ml|m?js)$/.test(path)))return errors;
  if(path==="scripts/check-source-migration.ts"||path==="tests/source-migration.test.ts")return errors;
  const checks:[RegExp,string][]=[
-  [/\bnode\s+--import(?:\s+|=)tsx\b|["']--import["']\s*,\s*["']tsx["']|\bfrom\s+["']node:test["']/,"legacy loader or test runner"],
+  [/\bTSX_DISABLE_CACHE\b|\bnode\s+--import(?:\s+|=)tsx\b|["']--import["']\s*,\s*["']tsx["']|\bfrom\s+["']node:test["']/,"legacy loader or test runner"],
   [/(?:^|[;&|]\s*)[ \t]*(?:sudo[ \t]+)?(?:[^\s;|&]+\/)?python(?:2|3(?:\.\d+)?)?(?=[ \t\r\n;&|]|$)/im,"shell interpreter command"],
   [/\b(?:execFile(?:Sync)?|spawn(?:Sync)?|execa(?:Sync)?)\s*\(\s*["'\x60](?:[^"'\x60\n]+\/)?python(?:2|3(?:\.\d+)?)?["'\x60]/i,"programmatic interpreter command"],
   [/\b(?:execFile(?:Sync)?|spawn(?:Sync)?|execa(?:Sync)?)\s*\(\s*["'\x60](?:[^"'\x60\n]+\/)?docker["'\x60]/i,"programmatic daemon command"],

@@ -87,6 +87,7 @@ jobs:
           git apply --index "$REVIEW_DIR/generated.patch"
           cmp package-lock.json "$REVIEW_DIR/package-lock.json"
           git diff --cached --check
+          git diff --cached --quiet -- .github/workflows infra || { echo 'Generated changes must not modify workflows or infrastructure manifests'; exit 1; }
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Stage generated Vite+ lock and formatting; qualification pending'

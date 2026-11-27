@@ -33,7 +33,7 @@ export function exchangePod(id:string,account:string,uid:string,token:string){
  return {apiVersion:"v1",kind:"Pod",metadata:{name:id+"-files",labels:{"vm-interface.io/account":account,"vm-interface.io/computer":id,"vm-interface.io/exchange-broker":"true"},ownerReferences:owner(id,uid)},spec:{
  automountServiceAccountToken:false,enableServiceLinks:false,restartPolicy:"Always",
  securityContext:{runAsNonRoot:true,runAsUser:107,runAsGroup:107,fsGroup:107,seccompProfile:{type:"RuntimeDefault"}},
- containers:[{name:"files",...brokerImage(),command:["node","--import","tsx","src/run-exchange-broker.ts"],env:[{name:"EXCHANGE_TOKEN",value:token},{name:"TSX_DISABLE_CACHE",value:"1"}],ports:[{containerPort:8080}],resources:{requests:{cpu:"25m",memory:"64Mi"},limits:{cpu:"500m",memory:"256Mi"}},securityContext:{allowPrivilegeEscalation:false,readOnlyRootFilesystem:true,capabilities:{drop:["ALL"]}},volumeMounts:[{name:"exchange",mountPath:"/exchange"}],readinessProbe:{tcpSocket:{port:8080}}}],
+ containers:[{name:"files",...brokerImage(),command:["node","--import","vite-plus/register","src/run-exchange-broker.ts"],env:[{name:"EXCHANGE_TOKEN",value:token},{name:"NODE_DISABLE_COMPILE_CACHE",value:"1"}],ports:[{containerPort:8080}],resources:{requests:{cpu:"25m",memory:"64Mi"},limits:{cpu:"500m",memory:"256Mi"}},securityContext:{allowPrivilegeEscalation:false,readOnlyRootFilesystem:true,capabilities:{drop:["ALL"]}},volumeMounts:[{name:"exchange",mountPath:"/exchange"}],readinessProbe:{tcpSocket:{port:8080}}}],
  volumes:[{name:"exchange",persistentVolumeClaim:{claimName:diskNames(id).exchange}}]
  }};
 }
