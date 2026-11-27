@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {namespace,deployment,verifyDeployment,verifyPvc} from "../scripts/device_profile.ts";

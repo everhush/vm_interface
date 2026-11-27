@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {addUsage,desiredUsage,emptyUsage,limits,requireCapacity,specUsage} from "../src/quota";
 import {vmManifest,type ComputerSpec} from "../src/spec";

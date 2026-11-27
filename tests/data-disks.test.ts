@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {vmManifest,type ComputerSpec} from "../src/spec";
 import {coldDataDiskPatch,readDataDisks,DATA_DISKS_ANNOTATION,dataDiskClaim,dataDiskSerial} from "../src/data-disk-layout";

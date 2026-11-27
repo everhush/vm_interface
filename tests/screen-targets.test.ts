@@ -1,4 +1,4 @@
-import test from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {parseTarget} from "../scripts/screen-targets.ts";
 const HEADER="level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n";

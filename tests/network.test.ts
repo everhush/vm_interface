@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {exposureSpec,networkToken,privateNetwork,validNetworkGrant} from "../src/network";
 import {computerSpec,vmManifest} from "../src/spec";

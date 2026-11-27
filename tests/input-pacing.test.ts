@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {pacedInputBatch,INPUT_EVENT_DWELL_MS} from "../src/input-batch";
 test("paced input does not coalesce button down/up and waits after final event",async()=>{

@@ -148,7 +148,7 @@ jobs:
           retention-days: 7
       - name: Actual VNC transport
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-vnc.ts
+        run: bash scripts/run-api-tests-ci.sh node --import vite-plus/register scripts/e2e-vnc.ts
       - name: Original API control recording
         id: control_proof
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
@@ -166,7 +166,7 @@ jobs:
       - name: Input ownership, pointer and keyboard isolation
         id: input_proof
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-input.ts
+        run: bash scripts/run-api-tests-ci.sh node --import vite-plus/register scripts/e2e-input.ts
       - name: Retain input-partial-evidence immediately on failed stage
         if: ${{ !cancelled() && steps.input_proof.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
@@ -185,7 +185,7 @@ jobs:
       - name: Private network isolation and tunnel
         id: network_proof
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-network.ts
+        run: bash scripts/run-api-tests-ci.sh node --import vite-plus/register scripts/e2e-network.ts
       - name: Retain network partial evidence immediately on failed stage
         if: ${{ !cancelled() && steps.network_proof.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
@@ -201,7 +201,7 @@ jobs:
           retention-days: 7
       - name: Recording API lifecycle and authorization
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-recording.ts
+        run: bash scripts/run-api-tests-ci.sh node --import vite-plus/register scripts/e2e-recording.ts
       - name: Actual guest VirtioFS exchange and published bundle
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node scripts/e2e-exchange.ts

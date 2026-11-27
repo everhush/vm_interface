@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {cirrosNormalize,cirrosReady} from "../scripts/cirros-screen";
 test("only the exact late entropy log can interrupt typed input",()=>{

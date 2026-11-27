@@ -15,7 +15,7 @@ git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba
 bash scripts/device-validate.sh checks
 ```
 
-This does not require KVM. It runs typecheck/lint/unit/build and shell syntax checks. The CI-only fork `xad3play/vm_interface` executes these checks against exact synchronized upstream commits. The separate static CI workflow is reserved for the preparation branch; the implementation branch runs static and KVM checks in one workflow. Upstream job execution is disabled by repository guard. Do not interpret its success as guest conformance.
+This does not require KVM. It bootstraps the locked project-local Vite+ package, runs `vp check` (format/lint/typecheck), `vp test run`, `vp build`, the migration guard and shell syntax checks. Use Node.js 24.11+ (24.x). The CI-only fork `xad3play/vm_interface` executes these checks against exact synchronized upstream commits. The separate static CI workflow is reserved for the preparation branch; the implementation branch runs static and KVM checks in one workflow. Upstream job execution is disabled by repository guard. Do not interpret its success as guest conformance.
 
 ## 2. Dedicated device
 

@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {quantity,eligibleNodes} from "../scripts/kvm_capacity.ts";
 test("canonical quantities",()=>{for(const [raw,expected] of [["1k",1000],["1000",1000],["1e3",1000],["1Ki",1024],["0",0],["500m",0.5],["2M",2000000]] as const)assert.equal(quantity(raw),expected)});

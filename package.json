@@ -3,12 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "vp dev",
+    "build": "vp build",
     "start": "vinext start",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
-    "test": "tsx --test tests/*.test.ts"
+    "check": "vp check --continue-on-error",
+    "typecheck": "vp check --no-fmt --no-lint",
+    "lint": "vp lint",
+    "fmt": "vp fmt",
+    "test": "vp test run"
   },
   "dependencies": {
     "vinext": "^1.0.0",
@@ -22,16 +24,21 @@
     "ws": "8.18.3"
   },
   "devDependencies": {
-    "vite": "^8.0.0",
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
     "@vitejs/plugin-react": "^6.0.0",
     "@vitejs/plugin-rsc": "latest",
     "typescript": "^5.9.3",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "tsx": "^4.20.0",
-    "eslint": "^9.0.0",
-    "typescript-eslint": "^8.0.0",
-    "@types/ws": "8.18.1"
+    "@types/ws": "8.18.1",
+    "vite-plus": "1.8.0"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
+    "vitest": "5.1.1"
+  },
+  "engines": {
+    "node": "^24.11.0"
   }
 }

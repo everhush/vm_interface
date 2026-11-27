@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {mkdtemp,writeFile,symlink,rm} from "node:fs/promises";
 import {tmpdir} from "node:os";

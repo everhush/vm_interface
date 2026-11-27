@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {exportManifest,exportEndpoint,assertCold,exportClaim,exportSelector,exportResponseHeaders} from "../src/disk-export";
 const id="vm-"+"a".repeat(32),name="vx-"+"b".repeat(32),claim=id+"-data-work",ns="vm-interface",service="virt-export-"+name;

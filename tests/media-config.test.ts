@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {boundedInteger,installerGiB,GiB,MiB,mediaMaxBytes,systemMaxGiB} from "../src/media-config";
 import {computerSpec,vmManifest} from "../src/spec";

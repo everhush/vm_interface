@@ -83,7 +83,7 @@ git checkout main
 bash scripts/device-validate.sh checks
 ```
 
-This uses `npm ci` and runs type checking, lint, TypeScript tests, production build and shell syntax checks. It does not install K3s or certify a guest. Do not run provisioning scripts merely to browse the code.
+This bootstraps the locked project-local Vite+ CLI with `npm ci`, then runs `vp check` (format, type checking and lint), `vp test run`, `vp build`, the source migration guard and shell syntax checks. Node.js 24.11 or newer within the 24.x release line is required. Vinext remains the application runtime. It does not install K3s or certify a guest. Do not run provisioning scripts merely to browse the code.
 
 ### 2. Try the full evaluation on a disposable x86_64 Linux device
 

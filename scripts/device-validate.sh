@@ -3,12 +3,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 profile="${1:-}"
 if [ "$profile" = checks ]; then
-  test "$(node -p 'process.versions.node.split(".")[0]')" = 24
+  node -e 'const [major,minor]=process.versions.node.split(".").map(Number); if(major!==24||minor<11)throw new Error("Node 24.11+ required")'
   command -v ffmpeg >/dev/null
   command -v tesseract >/dev/null
   npm ci --no-audit --no-fund
-  npm run typecheck
-  npm run lint
+  npm run check
   npm test
   npm run build
   node scripts/check-source-migration.ts
@@ -76,12 +75,12 @@ if [ "$profile" = core ]; then
   stage node scripts/e2e-smoke.ts
   stage node scripts/e2e-persistent.ts
   stage node scripts/e2e-data-disks.ts
-  stage node --import tsx scripts/e2e-vnc.ts
+  stage node --import vite-plus/register scripts/e2e-vnc.ts
   stage node scripts/e2e-api-control-proof.ts
-  stage node --import tsx scripts/e2e-input.ts
-  stage node --import tsx scripts/e2e-network.ts
+  stage node --import vite-plus/register scripts/e2e-input.ts
+  stage node --import vite-plus/register scripts/e2e-network.ts
   node scripts/verify_network_evidence.ts --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/network-independent-verification.json
-  stage node --import tsx scripts/e2e-recording.ts
+  stage node --import vite-plus/register scripts/e2e-recording.ts
   stage node scripts/e2e-exchange.ts
   stage node scripts/e2e-api-functional-proof.ts
   stage node scripts/e2e-idle.ts

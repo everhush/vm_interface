@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {validateVideoProbe} from "../src/recording-worker";
 test("only bounded playable video-only H264 metadata is accepted",()=>{

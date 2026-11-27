@@ -1,0 +1,49 @@
+name: Prepare Vite+ migration lock and formatting (not qualification)
+on:
+  push:
+    branches: ['prep/vite-plus-migration']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vite-plus-preparation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  prepare:
+    if: github.repository == 'xad3play/vm_interface' && github.ref == 'refs/heads/prep/vite-plus-migration'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Resolve pinned toolchain lock
+        run: |
+          set -euo pipefail
+          node -e 'const [major,minor]=process.versions.node.split(".").map(Number); if(major!==24||minor<11)throw new Error("Node 24.11+ required")'
+          npm install --package-lock-only --no-audit --no-fund
+          npm ci --no-audit --no-fund
+          ./node_modules/.bin/vp toolchain
+      - name: Format candidate and retain reviewable changes
+        run: npm run fmt
+      - name: Retain generated patch and lock
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/vite-plus-review
+          git rev-parse HEAD > /tmp/vite-plus-review/source-commit.txt
+          git diff --binary HEAD > /tmp/vite-plus-review/generated.patch
+          cp package-lock.json /tmp/vite-plus-review/package-lock.json
+          sha256sum package-lock.json > /tmp/vite-plus-review/lock-sha256.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vite-plus-preparation-review
+          path: /tmp/vite-plus-review/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Install evidence test dependencies
+        run: bash scripts/install-evidence-tools.sh
+      - name: Preliminary checks on generated working tree
+        run: bash scripts/device-validate.sh checks

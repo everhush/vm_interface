@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {dimensionsOkay,gatewayTicket} from "../src/console-gateway";
 test("gateway ticket is distinct and rejects ambiguous credentials",()=>{

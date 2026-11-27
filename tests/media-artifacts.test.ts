@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import {artifactSpec,artifactCapacity,artifactLimits,artifactMatches,artifactReference} from "../src/media-artifacts";
 const metadata={format:"raw" as const,bytes:4096,sha256:"a".repeat(64),source:"authorized source",os:"Linux",version:"1",authorizedByClient:true as const};

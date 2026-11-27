@@ -6,9 +6,16 @@ import {isMain} from "./tooling.ts";
 export function migrationViolations(path:string,content:string){
  const errors:string[]=[];
  if(/(?:^|\/)(?:Dockerfile(?:\.[^/]*)?|\.dockerignore|docker-compose(?:\.[^/]*)?|compose\.ya?ml|__pycache__)(?:$|\/)|\.(?:py|pyc|pyo)$/i.test(path))errors.push("legacy tracked file");
+ if(/(?:^|\/)(?:eslint\.config\.[^/]+|\.eslintrc(?:\.[^/]+)?|\.eslintignore)$/.test(path))errors.push("legacy lint config");
+ if(path==="package.json"){
+  const pkg=JSON.parse(content) as {dependencies?:Record<string,string>;devDependencies?:Record<string,string>;scripts?:Record<string,string>};
+  for(const name of ["eslint","typescript-eslint","tsx","vitest","oxlint","oxfmt"])if(name in {...pkg.dependencies,...pkg.devDependencies})errors.push("standalone tool dependency: "+name);
+  for(const command of Object.values(pkg.scripts??{}))if(/(?:^|[;&|]\s*)(?:eslint|tsx|tsc|vite|vitest|oxlint|oxfmt)(?:\s|$)/.test(command))errors.push("standalone tool command: "+command);
+ }
  if(!/^(?:scripts\/|tests\/|src\/|app\/|infra\/|showcases\/|\.github\/workflows\/|package\.json$)/.test(path)||!(/\.(?:ts|tsx|sh|ps1|json|ya?ml|m?js)$/.test(path)))return errors;
  if(path==="scripts/check-source-migration.ts"||path==="tests/source-migration.test.ts")return errors;
  const checks:[RegExp,string][]=[
+  [/\bnode\s+--import(?:\s+|=)tsx\b|["']--import["']\s*,\s*["']tsx["']|\bfrom\s+["']node:test["']/,"legacy loader or test runner"],
   [/(?:^|[;&|]\s*)[ \t]*(?:sudo[ \t]+)?(?:[^\s;|&]+\/)?python(?:2|3(?:\.\d+)?)?(?=[ \t\r\n;&|]|$)/im,"shell interpreter command"],
   [/\b(?:execFile(?:Sync)?|spawn(?:Sync)?|execa(?:Sync)?)\s*\(\s*["'\x60](?:[^"'\x60\n]+\/)?python(?:2|3(?:\.\d+)?)?["'\x60]/i,"programmatic interpreter command"],
   [/\b(?:execFile(?:Sync)?|spawn(?:Sync)?|execa(?:Sync)?)\s*\(\s*["'\x60](?:[^"'\x60\n]+\/)?docker["'\x60]/i,"programmatic daemon command"],

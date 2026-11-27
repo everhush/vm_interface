@@ -1,4 +1,4 @@
-import test from "node:test";
+import {test} from "vite-plus/test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
