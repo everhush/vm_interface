@@ -7,7 +7,7 @@ while true; do
     date -u +%FT%TZ
     kubectl -n vm-interface get vm,vmi,pods -o wide --request-timeout=10s
     kubectl -n vm-interface get pods -l kubevirt.io=virt-launcher -o json --request-timeout=10s |
-      python3 -c 'import json,sys; d=json.load(sys.stdin); print(json.dumps([{"name":p["metadata"]["name"],"phase":p.get("status",{}).get("phase"),"init":p.get("status",{}).get("initContainerStatuses",[]),"containers":p.get("status",{}).get("containerStatuses",[])} for p in d["items"]]))'
+      node -e 'const d=JSON.parse(require("node:fs").readFileSync(0,"utf8"));console.log(JSON.stringify(d.items.map(p=>({name:p.metadata.name,phase:p.status?.phase??null,init:p.status?.initContainerStatuses??[],containers:p.status?.containerStatuses??[]}))))'
   } >> evidence/launcher-timeline.txt 2>&1
   sleep 10
 done

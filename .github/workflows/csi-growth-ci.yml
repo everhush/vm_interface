@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '24'
       - run: bash -n scripts/provision-csi-growth-ci.sh
-      - run: python3 -m py_compile scripts/e2e-csi-growth.py
+      - run: node --check scripts/e2e-csi-growth.ts
       - run: bash scripts/reclaim-hosted-runner-space.sh
       - run: bash scripts/install-oci-tools.sh
       - run: bash scripts/provision-ci.sh

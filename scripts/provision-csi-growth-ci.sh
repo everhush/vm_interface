@@ -55,23 +55,14 @@ storageClasses:
 YAML
 helm install vm-csi "$work/chart.tgz" --namespace openebs --create-namespace -f "$work/values.yaml" --wait --timeout 10m
 kubectl get storageclass vm-expandable -o json > evidence/csi-storageclass.json
-python3 - <<'PY'
-import json
-s=json.load(open("evidence/csi-storageclass.json"))
-assert s["provisioner"]=="rawfile.csi.openebs.io" and s["allowVolumeExpansion"] is True
-PY
+node -e 'const s=JSON.parse(require("node:fs").readFileSync("evidence/csi-storageclass.json","utf8"));require("node:assert/strict")(s.provisioner==="rawfile.csi.openebs.io"&&s.allowVolumeExpansion===true)'
 kubectl get csidriver rawfile.csi.openebs.io
 # The default RBAC suite was verified before enabling this explicit profile.
 kubectl apply --dry-run=server -f infra/storage-growth.yaml
 kubectl apply -f infra/storage-growth.yaml
 for i in $(seq 1 30); do
   kubectl get validatingadmissionpolicy vm-pvc-growth -o json > evidence/csi-admission.json
-  if python3 - <<'PY'
-import json,sys
-s=json.load(open("evidence/csi-admission.json")).get("status",{})
-if "typeChecking" not in s: sys.exit(1)
-assert not s["typeChecking"].get("expressionWarnings"),s
-PY
+  if node -e 'const s=JSON.parse(require("node:fs").readFileSync("evidence/csi-admission.json","utf8")).status??{};require("node:assert/strict")(s.typeChecking&&!s.typeChecking.expressionWarnings?.length)'
   then break; fi
   test "$i" -lt 30
   sleep 2
@@ -153,6 +144,6 @@ cat evidence/csi-denied-patch.txt
 # a name pattern, not a reliable comma-separated selection.
 kubectl -n vm-interface patch deployment vm-api --type=strategic -p '{"spec":{"template":{"spec":{"containers":[{"name":"api","env":[{"name":"VM_STORAGE_CLASS","value":"vm-expandable"}]},{"name":"reconcile","env":[{"name":"VM_STORAGE_CLASS","value":"vm-expandable"}]}]}}}}'
 kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
-kubectl -n vm-interface get deployment vm-api -o json | python3 -c 'import json,sys; c={x["name"]:x for x in json.load(sys.stdin)["spec"]["template"]["spec"]["containers"]}; assert all(any(e["name"]=="VM_STORAGE_CLASS" and e.get("value")=="vm-expandable" for e in c[n].get("env",[])) for n in ("api","reconcile"))'
+kubectl -n vm-interface get deployment vm-api -o json | node -e 'const c=JSON.parse(require("node:fs").readFileSync(0,"utf8")).spec.template.spec.containers;require("node:assert/strict")(["api","reconcile"].every(n=>c.find(x=>x.name===n)?.env?.some(e=>e.name==="VM_STORAGE_CLASS"&&e.value==="vm-expandable")))'
 
 growth_ready=true
