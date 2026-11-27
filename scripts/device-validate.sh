@@ -31,13 +31,13 @@ if [ -d evidence ] && [ -n "$(find evidence -mindepth 1 -print -quit)" ]; then e
 test ! -e /etc/rancher/k3s/k3s.yaml
 test ! -e "$HOME/.kube/config"
 test -z "${KUBECONFIG:-}"
-for cmd in buildah node npm python3 curl openssl tesseract ffmpeg ffprobe git skopeo; do command -v "$cmd" >/dev/null; done
+for cmd in buildah node npm cc python3 curl openssl tesseract ffmpeg ffprobe git skopeo; do command -v "$cmd" >/dev/null; done
 mkdir -p evidence
 if [ "$profile" = core ] || [ "$profile" = linux ]; then
   test "$#" -eq 0
-  sudo python3 scripts/device-preflight.py --architecture "$architecture" | tee evidence/device-preflight.json
+  sudo "$(command -v node)" scripts/device-preflight.ts --architecture "$architecture" | tee evidence/device-preflight.json
 else
-  sudo python3 scripts/device-preflight.py --architecture "$architecture" --large-media | tee evidence/device-preflight.json
+  sudo "$(command -v node)" scripts/device-preflight.ts --architecture "$architecture" --large-media | tee evidence/device-preflight.json
   test "$#" -gt 0
   python3 scripts/showcase-native.py "$profile" "$@" --preflight-only | tee evidence/showcase-input-preflight.json
 fi
@@ -82,13 +82,13 @@ if [ "$profile" = core ]; then
   stage python3 scripts/e2e-api-control-proof.py
   stage node --import tsx scripts/e2e-input.ts
   stage node --import tsx scripts/e2e-network.ts
-  python3 scripts/verify_network_evidence.py --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/network-independent-verification.json
+  node scripts/verify_network_evidence.ts --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/network-independent-verification.json
   stage node --import tsx scripts/e2e-recording.ts
   stage python3 scripts/e2e-exchange.py
   stage python3 scripts/e2e-api-functional-proof.py
   stage python3 scripts/e2e-idle.py
   stage bash scripts/e2e-media-ci.sh
-  python3 scripts/verify_media_evidence.py --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/media-evidence-verification.json
+  node scripts/verify_media_evidence.ts --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/media-evidence-verification.json
   stage bash scripts/e2e-iso-ci.sh
   stage python3 scripts/e2e-recovery.py before
   kubectl -n vm-interface rollout restart deployment/vm-api

@@ -92,7 +92,7 @@ This uses `npm ci` and runs type checking, lint, TypeScript/Python tests, produc
 ```sh
 # Reproduce the exact hosted-qualified implementation:
 git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba
-sudo python3 scripts/device-preflight.py --architecture amd64
+sudo "$(command -v node)" scripts/device-preflight.ts --architecture amd64
 bash scripts/device-validate.sh core --confirm-disposable
 ```
 

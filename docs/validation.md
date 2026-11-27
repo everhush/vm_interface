@@ -35,8 +35,8 @@ Run [the device guide](device-validation.md) on authorized disposable equipment,
 
 ```sh
 python3 scripts/verify-evidence.py --root /path/to/core-artifact --profile core --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba
-python3 scripts/verify_media_evidence.py --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
-python3 scripts/verify_network_evidence.py --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
+node scripts/verify_media_evidence.ts --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
+node scripts/verify_network_evidence.ts --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
 python3 scripts/verify_csi_evidence.py --root /path/to/csi-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba
 ```
 

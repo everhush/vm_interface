@@ -22,7 +22,7 @@ This does not require KVM. It runs typecheck/lint/unit/build, Python syntax/unit
 Use a **disposable Linux device**, not an existing cluster, shared persistent self-hosted runner or a personal production PC. Review the checkout before running it. Require a matching x86_64 or AArch64 processor, actual /dev/kvm access, Buildah, sudo, Node 24, Python 3.11+, FFmpeg/ffprobe, Tesseract, skopeo and distribution packages used by probes. Core preflight requires >=6 GiB RAM and >=35 GiB free root storage; large media profiles require >=12 GiB and >=100 GiB free. These are conservative starting requirements, not guaranteed sufficient. No software fallback or cloud purchase.
 
 ```sh
-sudo python3 scripts/device-preflight.py --architecture amd64
+sudo "$(command -v node)" scripts/device-preflight.ts --architecture amd64
 bash scripts/device-validate.sh core --confirm-disposable
 ```
 
@@ -162,7 +162,7 @@ For large-media clients, inspect the target declaration/status first and use an 
 ### Recovering a disconnected mutation
 Use `GET /api/v1/operations/by-key` with the same account authorization and original `Idempotency-Key` header to retrieve the durable receipt. Missing returns 404 (including other accounts), invalid key 400. This never executes a mutation. Inspect the receipt and resource state; do not submit a fresh key for an unknown operation. The original key must be retained privately. The receipt lookup and health checks do not certify convergence; use the relevant resource/operation status.
 
-For complete native network proof run `python3 scripts/verify_network_evidence.py --root evidence --commit <approved-sha> --run-id <execution-id>`. Verify both actual guest HTTP response files, exact final trace digest, authorization/duplicate denial and deletion observation; bounded initial guest readiness failures remain visible in the trace. Do not use an incomplete trace or report as acceptance evidence.
+For complete native network proof run `node scripts/verify_network_evidence.ts --root evidence --commit <approved-sha> --run-id <execution-id>`. Verify both actual guest HTTP response files, exact final trace digest, authorization/duplicate denial and deletion observation; bounded initial guest readiness failures remain visible in the trace. Do not use an incomplete trace or report as acceptance evidence.
 
 ## Local evaluation API access
 

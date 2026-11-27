@@ -17,7 +17,7 @@ test -r "$CONSOLE_CA_PATH"
 # private ClusterIP; retain loopback-only client ports and end-to-end WSS TLS.
 service_json="$(mktemp)"
 kubectl -n vm-interface get svc vm-api -o json >"$service_json"
-python3 scripts/ci_loopback_relay.py --service-json "$service_json" >>evidence/api-relay.log 2>&1 &
+node scripts/ci_loopback_relay.ts --service-json "$service_json" >>evidence/api-relay.log 2>&1 &
 relay_pid=$!
 bash scripts/watch-launcher-ci.sh &
 diag_pid=$!
