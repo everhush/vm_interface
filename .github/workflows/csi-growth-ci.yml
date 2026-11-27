@@ -53,7 +53,7 @@ jobs:
           port_pid=$!
           trap 'kill "$port_pid" 2>/dev/null || true' EXIT
           curl --retry 20 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:3000/api/v1/health
-          python3 scripts/e2e-csi-growth.py
+          node scripts/e2e-csi-growth.ts
       - name: Independently verify retained real CSI evidence
         shell: bash
         run: node scripts/verify_csi_evidence.ts --root evidence --commit "$GITHUB_SHA" | tee evidence/csi-independent-verification.json

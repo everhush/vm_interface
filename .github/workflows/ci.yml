@@ -152,7 +152,7 @@ jobs:
       - name: Original API control recording
         id: control_proof
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-api-control-proof.py
+        run: bash scripts/run-api-tests-ci.sh node scripts/e2e-api-control-proof.ts
       - name: Retain control partial evidence immediately on failed stage
         if: ${{ !cancelled() && steps.control_proof.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
