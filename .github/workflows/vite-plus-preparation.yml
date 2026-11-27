@@ -13,8 +13,12 @@ jobs:
     if: github.repository == 'everhush/vm_interface' && github.ref == 'refs/heads/prep/vite-plus-migration'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    outputs:
+      generated: ${{ steps.retain.outputs.generated }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -29,7 +33,7 @@ jobs:
       - name: Format candidate and retain reviewable changes
         run: npm run fmt
       - name: Retain generated patch and lock
-        if: always()
+        id: retain
         run: |
           set -euo pipefail
           mkdir -p /tmp/vite-plus-review
@@ -37,8 +41,8 @@ jobs:
           git diff --binary HEAD > /tmp/vite-plus-review/generated.patch
           cp package-lock.json /tmp/vite-plus-review/package-lock.json
           sha256sum package-lock.json > /tmp/vite-plus-review/lock-sha256.txt
+          echo 'generated=true' >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: vite-plus-preparation-review
           path: /tmp/vite-plus-review/
@@ -47,4 +51,44 @@ jobs:
       - name: Install evidence test dependencies
         run: bash scripts/install-evidence-tools.sh
       - name: Preliminary checks on generated working tree
-        run: bash scripts/device-validate.sh checks
+        run: |
+          set +e
+          npm run check; checks=$?
+          npm test; tests=$?
+          npm run build; build=$?
+          node scripts/check-source-migration.ts; guard=$?
+          syntax=0
+          for f in scripts/*.sh showcases/android/*.sh; do bash -n "$f" || syntax=1; done
+          printf 'check=%s test=%s build=%s guard=%s shell=%s\n' "$checks" "$tests" "$build" "$guard" "$syntax"
+          test "$checks$tests$build$guard$syntax" = 00000
+  stage-generated:
+    needs: prepare
+    if: ${{ !cancelled() && needs.prepare.outputs.generated == 'true' && github.repository == 'everhush/vm_interface' && github.ref == 'refs/heads/prep/vite-plus-migration' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: vite-plus-preparation-review
+          path: ${{ runner.temp }}/vite-plus-review
+      - name: Stage generated files on a separate unqualified branch
+        env:
+          REVIEW_DIR: ${{ runner.temp }}/vite-plus-review
+        run: |
+          set -euo pipefail
+          test "$(cat "$REVIEW_DIR/source-commit.txt")" = "$GITHUB_SHA"
+          (cd "$REVIEW_DIR" && sha256sum -c lock-sha256.txt)
+          git apply --check --index "$REVIEW_DIR/generated.patch"
+          git apply --index "$REVIEW_DIR/generated.patch"
+          cmp package-lock.json "$REVIEW_DIR/package-lock.json"
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Stage generated Vite+ lock and formatting; qualification pending'
+          git push origin HEAD:refs/heads/prep/vite-plus-generated
+          git rev-parse HEAD >> "$GITHUB_STEP_SUMMARY"

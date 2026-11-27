@@ -11,12 +11,12 @@ export default defineConfig({
     fileParallelism: false,
   },
   lint: {
-    ignorePatterns: ["dist/**", ".vinext/**", "node_modules/**", ".output/**", "evidence/**"],
+    ignorePatterns: ["dist/**", ".vinext/**", ".next/**", "node_modules/**", ".output/**", "evidence/**"],
     options: { typeAware: true, typeCheck: true },
     rules: { "no-unused-vars": "error", "typescript/no-explicit-any": "error" },
   },
   fmt: {
-    ignorePatterns: ["dist/**", ".vinext/**", "node_modules/**", ".output/**", "evidence/**", "package-lock.json", "docs/**", "LICENSE", "NOTICE", "CHANGELOG.md", "showcases/**"],
+    ignorePatterns: ["dist/**", ".vinext/**", ".next/**", "node_modules/**", ".output/**", "evidence/**", "package-lock.json", "docs/**", "LICENSE", "NOTICE", "CHANGELOG.md", "showcases/**"],
     sortPackageJson: false,
   },
 });
