@@ -31,6 +31,77 @@ Planning validates configuration and quota without creating a computer. To creat
 
 For a reproducible executable client including ownership and cleanup assertions see [scripts/e2e-smoke.py](../scripts/e2e-smoke.py). Use [the functional proof client](../scripts/e2e-api-functional-proof.py) for persistent Fedora software execution, guest exchange, pointer proof, archive and recording.
 
+## Walkthrough: create and operate a smoke VM
+
+Continue from the plan example above, using the same Bash session. This is an interactive walkthrough for a **disposable** evaluation, not a deployment script. It creates an ephemeral CirrOS smoke computer, not a persistent workstation. You need curl, Python 3 and OpenSSL. Do not run steps blindly: inspect the receipt and observed VM state at each checkpoint. Use the same account for the full walkthrough.
+
+```sh
+# The operator supplies the scoped token securely; do not paste it into a command.
+read -r -s -p 'Evaluation bearer token: ' VM_TOKEN; printf '\n'
+export VM_TOKEN
+export API_URL=http://127.0.0.1:3000/api/v1
+```
+
+**Create.** Use the spec from the plan example. Keep the original key in this session for receipt recovery.
+
+```sh
+CREATE_KEY=$(openssl rand -hex 16)
+CREATED=$(curl --fail-with-body --silent --show-error -X POST \
+  -H "Authorization: Bearer $VM_TOKEN" \
+  -H "Idempotency-Key: $CREATE_KEY" -H 'Content-Type: application/json' \
+  --data-binary @/tmp/vm-spec.json "$API_URL/computers")
+printf '%s\n' "$CREATED"
+VM_ID=$(printf '%s' "$CREATED" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["id"])')
+OP_ID=$(printf '%s' "$CREATED" | python3 -c 'import json,sys; print(json.load(sys.stdin)["operationId"])')
+curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/operations/$OP_ID"
+curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/computers/$VM_ID"
+```
+
+**Start and observe.** Once creation is observed and the computer is halted, submit a new operation with a fresh key.
+
+```sh
+START_KEY=$(openssl rand -hex 16)
+curl --fail -X POST -H "Authorization: Bearer $VM_TOKEN" \
+  -H "Idempotency-Key: $START_KEY" -H 'Content-Type: application/json' \
+  --data '{}' "$API_URL/computers/$VM_ID/start"
+curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/computers/$VM_ID"
+```
+
+Repeat the last GET at a reasonable interval until `instance.status.phase` is `Running`. This is infrastructure state, not proof of guest login. After boot, inspect the actual display using the owned account authorization:
+
+```sh
+curl --fail --silent --show-error -H "Authorization: Bearer $VM_TOKEN" \
+  --output smoke-screen.png "$API_URL/computers/$VM_ID/screenshot"
+```
+
+Open the PNG locally; treat it as private guest data. For RFB viewing and input ownership use the scoped ticket and lease routes in OpenAPI, not raw Kubernetes access.
+
+**Stop and clean up.** Stop the computer and inspect its state until the instance is absent and the desired run strategy is `Halted`. Only then delete this disposable smoke VM.
+
+```sh
+STOP_KEY=$(openssl rand -hex 16)
+curl --fail -X POST -H "Authorization: Bearer $VM_TOKEN" \
+  -H "Idempotency-Key: $STOP_KEY" -H 'Content-Type: application/json' \
+  --data '{}' "$API_URL/computers/$VM_ID/stop"
+curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/computers/$VM_ID"
+# After observing stopped state, and only for this disposable smoke computer:
+DELETE_KEY=$(openssl rand -hex 16)
+curl --fail -X DELETE -H "Authorization: Bearer $VM_TOKEN" \
+  -H "Idempotency-Key: $DELETE_KEY" "$API_URL/computers/$VM_ID"
+curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/account/quota"
+```
+
+Confirm deletion by observing the computer is absent from the account list and its reservation released. Quota can include other owned computers. Never add `deleteDisks=true` to a persistent VM deletion without deliberate authorization and backup review. Unset `VM_TOKEN` when finished; securely remove or retain the screenshot according to the operator's policy.
+
+**If a mutation disconnects:** do not run the next step or create a replacement key. For example, recover the original start receipt with:
+
+```sh
+curl --fail -H "Authorization: Bearer $VM_TOKEN" \
+  -H "Idempotency-Key: $START_KEY" "$API_URL/operations/by-key"
+```
+
+Use the actual receipt and resource state to determine what happened. The executable [smoke test](../scripts/e2e-smoke.py) is the reference for observed lifecycle, bounded waits, cleanup and rejection behavior. This walkthrough is documentation of the existing contract; the exact hosted tests, not this example alone, establish qualification.
+
 ## Route groups
 
 All paths below are relative to `/api/v1`.

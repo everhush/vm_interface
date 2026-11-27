@@ -8,7 +8,7 @@ Larger cold clone is not in-place PVC or guest filesystem growth. The current K3
 
 Sources: https://github.com/kubevirt/kubevirt/blob/v1.9.0/staging/src/kubevirt.io/api/export/v1/types.go and https://github.com/kubevirt/kubevirt/blob/v1.9.0/pkg/storage/export/export/export.go
 
-The `system.disk` and `exchange.disk` selectors cannot collide with normal data names (dots are invalid in data disk names). CDI-managed system and block exchange images are exported as raw images, not guest-filesystem snapshots. VirtioFS is not a raw disk; its published files remain individually downloadable through the bounded file API. Test coverage additionally streams the system and block exchange exports and validates length, source-specific filename and digest. Do not claim successful native export until exact-candidate CI passes.
+The `system.disk` and `exchange.disk` selectors cannot collide with normal data names (dots are invalid in data disk names). CDI-managed system and block exchange images are exported as raw images, not guest-filesystem snapshots. VirtioFS is not a raw disk; its published files remain individually downloadable through the bounded file API. Test coverage additionally streams the system and block exchange exports and validates length, source-specific filename and digest. Hosted native export passed on the qualified commit; do not extend that result to untested storage classes or guest profiles.
 
 ## Published VirtioFS file bundle
 

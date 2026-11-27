@@ -10,4 +10,6 @@
 - Hosted source qualification at `7e095afe6274137104f15caf9cbaef7738d6a9ba`: 152 static tests, all 13 core native stages and independent evidence verifiers passed; real CSI and offline Android preparation passed.
 - Apache-2.0 licensing, public-facing README, API/architecture documentation and contribution/security/release guidance.
 
+The primary branch also includes a public documentation index, interactive API lifecycle walkthrough and independent acceptance record template. These are documentation-only changes after the hosted qualification.
+
 Independent-device acceptance (#12) remains pending (0/3); this entry is not a stable version or a published release. General dashboard, production identity and production cloud deployment remain deferred. See [validation](docs/validation.md) and [historical implementation record](docs/implementation.md).
