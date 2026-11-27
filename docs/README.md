@@ -5,6 +5,7 @@ Start with the [project README](../readme.md). VM Interface is an Apache-2.0 eva
 | I want to… | Read |
 | --- | --- |
 | Understand the design and trust boundaries | [Architecture](architecture.md) |
+| Evaluate a dedicated managed Kubernetes cluster | [Managed Kubernetes deployment](managed-kubernetes.md) |
 | Try the API and build a client | [API guide and lifecycle walkthrough](api.md) |
 | Export a stopped VM's disk or exchange bundle | [Disk export](disk-export.md) |
 | Reproduce the evaluation safely on real hardware | [Device validation](device-validation.md) |

@@ -86,7 +86,7 @@ The former daemon-specific build files are replaced by [daemonless OCI build](..
 | Gate | Run | Verdict |
 | --- | --- | --- |
 | Locked Vite+ static | [46077697248](https://github.com/everhush/vm_interface/actions/runs/46077697248) | PASS: 158/158 tests in 59 files; zero failed/skipped/todo; format, type-aware lint/check, build, loader and source guard passed. |
-| Native core | [46077980605](https://github.com/everhush/vm_interface/actions/runs/46077980605) | In progress; isolated actual KVM and OCI deployment, API smoke and tenant isolation, persistent system/exchange, independent data disk/media/export, and Linux installation/archive/native clone/original recording passed. Native CDI import and remaining stages pending. |
+| Native core | [46077980605](https://github.com/everhush/vm_interface/actions/runs/46077980605) | In progress; isolated actual KVM and OCI deployment, API smoke and tenant isolation, persistent system/exchange, independent data disk/media/export, and Linux installation/archive/native clone/original recording passed. Native CDI import passed; authorized ISO boot and remaining stages pending. |
 | Real CSI expansion | [46078053324](https://github.com/everhush/vm_interface/actions/runs/46078053324) | PASS: real expandable CSI, actual VirtioFS guest capacity growth, unchanged PVC/DataVolume identities, 206 matching HTTP status pairs and both admission denials. |
 | Android inputs | [46077983994](https://github.com/everhush/vm_interface/actions/runs/46077983994) | PASS: pinned disks, signed APK and both scenario preflights. Native boot and guest compatibility unverified. |
 

@@ -412,8 +412,9 @@
       "API smoke and tenant isolation",
       "persistent system and exchange lifecycle",
       "independent data disk lifecycle, media and native export",
-      "Linux installation, archive, native clone and original recording"
+      "Linux installation, archive, native clone and original recording",
+      "actual CDI disk import"
     ],
-    "coreActiveStage": "Actual CDI disk import"
+    "coreActiveStage": "Actual authorized ISO import and boot configuration"
   }
 }

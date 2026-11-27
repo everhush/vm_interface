@@ -51,7 +51,7 @@ flowchart LR
     R --> K
 ```
 
-Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/KVM supplies guest execution, while CloudNativePG/PostgreSQL stores durable account and operation state. Console, exchange and recording workers are separate services in the deployment. [Architecture and trust boundaries](docs/architecture.md).
+Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/KVM supplies guest execution, while CloudNativePG/PostgreSQL stores durable account and operation state. Console, exchange and recording workers are separate services in the deployment. [Architecture and trust boundaries](docs/architecture.md). [Dedicated managed Kubernetes evaluation](docs/managed-kubernetes.md) uses explicit context, immutable registry digest and eligible KVM/CSI/CNI; no EKS/AKS runtime certification is claimed.
 
 ## Current capability status
 

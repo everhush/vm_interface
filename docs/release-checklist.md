@@ -37,7 +37,7 @@ Before enabling public access, review private repository/fork visibility implica
 
 ## Before stable release or production use
 
-- [ ] Complete [#12](https://github.com/imxade/vm_interface/issues/12): three consecutive comprehensive independent native-device reviews on the approved exact candidate (currently 0/3). Report new defects to implementation owners and repeat as required.
+- [ ] Complete [#12](https://github.com/everhush/vm_interface/issues/12): three consecutive comprehensive independent native-device reviews on the approved exact candidate (currently 0/3). Report new defects to implementation owners and repeat as required.
 - [ ] Qualify Android native boot and application/file exchange, and only advertise conditional features on tested eligible hardware.
 - [ ] Complete distribution-specific SBOM, vulnerability and license/provenance review. Production identity, network exposure, security, operations, backup/recovery and cloud deployment require separate scope and qualification.
 - [ ] Review release notes and evidence, approve a version/tag and distribution scope. Do not publish an npm package or container image simply because the source is visible.
