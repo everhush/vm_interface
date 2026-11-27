@@ -24,7 +24,7 @@ Keep the filled record and original evidence private until reviewed for credenti
 - [ ] Native ARM64 Android: actual guest boot/display, authorized APK installation and execution, verified input/output transfer, cold resize/persistence and original recording.
 - [ ] Eligible conditional checks as required by the issue; explicitly record unsupported/not-attempted profiles rather than counting them as passes.
 - [ ] Original MP4s, decoded visible markers, redacted API traces, screenshots, preflight and machine state, exact file/disk digests, run provenance and verifier JSON retained.
-- [ ] Same-source aggregate review with `scripts/verify-evidence.py --profile all --root <private-reviewed-evidence-root> --commit <approved-sha>`; core proof directories from the same execution; separate Linux and Android evidence provenance retained.
+- [ ] Same-source aggregate review with `node scripts/verify-evidence.ts --profile all --root <private-reviewed-evidence-root> --commit <approved-sha>`; core proof directories from the same execution; separate Linux and Android evidence provenance retained.
 - [ ] Review actual guest results and original video manually as well as automated verification. Record teardown/disposal; verify no guest resources or credentials are inadvertently left accessible.
 
 | Evidence set | Private archive location / ID | SHA-256 | Review verdict |

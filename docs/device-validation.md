@@ -6,7 +6,7 @@
 
 ## 1. Non-virtualization checks
 
-On a Linux machine with network access, Git, Node.js 24, npm, Python 3.11+, Bash, curl, FFmpeg/ffprobe with `libx264` and `drawtext`, Tesseract English language data, and DejaVu fonts:
+On a Linux machine with network access, Git, Node.js 24, npm, Bash, curl, FFmpeg/ffprobe with `libx264` and `drawtext`, Tesseract English language data, and DejaVu fonts:
 
 ```sh
 git clone https://github.com/imxade/vm_interface.git
@@ -15,11 +15,11 @@ git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba
 bash scripts/device-validate.sh checks
 ```
 
-This does not require KVM. It runs typecheck/lint/unit/build, Python syntax/unit checks and shell syntax. The CI-only fork `xad3play/vm_interface` executes these checks against exact synchronized upstream commits. The separate static CI workflow is reserved for the preparation branch; the implementation branch runs static and KVM checks in one workflow. Upstream job execution is disabled by repository guard. Do not interpret its success as guest conformance.
+This does not require KVM. It runs typecheck/lint/unit/build and shell syntax checks. The CI-only fork `xad3play/vm_interface` executes these checks against exact synchronized upstream commits. The separate static CI workflow is reserved for the preparation branch; the implementation branch runs static and KVM checks in one workflow. Upstream job execution is disabled by repository guard. Do not interpret its success as guest conformance.
 
 ## 2. Dedicated device
 
-Use a **disposable Linux device**, not an existing cluster, shared persistent self-hosted runner or a personal production PC. Review the checkout before running it. Require a matching x86_64 or AArch64 processor, actual /dev/kvm access, Buildah, sudo, Node 24, Python 3.11+, FFmpeg/ffprobe, Tesseract, skopeo and distribution packages used by probes. Core preflight requires >=6 GiB RAM and >=35 GiB free root storage; large media profiles require >=12 GiB and >=100 GiB free. These are conservative starting requirements, not guaranteed sufficient. No software fallback or cloud purchase.
+Use a **disposable Linux device**, not an existing cluster, shared persistent self-hosted runner or a personal production PC. Review the checkout before running it. Require a matching x86_64 or AArch64 processor, actual /dev/kvm access, Buildah, sudo, Node 24, a C compiler for the KVM ioctl probe, FFmpeg/ffprobe, Tesseract, skopeo and distribution packages used by probes. Core preflight requires >=6 GiB RAM and >=35 GiB free root storage; large media profiles require >=12 GiB and >=100 GiB free. These are conservative starting requirements, not guaranteed sufficient. No software fallback or cloud purchase.
 
 ```sh
 sudo "$(command -v node)" scripts/device-preflight.ts --architecture amd64
@@ -50,7 +50,7 @@ The owner replaced Windows with Linux on 2026-11-25. Use the digest-pinned Fedor
 
 ```sh
 bash scripts/device-validate.sh core --confirm-disposable
-python3 scripts/verify-evidence.py --root evidence --profile linux
+node scripts/verify-evidence.ts --root evidence --profile linux
 ```
 
 The client generates an exact reproducible application ZIP, uploads it and a random challenge through the product file API, then sends a visible install/launch command through the leased input API. The guest verifies package digest, installs the application on its system disk, creates and tests an archive of actual challenge bytes, publishes output and checksum, and emits a visible marker during consented recording. The client retrieves original MP4, verifies marker frames, retrieves both result and archive, performs cold CPU/RAM resize and restart, checks new VMI identity and original PVC UIDs, installed app persistence and exact file bytes. The verifier checks software package, challenge, archive and trace independently. No Windows registration or driver files are required. Hosted Fedora x86_64 functional qualification passed; independent device reproduction remains pending.
@@ -86,7 +86,7 @@ Expected Windows output: ASCII "VM Interface Windows 7-Zip functional proof" fol
 
 Core proof folders contain platform-recording.mp4, real screenshots, redacted HTTP trace, verification.json and a separately labelled derived presentation. Native showcases produce the same evidence plus output bytes and media/software digests. Preserve original MP4; verify SHA256 and full H264 decode; inspect actual frames and guest results. A static presentation or synthetic video is not evidence. Review failures and rerun after corrections. The primary source preview is consolidated; no stable release until full applicable gates and three comprehensive reviewed passes, unless the owner explicitly changes release policy.
 
-To verify already downloaded evidence independently (no KVM needed): `python3 scripts/verify-evidence.py --root evidence --profile core --commit <approved-sha>` or `--profile all --commit <approved-sha>` for the three mandatory proof folders. All evidence in a comprehensive review must use the same exact commit; core control and functional evidence must come from the same execution. Assemble a private reviewed evidence set with the original three proof directories (control, functional and android) under one root for `--profile all`; preserve separate device/run provenance and never replace existing files to conceal a failure. Use the [acceptance record template](acceptance-record.md) for each independent review. This requires original recordings, hashes and reported assertions; it does not certify hardware or replace manual review of actual guest frames. Historical screenshot-only evidence must fail this gate.
+To verify already downloaded evidence independently (no KVM needed): `node scripts/verify-evidence.ts --root evidence --profile core --commit <approved-sha>` or `--profile all --commit <approved-sha>` for the three mandatory proof folders. All evidence in a comprehensive review must use the same exact commit; core control and functional evidence must come from the same execution. Assemble a private reviewed evidence set with the original three proof directories (control, functional and android) under one root for `--profile all`; preserve separate device/run provenance and never replace existing files to conceal a failure. Use the [acceptance record template](acceptance-record.md) for each independent review. This requires original recordings, hashes and reported assertions; it does not certify hardware or replace manual review of actual guest frames. Historical screenshot-only evidence must fail this gate.
 
 ### Pinned two-disk Android media (offline qualified; native boot pending)
 
@@ -101,7 +101,7 @@ The official virtio-win 0.1.302-1 ISO is pinned by exact SHA256. The two tested 
 Run scripts/qualify-windows-catalog.ps1 on Windows against the pinned media. Then, on a Linux host with xorriso, fetch the pinned virtioISO and winfsp using scripts/fetch-pinned-media.ts and build the authorized driver ISO:
 
 ```sh
-python3 showcases/windows/build-catalog-iso.py --authorized --iso /path/to/virtio-win.iso \
+node showcases/windows/build-catalog-iso.ts --authorized --iso /path/to/virtio-win.iso \
   --winfsp /path/to/winfsp.msi --report /path/to/driver-catalog-report.json --output VMDRIVERS.iso
 ```
 
@@ -110,11 +110,11 @@ Retain the actual output digest, not a digest from a different build (ISO metada
 Windows media and scenario are historical/optional. Hosted Linux qualification passed; native ARM64 Android and independent device acceptance remain outstanding under ready issue #12.
 
 ### Bundled scenario recipes (prepared, not runtime-qualified)
-Use `python3 scripts/write-showcase-scenario.py windows windows-scenario.json` or `python3 scripts/write-showcase-scenario.py android android-scenario.json` to create the concrete client recipe. Windows uses authorized installation and login checkpoints before recording, then actual 7-Zip GUI evidence. Android requires fixture APK version 3.0, adds a post-upload installation and authorized Storage Access Framework directory selection checkpoint, then clicks the exact unique visible Compute proof label using OCR from actual API screenshots. The APK reads the fresh 4096-byte API-uploaded challenge using the user-granted directory, computes its SHA256 and publishes a challenge-bound result/checksum. Version 2.0 static-output evidence is historical only. No fabricated click coordinates or recording of credentials. These prepared recipes still require guest qualification on the exact media; missing mount/provider or ambiguous OCR is an explicit failure, not a fallback. The new APK must be rebuilt and independently signature-checked; version 1.0 artifact is historical only. The prepared Android client rechecks the actual APK signature and package/version metadata using the authorized portable Java apksigner.jar (set ANDROID_HOME to the SDK containing build-tools 34.0.0, APKSIGNER_JAR to its verified JAR, or use apksigner in PATH) and a bounded standard-library binary-manifest reader; no x86-only aapt2 executable is required on ARM64. The adb-saf launch additionally checks native adb before provisioning. If the guest requires the same test RSA key to be reauthorized after a cold restart, the operator may approve it at an unrecorded checkpoint; authentication and SELinux enforcement must remain enabled.
+Use `node scripts/write-showcase-scenario.ts windows windows-scenario.json` or `node scripts/write-showcase-scenario.ts android android-scenario.json` to create the concrete client recipe. Windows uses authorized installation and login checkpoints before recording, then actual 7-Zip GUI evidence. Android requires fixture APK version 3.0, adds a post-upload installation and authorized Storage Access Framework directory selection checkpoint, then clicks the exact unique visible Compute proof label using OCR from actual API screenshots. The APK reads the fresh 4096-byte API-uploaded challenge using the user-granted directory, computes its SHA256 and publishes a challenge-bound result/checksum. Version 2.0 static-output evidence is historical only. No fabricated click coordinates or recording of credentials. These prepared recipes still require guest qualification on the exact media; missing mount/provider or ambiguous OCR is an explicit failure, not a fallback. The new APK must be rebuilt and independently signature-checked; version 1.0 artifact is historical only. The prepared Android client rechecks the actual APK signature and package/version metadata using the authorized portable Java apksigner.jar (set ANDROID_HOME to the SDK containing build-tools 34.0.0, APKSIGNER_JAR to its verified JAR, or use apksigner in PATH) and a bounded standard-library binary-manifest reader; no x86-only aapt2 executable is required on ARM64. The adb-saf launch additionally checks native adb before provisioning. If the guest requires the same test RSA key to be reauthorized after a cold restart, the operator may approve it at an unrecorded checkpoint; authentication and SELinux enforcement must remain enabled.
 
 ### Standalone Linux device profile
 
-On a separate disposable native x86_64 KVM device, `bash scripts/device-validate.sh linux --confirm-disposable` runs the full Linux application installation, control, archive, recording and cold-resize/reboot proof. It uses the pinned Fedora catalog image and requires no Windows installer, external APK, scenario or licensing credentials. Verify independently with `python3 scripts/verify-evidence.py --root evidence --profile linux`.
+On a separate disposable native x86_64 KVM device, `bash scripts/device-validate.sh linux --confirm-disposable` runs the full Linux application installation, control, archive, recording and cold-resize/reboot proof. It uses the pinned Fedora catalog image and requires no Windows installer, external APK, scenario or licensing credentials. Verify independently with `node scripts/verify-evidence.ts --root evidence --profile linux`.
 
 ## Optional CSI storage growth evaluation
 
@@ -130,17 +130,17 @@ On an authorized preparation machine with Android SDK 34, JDK, qemu-img and auth
 
 ```sh
 bash scripts/qualify-android-media.sh /absolute/path/to/android-inputs --retain-disks
-python3 scripts/prepared_android.py /absolute/path/to/android-inputs --preflight-only
+node scripts/prepared-android.ts /absolute/path/to/android-inputs --preflight-only
 ```
 
-This verifies the exact pinned archive and both disk hashes against the committed prior qualification manifest, builds/signs APK v3, generates the matching scenario, and validates input only. No KVM, API credentials or guest execution. Keep disks private to the authorized operator; CI artifacts retain only manifest, APK and scenario. On the independent disposable native ARM64 device after explicit #12 readiness, run `python3 scripts/prepared_android.py /absolute/path/to/android-inputs --confirm-disposable`. No manual digest substitution required. First-run UI/SAF authorization remains a genuine device checkpoint; no security bypass or synthetic evidence.
+This verifies the exact pinned archive and both disk hashes against the committed prior qualification manifest, builds/signs APK v3, generates the matching scenario, and validates input only. No KVM, API credentials or guest execution. Keep disks private to the authorized operator; CI artifacts retain only manifest, APK and scenario. On the independent disposable native ARM64 device after explicit #12 readiness, run `node scripts/prepared-android.ts /absolute/path/to/android-inputs --confirm-disposable`. No manual digest substitution required. First-run UI/SAF authorization remains a genuine device checkpoint; no security bypass or synthetic evidence.
 
 ### Explicit Android guest-transfer alternative
 
 The pinned LineageOS source uses the VirtioFS tag `share`, mounted at `/mnt/vendor/shared`. This does not prove that Android's ordinary Storage Access Framework (SAF) exposes that vendor mount. Choose the direct VirtioFS scenario first when it is available. For a disposable guest with ordinary authenticated Ethernet ADB (TCP 5555), an alternative can be selected **before** creating the VM:
 
 ```sh
-python3 scripts/prepared_android.py /path/to/prepared --confirm-disposable --transfer adb-saf --authorize-android-debug
+node scripts/prepared-android.ts /path/to/prepared --confirm-disposable --transfer adb-saf --authorize-android-debug
 ```
 
 Requires native platform-tools adb, private TLS WSS tunnel and a human approving the freshly generated guest RSA key. Never enable unauthenticated debugging, root, permissive SELinux or public port forwarding. The client verifies the original API-staged APK and challenge from the halted exchange bundle, installs and transfers those bytes through the authorized tunnel, selects Documents/VMInterface with SAF, and obtains the computed result through that same authenticated guest-transfer path. The report distinguishes this from a direct VirtioFS file download; both require actual video, independent challenge verification and preserved disk identities after cold resize. This route is prepared, not yet native-device-qualified.
@@ -153,7 +153,7 @@ The Linux application profile requests an explicit USB tablet only in the pinned
 
 ### Authorized public URL acquisition and cache
 
-External downloads remain client-side rather than granting the service arbitrary network egress. Use `scripts/acquire-image.py` with an explicitly authorized HTTPS URL, exact hostname allowlist, publisher SHA256 and byte bound. Every redirect is checked, DNS answers must all be public, the TCP destination is pinned to a checked address and TLS authenticates the original hostname; ambient proxies are not used. The optional public-media cache is private to the client and keyed by digest; every hit is rehashed and materialized into a separate file. Never use the public cache for tenant-private images. Submit the resulting bytes to the authenticated media API with declared size/digest and upload or resume/commit; the server never fetches the supplied source string. Native CI tests this with CirrOS 0.6.3, publisher https://download.cirros-cloud.net/0.6.3/SHA256SUMS and exact 21692416-byte release asset, followed by real CDI import and API screenshot. This is not a central cross-tenant artifact registry.
+External downloads remain client-side rather than granting the service arbitrary network egress. Use `node scripts/acquire-image.ts` with an explicitly authorized HTTPS URL, exact hostname allowlist, publisher SHA256 and byte bound. Every redirect is checked, DNS answers must all be public, the TCP destination is pinned to a checked address and TLS authenticates the original hostname; ambient proxies are not used. The optional public-media cache is private to the client and keyed by digest; every hit is rehashed and materialized into a separate file. Never use the public cache for tenant-private images. Submit the resulting bytes to the authenticated media API with declared size/digest and upload or resume/commit; the server never fetches the supplied source string. Native CI tests this with CirrOS 0.6.3, publisher https://download.cirros-cloud.net/0.6.3/SHA256SUMS and exact 21692416-byte release asset, followed by real CDI import and API screenshot. This is not a central cross-tenant artifact registry.
 
 Account-owned registered image API: POST /media-artifacts with {metadata: declared MediaSpec, architecture, licensing} and Idempotency-Key; reserve 64 MiB per item, 256 MiB per account and 512 MiB total in a separate operator-created PVC. PUT /media-artifacts/{id}/file with exact bytes and idempotency key; verified immutable files are not overwritten. GET list/status and DELETE owned artifact. Declare identical metadata and architecture in the destination ComputerSpec, then POST /computers/{id}/media/{slot}/artifact with {artifactId}; the existing CDI path re-verifies bytes/header/capacity and creates an independent VM disk. Deleting the artifact does not delete imported disks. Larger images still use per-VM resumable uploads and optional authorized client cache; no arbitrary backend URL access or cross-tenant deduplication. CI public URL fixture exercises ownership, bad digest, immutability, replay, independent PVCs and deletion. Hosted registry/import qualification passed (run 45954535380); independent-device reproduction remains pending.
 
@@ -179,7 +179,7 @@ In another Bash terminal on that host, the **cluster operator only** can recover
 ```sh
 set +x
 set -o pipefail
-VM_TOKEN=$(kubectl -n vm-interface get secret vm-api-test -o jsonpath='{.data.identities}' | base64 --decode | python3 -c 'import json,sys; print(json.load(sys.stdin)["alpha"])')
+VM_TOKEN=$(kubectl -n vm-interface get secret vm-api-test -o jsonpath='{.data.identities}' | base64 --decode | node -e 'console.log(JSON.parse(require("node:fs").readFileSync(0)).alpha)')
 test -n "$VM_TOKEN"
 API_URL=http://127.0.0.1:3000/api/v1
 curl --fail "$API_URL/health"

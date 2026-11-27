@@ -34,7 +34,7 @@ CSI guest exchange capacity increased from 1,020,702,720 to 2,077,073,408 bytes,
 Run [the device guide](device-validation.md) on authorized disposable equipment, not an existing cluster. For the exact hosted implementation use `git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba`. To inspect retained core artifacts without KVM, extract the archive into a private directory and run:
 
 ```sh
-python3 scripts/verify-evidence.py --root /path/to/core-artifact --profile core --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba
+ # Use the verifier from an exact checkout of historical candidate 7e095afe6274137104f15caf9cbaef7738d6a9ba.
 node scripts/verify_media_evidence.ts --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
 node scripts/verify_network_evidence.ts --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
 node scripts/verify_csi_evidence.ts --root /path/to/csi-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba

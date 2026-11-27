@@ -74,7 +74,7 @@ Full results and exact commit: [validation record](docs/validation.md). The runt
 
 ### 1. Inspect and test the source (no KVM required)
 
-Use Linux with Git, Node.js 24, npm, Python 3.11+, Bash, curl, FFmpeg/ffprobe (including `libx264` and `drawtext`), Tesseract with English language data, and DejaVu fonts installed. Internet access is required to download locked dependencies. On Ubuntu/Debian, the evidence prerequisites are `ffmpeg tesseract-ocr tesseract-ocr-eng fonts-dejavu-core`; install them through your distribution's trusted package manager.
+Use Linux with Git, Node.js 24, npm, Bash, curl, FFmpeg/ffprobe (including `libx264` and `drawtext`), Tesseract with English language data, and DejaVu fonts installed. Internet access is required to download locked dependencies. On Ubuntu/Debian, the evidence prerequisites are `ffmpeg tesseract-ocr tesseract-ocr-eng fonts-dejavu-core`; install them through your distribution's trusted package manager.
 
 ```sh
 git clone https://github.com/imxade/vm_interface.git
@@ -83,11 +83,11 @@ git checkout main
 bash scripts/device-validate.sh checks
 ```
 
-This uses `npm ci` and runs type checking, lint, TypeScript/Python tests, production build and shell syntax checks. It does not install K3s or certify a guest. Do not run provisioning scripts merely to browse the code.
+This uses `npm ci` and runs type checking, lint, TypeScript tests, production build and shell syntax checks. It does not install K3s or certify a guest. Do not run provisioning scripts merely to browse the code.
 
 ### 2. Try the full evaluation on a disposable x86_64 Linux device
 
-**Warning:** the native validation workflow provisions a new K3s cluster, downloads guest images and uses local disks and elevated privileges. Never run it on a personal production workstation, existing cluster or shared persistent runner. Review the scripts first and obtain operator consent. Use a clean source checkout; keep guest media, credentials and other private files outside the source checkout and OCI build context. Require real `/dev/kvm`, Buildah, sudo, Node.js 24, Python 3.11+, curl, OpenSSL, Git, FFmpeg/ffprobe, Tesseract and skopeo. The core preflight requires at least 6 GiB RAM and 35 GiB free root storage; large-media profiles require 12 GiB and 100 GiB. No TCG fallback.
+**Warning:** the native validation workflow provisions a new K3s cluster, downloads guest images and uses local disks and elevated privileges. Never run it on a personal production workstation, existing cluster or shared persistent runner. Review the scripts first and obtain operator consent. Use a clean source checkout; keep guest media, credentials and other private files outside the source checkout and OCI build context. Require real `/dev/kvm`, Buildah, sudo, Node.js 24, a C compiler, curl, OpenSSL, Git, FFmpeg/ffprobe, Tesseract and skopeo. The core preflight requires at least 6 GiB RAM and 35 GiB free root storage; large-media profiles require 12 GiB and 100 GiB. No TCG fallback.
 
 ```sh
 # Reproduce the exact hosted-qualified implementation:
