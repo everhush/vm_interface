@@ -5,7 +5,8 @@ import {mkdtempSync,readdirSync,rmSync,readFileSync,writeFileSync,copyFileSync} 
 import {tmpdir} from "node:os";
 import {join,basename} from "node:path";
 import {client,key,sha,sleep,wait} from "./api-client.ts";
-import {ocr,ocrText} from "./evidence-frames.ts";
+import {ocr,ocrText,normalized} from "./evidence-frames.ts";
+import {cirrosNormalize} from "./cirros-screen.ts";
 export const batch=(text:string)=>({events:[...text].flatMap(ch=>[true,false].map(down=>({type:"key",keysym:ch.codePointAt(0)!,down})))});
 export const count=(text:string,marker:string)=>text.split(marker).length-1;
 export const png=Buffer.from([137,80,78,71,13,10,26,10]);
@@ -15,7 +16,7 @@ export function proofTools(out:string){
  const file=(name:string)=>join(out,name);
  async function screen(path:string,name:string,cirros=false){
   const [data,headers]=await binary("GET",path+"/screenshot");assert.equal(headers.get("content-type"),"image/png");assert(data.subarray(0,8).equals(png));writeFileSync(file(name),data);
-  const text=ocrText(file(name));return [ocr(file(name),cirros),text.toLowerCase()] as const;
+  const text=ocrText(file(name));return [cirros?cirrosNormalize(text):normalized(text),text.toLowerCase()] as const;
  }
  async function coldResize(path:string,cpu:number,memoryMiB:number){
   const halted=async()=>{const v=await call("GET",path),s=v.status??{};return !v.instance&&v.desired.runStrategy==="Halted"&&!s.stateChangeRequests?.length&&!s.created&&!s.ready?v:null;};

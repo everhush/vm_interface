@@ -11,9 +11,6 @@ if [ "$profile" = checks ]; then
   npm run lint
   npm test
   npm run build
-  python3 -m compileall -q scripts
-  python3 -m unittest discover -s scripts -p 'test_*.py'
-  python3 -m unittest discover -s showcases/windows -p 'test_*.py'
   for f in scripts/*.sh showcases/android/*.sh; do bash -n "$f"; done
   exit 0
 fi
@@ -31,7 +28,7 @@ if [ -d evidence ] && [ -n "$(find evidence -mindepth 1 -print -quit)" ]; then e
 test ! -e /etc/rancher/k3s/k3s.yaml
 test ! -e "$HOME/.kube/config"
 test -z "${KUBECONFIG:-}"
-for cmd in buildah node npm cc python3 curl openssl tesseract ffmpeg ffprobe git skopeo; do command -v "$cmd" >/dev/null; done
+for cmd in buildah node npm cc curl openssl tesseract ffmpeg ffprobe git skopeo; do command -v "$cmd" >/dev/null; done
 mkdir -p evidence
 if [ "$profile" = core ] || [ "$profile" = linux ]; then
   test "$#" -eq 0

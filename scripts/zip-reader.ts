@@ -12,7 +12,8 @@ export class ZipReader{
  private fd:number;
  private length:number;
  private central=0;
- constructor(readonly path:string,maxEntries=256){
+ readonly path:string;
+ constructor(path:string,maxEntries=256){this.path=path;
   this.fd=openSync(path,"r");
   try{
    const st=fstatSync(this.fd);assert(st.isFile()&&st.size>=22,"Invalid ZIP");

@@ -90,7 +90,7 @@ jobs:
           bash showcases/android/build-apk.sh qualification/apk/proof.apk
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs qualification/apk/proof.apk > qualification/apk/signature.txt
           "$ANDROID_HOME/build-tools/34.0.0/aapt2" dump badging qualification/apk/proof.apk > qualification/apk/badging.txt
-          grep -F "versionName='2.0'" qualification/apk/badging.txt
+          grep -F "versionName='3.0'" qualification/apk/badging.txt
           node scripts/write-showcase-scenario.ts windows qualification/apk/windows-scenario.json
           node scripts/write-showcase-scenario.ts android qualification/apk/android-scenario.json
           node --input-type=module -e 'import {loadScenario} from "./scripts/showcase-inputs.ts"; for(const p of ["windows","android"])loadScenario("qualification/apk/"+p+"-scenario.json",p)'
