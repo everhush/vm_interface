@@ -7,23 +7,28 @@ The service exposes REST under `/api/v1` and scoped WebSocket connections on the
 Use an already deployed **disposable** environment from the [device guide](device-validation.md). The examples require a valid operator-issued test identity or appropriately scoped account API key in `VM_TOKEN`; this is not production authentication. Keep the HTTP service bound to loopback. Use a trusted CA for TLS WSS; never disable certificate verification. Do not persist tokens, display tickets or network grants in history, evidence or source.
 
 ```sh
+# Use Bash on the dedicated disposable device, with the API port-forward running.
 export API_URL=http://127.0.0.1:3000/api/v1
-# VM_TOKEN is supplied securely by the evaluation operator.
+set +x
+read -r -s -p 'Evaluation bearer token: ' VM_TOKEN; printf '\n'
 curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/account"
 curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/account/quota"
 curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/images"
 ```
+
+If you are the operator of the locally provisioned evaluation, see [local evaluation access](device-validation.md#local-evaluation-api-access) for safe bootstrap-token handling. Use an appropriately scoped account key for a separate client. See the live `/keys` contract for creating and revoking keys.
 
 ## Example: plan a smoke VM
 
 The following minimal CirrOS profile is the exact shape used by the native smoke client. It is a test profile, not a persistent desktop or a production OS image.
 
 ```sh
-cat > /tmp/vm-spec.json <<'JSON'
+VM_SPEC=$(mktemp)
+cat > "$VM_SPEC" <<'JSON'
 {"version":1,"name":"example-smoke","architecture":"amd64","cpu":1,"memoryMiB":512,"image":"cirros-smoke"}
 JSON
 curl --fail -X POST -H "Authorization: Bearer $VM_TOKEN" \
-  -H 'Content-Type: application/json' --data-binary @/tmp/vm-spec.json \
+  -H 'Content-Type: application/json' --data-binary @"$VM_SPEC" \
   "$API_URL/computers/plan"
 ```
 
@@ -33,14 +38,7 @@ For a reproducible executable client including ownership and cleanup assertions 
 
 ## Walkthrough: create and operate a smoke VM
 
-Continue from the plan example above, using the same Bash session. This is an interactive walkthrough for a **disposable** evaluation, not a deployment script. It creates an ephemeral CirrOS smoke computer, not a persistent workstation. You need curl, Python 3 and OpenSSL. Do not run steps blindly: inspect the receipt and observed VM state at each checkpoint. Use the same account for the full walkthrough.
-
-```sh
-# The operator supplies the scoped token securely; do not paste it into a command.
-read -r -s -p 'Evaluation bearer token: ' VM_TOKEN; printf '\n'
-export VM_TOKEN
-export API_URL=http://127.0.0.1:3000/api/v1
-```
+Continue from the successful plan example above, using the same Bash session, `VM_SPEC` and account token. This is an interactive walkthrough for a **disposable** evaluation, not a deployment script. It creates an ephemeral CirrOS smoke computer, not a persistent workstation. You need curl, Python 3 and OpenSSL. Do not run steps blindly: inspect the receipt and observed VM state at each checkpoint. Use the same account for the full walkthrough.
 
 **Create.** Use the spec from the plan example. Keep the original key in this session for receipt recovery.
 
@@ -49,7 +47,7 @@ CREATE_KEY=$(openssl rand -hex 16)
 CREATED=$(curl --fail-with-body --silent --show-error -X POST \
   -H "Authorization: Bearer $VM_TOKEN" \
   -H "Idempotency-Key: $CREATE_KEY" -H 'Content-Type: application/json' \
-  --data-binary @/tmp/vm-spec.json "$API_URL/computers")
+  --data-binary @"$VM_SPEC" "$API_URL/computers")
 printf '%s\n' "$CREATED"
 VM_ID=$(printf '%s' "$CREATED" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["id"])')
 OP_ID=$(printf '%s' "$CREATED" | python3 -c 'import json,sys; print(json.load(sys.stdin)["operationId"])')
@@ -70,8 +68,10 @@ curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/computers/$VM_ID"
 Repeat the last GET at a reasonable interval until `instance.status.phase` is `Running`. This is infrastructure state, not proof of guest login. After boot, inspect the actual display using the owned account authorization:
 
 ```sh
+SCREENSHOT=$(mktemp --suffix=.png)
 curl --fail --silent --show-error -H "Authorization: Bearer $VM_TOKEN" \
-  --output smoke-screen.png "$API_URL/computers/$VM_ID/screenshot"
+  --output "$SCREENSHOT" "$API_URL/computers/$VM_ID/screenshot"
+printf 'Screenshot saved privately at %s\n' "$SCREENSHOT"
 ```
 
 Open the PNG locally; treat it as private guest data. For RFB viewing and input ownership use the scoped ticket and lease routes in OpenAPI, not raw Kubernetes access.
@@ -91,7 +91,7 @@ curl --fail -X DELETE -H "Authorization: Bearer $VM_TOKEN" \
 curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/account/quota"
 ```
 
-Confirm deletion by observing the computer is absent from the account list and its reservation released. Quota can include other owned computers. Never add `deleteDisks=true` to a persistent VM deletion without deliberate authorization and backup review. Unset `VM_TOKEN` when finished; securely remove or retain the screenshot according to the operator's policy.
+Confirm deletion by observing the computer is absent from the account list and its reservation released. Quota can include other owned computers. Never add `deleteDisks=true` to a persistent VM deletion without deliberate authorization and backup review. When finished, unset `VM_TOKEN`, remove the temporary spec with `rm -f -- "$VM_SPEC"`, and securely remove or retain the private screenshot according to the operator's policy. Stop the port-forward; the dedicated cluster and test identity remain the operator's responsibility.
 
 **If a mutation disconnects:** do not run the next step or create a replacement key. For example, recover the original start receipt with:
 

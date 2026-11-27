@@ -1,3 +1,9 @@
+# Historical product specification
+
+> **Archived design and implementation brief.** The original directive below is retained for traceability, not as current operating instructions or an implemented-feature list. The owner replaced the mandatory Windows demonstration with Linux x86_64; native Android ARM64 remains pending. See the [project README](../readme.md), [qualification record](validation.md), [current requirements](requirements.json) and [device acceptance guide](device-validation.md) for the current scope and state. Do not execute historical automation, deployment or acceptance instructions independently of the current guides and operator authorization.
+
+---
+
 # Autonomous Implementation and Continuous End-to-End Validation Directive
 
 ## 1. Objective and Authority

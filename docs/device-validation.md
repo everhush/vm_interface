@@ -6,7 +6,7 @@
 
 ## 1. Non-virtualization checks
 
-On a machine with network access, Node.js 24 and Python 3.11+:
+On a Linux machine with network access, Git, Node.js 24, npm, Python 3.11+, Bash, curl, FFmpeg/ffprobe with `libx264` and `drawtext`, Tesseract English language data, and DejaVu fonts:
 
 ```sh
 git clone https://github.com/imxade/vm_interface.git
@@ -163,3 +163,27 @@ For large-media clients, inspect the target declaration/status first and use an 
 Use `GET /api/v1/operations/by-key` with the same account authorization and original `Idempotency-Key` header to retrieve the durable receipt. Missing returns 404 (including other accounts), invalid key 400. This never executes a mutation. Inspect the receipt and resource state; do not submit a fresh key for an unknown operation. The original key must be retained privately. The receipt lookup and health checks do not certify convergence; use the relevant resource/operation status.
 
 For complete native network proof run `python3 scripts/verify_network_evidence.py --root evidence --commit <approved-sha> --run-id <execution-id>`. Verify both actual guest HTTP response files, exact final trace digest, authorization/duplicate denial and deletion observation; bounded initial guest readiness failures remain visible in the trace. Do not use an incomplete trace or report as acceptance evidence.
+
+## Local evaluation API access
+
+The disposable validation runner creates two random test identities, `alpha` and `beta`, in the namespace's `vm-api-test` Secret. It unsets its environment tokens on exit but intentionally retains the dedicated cluster for authorized inspection. It is not a production account registration flow. A separate client should receive only an operator-issued, appropriately scoped credential. Do not read another operator's Secret or grant a client Kubernetes permissions.
+
+On the same authorized dedicated host, the operator may forward only the evaluation HTTP endpoint to loopback:
+
+```sh
+kubectl -n vm-interface port-forward --address 127.0.0.1 svc/vm-api 3000:3000
+```
+
+In another Bash terminal on that host, the **cluster operator only** can recover the locally generated `alpha` bootstrap test identity directly into a shell variable, without printing it or storing it in a file. Disable tracing and do not use this on a shared host:
+
+```sh
+set +x
+set -o pipefail
+VM_TOKEN=$(kubectl -n vm-interface get secret vm-api-test -o jsonpath='{.data.identities}' | base64 --decode | python3 -c 'import json,sys; print(json.load(sys.stdin)["alpha"])')
+test -n "$VM_TOKEN"
+API_URL=http://127.0.0.1:3000/api/v1
+curl --fail "$API_URL/health"
+curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/account"
+```
+
+Proceed only if token retrieval and the authenticated account check succeed. Use the same terminal for authorized exploration, or create a scoped account key through the documented API for a separate client. Do not echo, log, commit or transfer bootstrap identity values; do not use raw Kubernetes access to substitute for product API tests. See [API walkthrough](api.md#walkthrough-create-and-operate-a-smoke-vm). When finished, `unset VM_TOKEN`, revoke any issued client keys, stop port-forwarding, and dispose of the dedicated device and data when inspection is complete. Never expose this test API to other hosts.
