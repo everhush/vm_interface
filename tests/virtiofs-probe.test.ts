@@ -1,0 +1,6 @@
+import {test} from "node:test";
+import assert from "node:assert/strict";
+import {objects,verifyResponse} from "../scripts/probe-virtiofs-ci.ts";
+import {sha} from "../scripts/api-client.ts";
+test("probe uses only isolated PVC and disables guest network",()=>{const [pvc,pod,vmi]=objects("fedora@sha256:"+"a".repeat(64),"busybox@sha256:"+"b".repeat(64));assert.deepEqual(pvc.spec.accessModes,["ReadWriteOnce"]);assert.equal(pod.spec.automountServiceAccountToken,false);assert.equal(pod.spec.securityContext.runAsNonRoot,true);assert.equal(vmi.spec.domain.devices.autoattachPodInterface,false);assert.deepEqual(vmi.spec.networks,[]);assert.deepEqual(vmi.spec.domain.devices.filesystems,[{name:"exchange",virtiofs:{}}]);assert.equal(vmi.spec.volumes[2].persistentVolumeClaim?.claimName,"exchange");assert(!JSON.stringify([pod,vmi]).includes("hostPath"));});
+test("requires exact guest response, mount and kernel",()=>{const challenge="abc",raw="sha256="+sha(Buffer.from(challenge))+"\nfilesystem=virtiofs\nkernel=6.1\nvirtio_mem_driver=present\n";assert.equal(verifyResponse(raw,challenge).filesystem,"virtiofs");assert.throws(()=>verifyResponse(raw,"wrong"));assert.throws(()=>verifyResponse(raw.replace("virtiofs","ext4"),challenge));assert.throws(()=>verifyResponse(raw.replace("kernel=6.1","kernel="),challenge));});

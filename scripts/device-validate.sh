@@ -94,7 +94,7 @@ if [ "$profile" = core ]; then
   kubectl -n vm-interface rollout restart deployment/vm-api
   kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
   stage node scripts/e2e-recovery.ts after
-  python3 scripts/probe-virtiofs-ci.py
+  node scripts/probe-virtiofs-ci.ts
 elif [ "$profile" = linux ]; then
   stage python3 scripts/e2e-api-functional-proof.py
 else
