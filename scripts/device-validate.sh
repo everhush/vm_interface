@@ -84,7 +84,7 @@ if [ "$profile" = core ]; then
   stage node --import tsx scripts/e2e-network.ts
   node scripts/verify_network_evidence.ts --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/network-independent-verification.json
   stage node --import tsx scripts/e2e-recording.ts
-  stage python3 scripts/e2e-exchange.py
+  stage node scripts/e2e-exchange.ts
   stage python3 scripts/e2e-api-functional-proof.py
   stage node scripts/e2e-idle.ts
   stage bash scripts/e2e-media-ci.sh

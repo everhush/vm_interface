@@ -204,7 +204,7 @@ jobs:
         run: bash scripts/run-api-tests-ci.sh node --import tsx scripts/e2e-recording.ts
       - name: Actual guest VirtioFS exchange and published bundle
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-exchange.py
+        run: bash scripts/run-api-tests-ci.sh node scripts/e2e-exchange.ts
       - name: Idle-stop semantics
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh node scripts/e2e-idle.ts

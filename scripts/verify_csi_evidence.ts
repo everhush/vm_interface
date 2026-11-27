@@ -11,7 +11,7 @@ export const digest=(data:Buffer)=>createHash("sha256").update(data).digest("hex
 export function capacity(value:string){const m=/^([0-9]+)(Gi|Mi)?$/.exec(value);if(!m)throw Error("Unexpected PVC capacity");const n=Number(m[1])*(m[2]==="Gi"?GIB:m[2]==="Mi"?1024**2:1);if(!Number.isSafeInteger(n))throw Error("Unexpected PVC capacity");return n;}
 type PVC={kind:string;name:string;pvcUid:string;pvcPhase:string;capacity:string;dataVolumeUid?:string;mode?:string;growth:{reservedGiB:number;submitted:boolean;pvcCapacityConverged:boolean;guestDiskGrowthVerified:boolean;guestFilesystemGrowthVerified:boolean}};
 type Proof={commit:string;runId:string;original:Record<string,PVC>;expanded:Record<string,PVC>;inputSha256:string;guestBeforeBytes:number;guestAfterBytes:number;actualVirtioFsGrowthVerified:boolean;samePvcIdentities:boolean;crossAccountDenied:boolean;quotaReserved:boolean;virtualBootDiskGrowthVerified:boolean;guestBootFilesystemGrowthVerified:boolean};
-function tarMembers(data:Buffer){
+export function tarMembers(data:Buffer){
  const result=new Map<string,Buffer>();let pos=0;
  const str=(b:Buffer)=>b.toString("utf8").split("\0")[0];
  const oct=(b:Buffer)=>{const s=str(b).trim();assert(/^[0-7]+$/.test(s),"Invalid tar integer");return parseInt(s,8);};
