@@ -26,3 +26,21 @@ test("growth policy retains dynamic PVC resource checks and fails closed", () =>
   ])
     assert.ok(raw.includes(s));
 });
+
+test("exchange broker admission requires the exact Vite+ loader and only its scoped token plus fixed compile-cache setting", () => {
+  const raw = readFileSync(new URL("../infra/exchange-policy.yaml", import.meta.url), "utf8");
+  for (const expected of [
+    "['node','--import','vite-plus/register','src/run-exchange-broker.ts']",
+    "size(c.env) == 2",
+    "c.env[1].name == 'NODE_DISABLE_COMPILE_CACHE'",
+    "c.env[1].value == '1'",
+    "!has(c.env[1].valueFrom)",
+    "c.env[0].name == 'EXCHANGE_TOKEN'",
+    "!has(c.env[0].valueFrom)",
+    "!has(c.envFrom)",
+    "c.securityContext.readOnlyRootFilesystem",
+    "failurePolicy: Fail",
+    "validationActions: [Deny]",
+  ])
+    assert.ok(raw.includes(expected), expected);
+});

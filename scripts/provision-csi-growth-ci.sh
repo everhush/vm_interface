@@ -4,7 +4,7 @@ set -euo pipefail
 # Kubernetes' metadata-only CSI test driver. It is a disposable CI evaluation.
 test "${GITHUB_ACTIONS:-}" = true
 test "${RUNNER_ENVIRONMENT:-}" = github-hosted
-test "${GITHUB_REPOSITORY:-}" = xad3play/vm_interface
+test "${GITHUB_REPOSITORY:-}" = everhush/vm_interface
 sudo test -c /dev/kvm
 sudo modprobe loop
 sudo test -c /dev/loop-control

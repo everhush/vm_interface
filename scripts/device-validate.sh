@@ -8,7 +8,15 @@ if [ "$profile" = checks ]; then
   command -v tesseract >/dev/null
   npm ci --no-audit --no-fund
   npm run check
-  npm test
+  if [ -n "${VM_STATIC_TEST_REPORT:-}" ]; then
+    test_report="$VM_STATIC_TEST_REPORT"
+    test ! -e "$test_report"
+  else
+    test_report=$(mktemp -t vm-interface-tests.XXXXXX.json)
+    trap 'rm -f "$test_report"' EXIT
+  fi
+  npm test -- --reporter=json --outputFile="$test_report"
+  node scripts/verify-static-test-report.ts "$test_report"
   npm run build
   node scripts/check-source-migration.ts
   NODE_DISABLE_COMPILE_CACHE=1 node --import vite-plus/register --input-type=module -e 'await import("./src/exchange.ts"); await import("./scripts/android-guest-transfer.ts");'

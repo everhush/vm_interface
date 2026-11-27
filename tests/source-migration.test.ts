@@ -67,6 +67,10 @@ test("reject redundant standalone tool configuration and executable paths", () =
   assert(
     migrationViolations("src/exchange.ts", 'const env={name:"TSX_DISABLE_CACHE",value:"1"}').length,
   );
+  assert(
+    migrationViolations("scripts/android-guest-transfer.ts", '["--import","tsx","relay.ts"]')
+      .length,
+  );
   assert(migrationViolations("tests/example.test.ts", 'import test from "node:test"').length);
   assert.deepEqual(
     migrationViolations(
@@ -83,6 +87,23 @@ test("reject redundant standalone tool configuration and executable paths", () =
   );
   assert.deepEqual(
     migrationViolations("scripts/run.sh", "node --import vite-plus/register src/run.ts"),
+    [],
+  );
+  assert(
+    migrationViolations("package.json", JSON.stringify({ devDependencies: { vite: "^8.0.0" } }))
+      .length,
+  );
+  assert(
+    migrationViolations(
+      "package-lock.json",
+      JSON.stringify({ packages: { "node_modules/eslint": { version: "9.0.0" } } }),
+    ).length,
+  );
+  assert.deepEqual(
+    migrationViolations(
+      "package-lock.json",
+      JSON.stringify({ packages: { "node_modules/vite-plus": { version: "1.8.0" } } }),
+    ),
     [],
   );
 });

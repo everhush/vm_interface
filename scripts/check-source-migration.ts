@@ -19,12 +19,21 @@ export function migrationViolations(path: string, content: string) {
       devDependencies?: Record<string, string>;
       scripts?: Record<string, string>;
     };
+    const vite = { ...pkg.dependencies, ...pkg.devDependencies }.vite;
+    if (vite && !vite.startsWith("npm:@voidzero-dev/vite-plus-core@"))
+      errors.push("standalone Vite dependency");
     for (const name of ["eslint", "typescript-eslint", "tsx", "vitest", "oxlint", "oxfmt"])
       if (name in { ...pkg.dependencies, ...pkg.devDependencies })
         errors.push("standalone tool dependency: " + name);
     for (const command of Object.values(pkg.scripts ?? {}))
       if (/(?:^|[;&|]\s*)(?:eslint|tsx|tsc|vite|vitest|oxlint|oxfmt)(?:\s|$)/.test(command))
         errors.push("standalone tool command: " + command);
+  }
+  if (path === "package-lock.json") {
+    const lock = JSON.parse(content) as { packages?: Record<string, unknown> };
+    for (const name of Object.keys(lock.packages ?? {}))
+      if (/(?:^|\/)node_modules\/(?:eslint|typescript-eslint|tsx)$/.test(name))
+        errors.push("legacy installed dependency: " + name);
   }
   if (
     !/^(?:scripts\/|tests\/|src\/|app\/|infra\/|showcases\/|\.github\/workflows\/|package\.json$)/.test(
