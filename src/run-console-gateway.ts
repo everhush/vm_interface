@@ -1,2 +1,2 @@
-import {startGateway} from "./console-gateway";
+import { startGateway } from "./console-gateway";
 startGateway();

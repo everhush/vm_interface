@@ -1,79 +1,190 @@
-import {test} from "vite-plus/test";
+import { test } from "vite-plus/test";
 import assert from "node:assert/strict";
-import {vmManifest,type ComputerSpec} from "../src/spec";
-import {coldDataDiskPatch,readDataDisks,DATA_DISKS_ANNOTATION,dataDiskClaim,dataDiskSerial} from "../src/data-disk-layout";
-import {dataDiskSpec,dataDiskManifest} from "../src/data-disks";
-import {desiredUsage} from "../src/quota";
-import {managedDisks} from "../src/storage";
-import {mediaDeclaration,isMediaSlot} from "../src/media";
-import type {Resource} from "../src/kube";
-const id="vm-"+"a".repeat(32),uid="test-uid",rv="3";
-const spec:ComputerSpec={version:1,name:"disk-test",architecture:"amd64",cpu:1,memoryMiB:512,image:"cirros-smoke",storage:{systemGiB:2,exchangeGiB:1}};
-function vm():Resource{const m=vmManifest(id,"alpha",spec);return {...m,metadata:{...m.metadata,uid,resourceVersion:rv}}}
-function apply(vm:Resource,r:ReturnType<typeof coldDataDiskPatch>){
- const s=vm.spec as {template:{metadata:{annotations?:Record<string,string>};spec:{domain:{devices:{disks:unknown[]}};volumes:unknown[]}}};
- s.template.metadata.annotations={...s.template.metadata.annotations,...r.patch.spec.template.metadata.annotations};
- s.template.spec.domain.devices.disks=r.patch.spec.template.spec.domain.devices.disks;
- s.template.spec.volumes=r.patch.spec.template.spec.volumes;
+import { vmManifest, type ComputerSpec } from "../src/spec";
+import {
+  coldDataDiskPatch,
+  readDataDisks,
+  DATA_DISKS_ANNOTATION,
+  dataDiskClaim,
+  dataDiskSerial,
+} from "../src/data-disk-layout";
+import { dataDiskSpec, dataDiskManifest } from "../src/data-disks";
+import { desiredUsage } from "../src/quota";
+import { managedDisks } from "../src/storage";
+import { mediaDeclaration, isMediaSlot } from "../src/media";
+import type { Resource } from "../src/kube";
+const id = "vm-" + "a".repeat(32),
+  uid = "test-uid",
+  rv = "3";
+const spec: ComputerSpec = {
+  version: 1,
+  name: "disk-test",
+  architecture: "amd64",
+  cpu: 1,
+  memoryMiB: 512,
+  image: "cirros-smoke",
+  storage: { systemGiB: 2, exchangeGiB: 1 },
+};
+function vm(): Resource {
+  const m = vmManifest(id, "alpha", spec);
+  return { ...m, metadata: { ...m.metadata, uid, resourceVersion: rv } };
 }
-test("create, attach and detach keep reservation and disk identity; only attached data disk enters VM volumes",()=>{
- const v=vm(),create=coldDataDiskPatch(v,null,id,{action:"create",name:"work",sizeGiB:2,expectedResourceVersion:rv});apply(v,create);
- assert.equal(desiredUsage(v.spec).storageGiB,5);
- assert.deepEqual(readDataDisks(v,id),[{name:"work",sizeGiB:2,attached:false}]);
- assert.equal(managedDisks(v,id).find(d=>d.kind==="data")?.name,dataDiskClaim(id,"work"));
- assert.equal(create.patch.spec.template.spec.volumes.some(x=>x.name==="data-work"),false);
- apply(v,coldDataDiskPatch(v,null,id,{action:"attach",name:"work",expectedResourceVersion:rv}));
- assert.equal(readDataDisks(v,id)[0].attached,true);
- const attached=(v.spec as {template:{spec:{domain:{devices:{disks:{name:string;serial?:string}[]}}}}}).template.spec.domain.devices.disks.find(d=>d.name==="data-work");
- assert.equal(attached?.serial,dataDiskSerial("work"));assert.equal(dataDiskSerial("abcdefghijklmnop").length,18);
- assert.equal(desiredUsage(v.spec).storageGiB,5);
- apply(v,coldDataDiskPatch(v,null,id,{action:"detach",name:"work",expectedResourceVersion:rv}));
- assert.equal(readDataDisks(v,id)[0].attached,false);assert.equal(desiredUsage(v.spec).storageGiB,5);
- assert.equal(managedDisks(v,id).filter(d=>d.kind==="data").length,1);
+function apply(vm: Resource, r: ReturnType<typeof coldDataDiskPatch>) {
+  const s = vm.spec as {
+    template: {
+      metadata: { annotations?: Record<string, string> };
+      spec: { domain: { devices: { disks: unknown[] } }; volumes: unknown[] };
+    };
+  };
+  s.template.metadata.annotations = {
+    ...s.template.metadata.annotations,
+    ...r.patch.spec.template.metadata.annotations,
+  };
+  s.template.spec.domain.devices.disks = r.patch.spec.template.spec.domain.devices.disks;
+  s.template.spec.volumes = r.patch.spec.template.spec.volumes;
+}
+test("create, attach and detach keep reservation and disk identity; only attached data disk enters VM volumes", () => {
+  const v = vm(),
+    create = coldDataDiskPatch(v, null, id, {
+      action: "create",
+      name: "work",
+      sizeGiB: 2,
+      expectedResourceVersion: rv,
+    });
+  apply(v, create);
+  assert.equal(desiredUsage(v.spec).storageGiB, 5);
+  assert.deepEqual(readDataDisks(v, id), [{ name: "work", sizeGiB: 2, attached: false }]);
+  assert.equal(managedDisks(v, id).find((d) => d.kind === "data")?.name, dataDiskClaim(id, "work"));
+  assert.equal(
+    create.patch.spec.template.spec.volumes.some((x) => x.name === "data-work"),
+    false,
+  );
+  apply(
+    v,
+    coldDataDiskPatch(v, null, id, { action: "attach", name: "work", expectedResourceVersion: rv }),
+  );
+  assert.equal(readDataDisks(v, id)[0].attached, true);
+  const attached = (
+    v.spec as {
+      template: { spec: { domain: { devices: { disks: { name: string; serial?: string }[] } } } };
+    }
+  ).template.spec.domain.devices.disks.find((d) => d.name === "data-work");
+  assert.equal(attached?.serial, dataDiskSerial("work"));
+  assert.equal(dataDiskSerial("abcdefghijklmnop").length, 18);
+  assert.equal(desiredUsage(v.spec).storageGiB, 5);
+  apply(
+    v,
+    coldDataDiskPatch(v, null, id, { action: "detach", name: "work", expectedResourceVersion: rv }),
+  );
+  assert.equal(readDataDisks(v, id)[0].attached, false);
+  assert.equal(desiredUsage(v.spec).storageGiB, 5);
+  assert.equal(managedDisks(v, id).filter((d) => d.kind === "data").length, 1);
 });
-test("reject running, stale, duplicate, malformed, unregistered and traversal disk requests",()=>{
- const v=vm(),r={action:"create" as const,name:"work",sizeGiB:1,expectedResourceVersion:rv};
- assert.throws(()=>coldDataDiskPatch(v,{},id,r),/Stop the VM/);
- assert.throws(()=>coldDataDiskPatch(v,null,id,{...r,expectedResourceVersion:"old"}),/resource version/);
- assert.equal(dataDiskSpec.safeParse({...r,name:"../foreign"}).success,false);
- assert.equal(dataDiskSpec.safeParse({...r,sizeGiB:9}).success,false);
- assert.equal(dataDiskSpec.safeParse({...r,claimName:"other-account"}).success,false);
- apply(v,coldDataDiskPatch(v,null,id,r));
- assert.throws(()=>coldDataDiskPatch(v,null,id,r),/name exists/);
- assert.throws(()=>coldDataDiskPatch(v,null,id,{action:"detach",name:"absent",expectedResourceVersion:rv}),/not found/);
- const s=v.spec as {template:{metadata:{annotations:Record<string,string>}}};s.template.metadata.annotations[DATA_DISKS_ANNOTATION]='[{"name":"work","sizeGiB":1,"attached":true}]';
- assert.throws(()=>readDataDisks(v,id),/Unrecognized/);
+test("reject running, stale, duplicate, malformed, unregistered and traversal disk requests", () => {
+  const v = vm(),
+    r = { action: "create" as const, name: "work", sizeGiB: 1, expectedResourceVersion: rv };
+  assert.throws(() => coldDataDiskPatch(v, {}, id, r), /Stop the VM/);
+  assert.throws(
+    () => coldDataDiskPatch(v, null, id, { ...r, expectedResourceVersion: "old" }),
+    /resource version/,
+  );
+  assert.equal(dataDiskSpec.safeParse({ ...r, name: "../foreign" }).success, false);
+  assert.equal(dataDiskSpec.safeParse({ ...r, sizeGiB: 9 }).success, false);
+  assert.equal(dataDiskSpec.safeParse({ ...r, claimName: "other-account" }).success, false);
+  apply(v, coldDataDiskPatch(v, null, id, r));
+  assert.throws(() => coldDataDiskPatch(v, null, id, r), /name exists/);
+  assert.throws(
+    () =>
+      coldDataDiskPatch(v, null, id, {
+        action: "detach",
+        name: "absent",
+        expectedResourceVersion: rv,
+      }),
+    /not found/,
+  );
+  const s = v.spec as { template: { metadata: { annotations: Record<string, string> } } };
+  s.template.metadata.annotations[DATA_DISKS_ANNOTATION] =
+    '[{"name":"work","sizeGiB":1,"attached":true}]';
+  assert.throws(() => readDataDisks(v, id), /Unrecognized/);
 });
-test("blank CDI disk manifest has fixed namespace-independent name, owner, storage and no import URL",()=>{
- const m=dataDiskManifest(id,"alpha",uid,{name:"work",sizeGiB:2,attached:false});
- assert.equal(m.metadata.name,id+"-data-work");assert.equal(m.metadata.ownerReferences[0].uid,uid);
- assert.deepEqual(m.spec.source,{blank:{}});assert.equal(m.spec.storage.resources.requests.storage,"2Gi");
+test("blank CDI disk manifest has fixed namespace-independent name, owner, storage and no import URL", () => {
+  const m = dataDiskManifest(id, "alpha", uid, { name: "work", sizeGiB: 2, attached: false });
+  assert.equal(m.metadata.name, id + "-data-work");
+  assert.equal(m.metadata.ownerReferences[0].uid, uid);
+  assert.deepEqual(m.spec.source, { blank: {} });
+  assert.equal(m.spec.storage.resources.requests.storage, "2Gi");
 });
 
-test("clone is cold, source-scoped, capacity-accounted and never self-referential",()=>{
- const v=vm(),create=coldDataDiskPatch(v,null,id,{action:"create",name:"work",sizeGiB:2,expectedResourceVersion:rv});apply(v,create);
- const clone={action:"clone" as const,name:"copy",source:"work",sizeGiB:2,expectedResourceVersion:rv};
- assert.throws(()=>coldDataDiskPatch(v,null,id,{...clone,sizeGiB:1}),/at least/);
- assert.throws(()=>coldDataDiskPatch(v,null,id,{...clone,source:"other"}),/not found/);
- assert.throws(()=>coldDataDiskPatch(v,{},id,clone),/Stop the VM/);
- assert.equal(dataDiskSpec.safeParse({...clone,source:"../other"}).success,false);
- apply(v,coldDataDiskPatch(v,null,id,clone));
- assert.equal(desiredUsage(v.spec).storageGiB,7);
- const d=readDataDisks(v,id)[1];assert.equal(d.source,"work");assert.equal(d.attached,false);
- const m=dataDiskManifest(id,"alpha",uid,d);assert.equal(m.spec.source.pvc?.name,dataDiskClaim(id,"work"));assert.equal(m.metadata.name,dataDiskClaim(id,"copy"));
- assert.equal(m.metadata.annotations?.["cdi.kubevirt.io/storage.bind.immediate.requested"],"true");
+test("clone is cold, source-scoped, capacity-accounted and never self-referential", () => {
+  const v = vm(),
+    create = coldDataDiskPatch(v, null, id, {
+      action: "create",
+      name: "work",
+      sizeGiB: 2,
+      expectedResourceVersion: rv,
+    });
+  apply(v, create);
+  const clone = {
+    action: "clone" as const,
+    name: "copy",
+    source: "work",
+    sizeGiB: 2,
+    expectedResourceVersion: rv,
+  };
+  assert.throws(() => coldDataDiskPatch(v, null, id, { ...clone, sizeGiB: 1 }), /at least/);
+  assert.throws(() => coldDataDiskPatch(v, null, id, { ...clone, source: "other" }), /not found/);
+  assert.throws(() => coldDataDiskPatch(v, {}, id, clone), /Stop the VM/);
+  assert.equal(dataDiskSpec.safeParse({ ...clone, source: "../other" }).success, false);
+  apply(v, coldDataDiskPatch(v, null, id, clone));
+  assert.equal(desiredUsage(v.spec).storageGiB, 7);
+  const d = readDataDisks(v, id)[1];
+  assert.equal(d.source, "work");
+  assert.equal(d.attached, false);
+  const m = dataDiskManifest(id, "alpha", uid, d);
+  assert.equal(m.spec.source.pvc?.name, dataDiskClaim(id, "work"));
+  assert.equal(m.metadata.name, dataDiskClaim(id, "copy"));
+  assert.equal(
+    m.metadata.annotations?.["cdi.kubevirt.io/storage.bind.immediate.requested"],
+    "true",
+  );
 });
 
-test("declared data disk import has a fixed media slot, digest and capacity",()=>{
- const v=vm(),media={format:"raw" as const,bytes:512,sha256:"0".repeat(64),source:"client fixture",os:"test",version:"1",authorizedByClient:true as const};
- const request={action:"import" as const,name:"extra",sizeGiB:1,media,expectedResourceVersion:rv};
- assert.throws(()=>coldDataDiskPatch(v,null,id,{...request,media:{...media,format:"iso"}}),/raw\/QCOW2/);
- assert.equal(dataDiskSpec.safeParse({...request,media:{...media,authorizedByClient:false}}).success,false);
- apply(v,coldDataDiskPatch(v,null,id,request));
- const disk=readDataDisks(v,id)[0];assert.deepEqual(disk.media,media);
- assert.deepEqual(dataDiskManifest(id,"alpha",uid,disk).spec.source,{upload:{}});
- assert.equal(desiredUsage(v.spec).storageGiB,4);
- assert.deepEqual(mediaDeclaration(v,id,"data-extra"),{slot:"data-extra",name:dataDiskClaim(id,"extra"),metadata:media});
- assert.equal(mediaDeclaration(v,id,"data-unknown"),null);
- assert.equal(isMediaSlot("data-../other"),false);
+test("declared data disk import has a fixed media slot, digest and capacity", () => {
+  const v = vm(),
+    media = {
+      format: "raw" as const,
+      bytes: 512,
+      sha256: "0".repeat(64),
+      source: "client fixture",
+      os: "test",
+      version: "1",
+      authorizedByClient: true as const,
+    };
+  const request = {
+    action: "import" as const,
+    name: "extra",
+    sizeGiB: 1,
+    media,
+    expectedResourceVersion: rv,
+  };
+  assert.throws(
+    () => coldDataDiskPatch(v, null, id, { ...request, media: { ...media, format: "iso" } }),
+    /raw\/QCOW2/,
+  );
+  assert.equal(
+    dataDiskSpec.safeParse({ ...request, media: { ...media, authorizedByClient: false } }).success,
+    false,
+  );
+  apply(v, coldDataDiskPatch(v, null, id, request));
+  const disk = readDataDisks(v, id)[0];
+  assert.deepEqual(disk.media, media);
+  assert.deepEqual(dataDiskManifest(id, "alpha", uid, disk).spec.source, { upload: {} });
+  assert.equal(desiredUsage(v.spec).storageGiB, 4);
+  assert.deepEqual(mediaDeclaration(v, id, "data-extra"), {
+    slot: "data-extra",
+    name: dataDiskClaim(id, "extra"),
+    metadata: media,
+  });
+  assert.equal(mediaDeclaration(v, id, "data-unknown"), null);
+  assert.equal(isMediaSlot("data-../other"), false);
 });

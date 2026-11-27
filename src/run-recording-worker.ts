@@ -1,2 +1,2 @@
-import {runRecordingWorker} from "./recording-worker";
+import { runRecordingWorker } from "./recording-worker";
 void runRecordingWorker();

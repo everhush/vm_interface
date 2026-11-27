@@ -1,31 +1,48 @@
-import {test} from "vite-plus/test";
+import { test } from "vite-plus/test";
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
-import {renderManaged} from "../scripts/render-managed-kubernetes.ts";
-import {brokerImage,LOCAL_IMAGE} from "../src/cluster-image";
-import {exchangePod} from "../src/exchange";
-const read=(p:string)=>readFileSync(new URL("../infra/"+p,import.meta.url),"utf8");
-const base={namespace:read("namespace.yaml"),app:read("app.yaml"),exchange:read("exchange-policy.yaml"),exportPolicy:read("disk-export-policy.yaml")};
-const image="registry.example.org/team/vm-interface@sha256:"+"a".repeat(64);
-test("managed rendering fixes the image, pull policy, storage profile and admission together",()=>{
- const r=renderManaged(base,image);
- assert.equal(r.app.split("image: "+image).length-1,4);
- assert.equal(r.app.split("imagePullPolicy: IfNotPresent").length-1,4);
- assert.equal(r.app.split("name: VM_STORAGE_CLASS").length-1,2);
- assert.equal(r.app.split("name: VM_BROKER_IMAGE").length-1,1);
- assert.equal(r.namespace.split("storageClassName: vm-managed").length-1,3);
- assert.match(r.namespace,/storageClass: vm-managed/);
- assert.ok(r.exchange.includes("image == '"+image+"'"));
- assert.ok(r.exchange.includes("imagePullPolicy == 'IfNotPresent'"));
- assert.equal(r.exchange.split("['vm-managed']").length-1,2);
- assert.equal(r.exportPolicy,base.exportPolicy);
- assert.equal(brokerImage(image).imagePullPolicy,"IfNotPresent");
- assert.equal(brokerImage(LOCAL_IMAGE).imagePullPolicy,"Never");
- const p=exchangePod("vm-"+"a".repeat(32),"alpha","uid","a".repeat(43));
- assert.equal(p.spec.containers[0].image,LOCAL_IMAGE);
+import { readFileSync } from "node:fs";
+import { renderManaged } from "../scripts/render-managed-kubernetes.ts";
+import { brokerImage, LOCAL_IMAGE } from "../src/cluster-image";
+import { exchangePod } from "../src/exchange";
+const read = (p: string) => readFileSync(new URL("../infra/" + p, import.meta.url), "utf8");
+const base = {
+  namespace: read("namespace.yaml"),
+  app: read("app.yaml"),
+  exchange: read("exchange-policy.yaml"),
+  exportPolicy: read("disk-export-policy.yaml"),
+};
+const image = "registry.example.org/team/vm-interface@sha256:" + "a".repeat(64);
+test("managed rendering fixes the image, pull policy, storage profile and admission together", () => {
+  const r = renderManaged(base, image);
+  assert.equal(r.app.split("image: " + image).length - 1, 4);
+  assert.equal(r.app.split("imagePullPolicy: IfNotPresent").length - 1, 4);
+  assert.equal(r.app.split("name: VM_STORAGE_CLASS").length - 1, 2);
+  assert.equal(r.app.split("name: VM_BROKER_IMAGE").length - 1, 1);
+  assert.equal(r.namespace.split("storageClassName: vm-managed").length - 1, 3);
+  assert.match(r.namespace, /storageClass: vm-managed/);
+  assert.ok(r.exchange.includes("image == '" + image + "'"));
+  assert.ok(r.exchange.includes("imagePullPolicy == 'IfNotPresent'"));
+  assert.equal(r.exchange.split("['vm-managed']").length - 1, 2);
+  assert.equal(r.exportPolicy, base.exportPolicy);
+  assert.equal(brokerImage(image).imagePullPolicy, "IfNotPresent");
+  assert.equal(brokerImage(LOCAL_IMAGE).imagePullPolicy, "Never");
+  const p = exchangePod("vm-" + "a".repeat(32), "alpha", "uid", "a".repeat(43));
+  assert.equal(p.spec.containers[0].image, LOCAL_IMAGE);
 });
-test("reject mutable, malformed or injected registry references and stale base manifests",()=>{
- for(const s of ["registry.example.org/test:latest",image+"'",image+"\n","https://"+image,"foo/../bar@sha256:"+"a".repeat(64)])assert.throws(()=>renderManaged(base,s));
- assert.throws(()=>brokerImage("mutable:latest"));
- assert.throws(()=>renderManaged({...base,exchange:base.exchange.replace("imagePullPolicy == 'Never'","true")},image));
+test("reject mutable, malformed or injected registry references and stale base manifests", () => {
+  for (const s of [
+    "registry.example.org/test:latest",
+    image + "'",
+    image + "\n",
+    "https://" + image,
+    "foo/../bar@sha256:" + "a".repeat(64),
+  ])
+    assert.throws(() => renderManaged(base, s));
+  assert.throws(() => brokerImage("mutable:latest"));
+  assert.throws(() =>
+    renderManaged(
+      { ...base, exchange: base.exchange.replace("imagePullPolicy == 'Never'", "true") },
+      image,
+    ),
+  );
 });

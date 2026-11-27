@@ -55,18 +55,18 @@ Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/K
 
 ## Current capability status
 
-| Capability | Qualification |
-| --- | --- |
-| x86_64 lifecycle, account isolation, quotas, restart/recovery | Hosted native KVM passed |
-| BIOS/UEFI boot, persistent system/exchange and data disks, cold CPU/RAM change | Hosted native KVM passed |
-| Direct/resumable CDI, dual disk, registered images, cache, clone/export | Hosted native KVM passed |
-| RFB display, screenshots, keyboard/tablet, input ownership and hard reset | Hosted native KVM passed |
-| Fedora 44 application install/run, archive, guest result, original recording | Hosted native KVM passed |
-| VirtioFS file exchange and private TCP tunnel | Hosted native KVM passed |
-| CSI growth | Qualified evaluation driver; guest exchange growth and unchanged PVC identities verified; guest boot filesystem growth not claimed |
-| Android ARM64 | Pinned media, APK and scenarios prepared; actual guest boot and runtime pending native device |
-| Windows | Optional historical experiments; not a release requirement or certified guest |
-| GPU, live migration/resize, virtio-mem, snapshots and additional hardware/OS combinations | Conditional or unverified; never assume availability |
+| Capability                                                                                | Qualification                                                                                                                      |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| x86_64 lifecycle, account isolation, quotas, restart/recovery                             | Hosted native KVM passed                                                                                                           |
+| BIOS/UEFI boot, persistent system/exchange and data disks, cold CPU/RAM change            | Hosted native KVM passed                                                                                                           |
+| Direct/resumable CDI, dual disk, registered images, cache, clone/export                   | Hosted native KVM passed                                                                                                           |
+| RFB display, screenshots, keyboard/tablet, input ownership and hard reset                 | Hosted native KVM passed                                                                                                           |
+| Fedora 44 application install/run, archive, guest result, original recording              | Hosted native KVM passed                                                                                                           |
+| VirtioFS file exchange and private TCP tunnel                                             | Hosted native KVM passed                                                                                                           |
+| CSI growth                                                                                | Qualified evaluation driver; guest exchange growth and unchanged PVC identities verified; guest boot filesystem growth not claimed |
+| Android ARM64                                                                             | Pinned media, APK and scenarios prepared; actual guest boot and runtime pending native device                                      |
+| Windows                                                                                   | Optional historical experiments; not a release requirement or certified guest                                                      |
+| GPU, live migration/resize, virtio-mem, snapshots and additional hardware/OS combinations | Conditional or unverified; never assume availability                                                                               |
 
 Full results and exact commit: [validation record](docs/validation.md). The runtime capability/schema endpoints are authoritative for allowed configurations; a supported request is not a guarantee of guest conformance.
 
@@ -124,26 +124,26 @@ See the [API guide](docs/api.md#walkthrough-create-and-operate-a-smoke-vm) for a
 
 The final hosted candidate passed **152 automated tests** (93 TypeScript + 59 Python), all **13 recorded core native stages**, real CSI qualification and Android input preparation. Both original H.264 guest recordings were independently decoded and matched to actual API traces and guest results.
 
-| Hosted workflow | Result |
-| --- | --- |
-| [Core KVM + static checks](https://github.com/xad3play/vm_interface/actions/runs/45954535380) | Pass |
-| [Real CSI expansion](https://github.com/xad3play/vm_interface/actions/runs/45954542680) | Pass |
+| Hosted workflow                                                                                               | Result              |
+| ------------------------------------------------------------------------------------------------------------- | ------------------- |
+| [Core KVM + static checks](https://github.com/xad3play/vm_interface/actions/runs/45954535380)                 | Pass                |
+| [Real CSI expansion](https://github.com/xad3play/vm_interface/actions/runs/45954542680)                       | Pass                |
 | [Android media and signed APK preparation](https://github.com/xad3play/vm_interface/actions/runs/45954551058) | Pass (offline only) |
 
 Actions runs were executed in a CI-only synchronized fork. Access to historical run artifacts may require repository authorization and artifacts may expire. The durable [validation record](docs/validation.md) documents run IDs, artifact digests, observed results and limitations without publishing raw logs, guest data or credentials. The upstream main branch includes documentation/license-only changes after the exact tested commit. It does not claim a new same-SHA CI result.
 
 ## Repository map
 
-| Path | Purpose |
-| --- | --- |
-| `app/` | Vinext app and versioned API route |
-| `src/` | VM schema, operations, persistence, storage, gateways and workers |
-| `infra/` | K3s/KubeVirt/CDI/CNPG deployment and least-privilege policies |
-| `scripts/` | Provisioning, API-only tests, media acquisition and verifiers |
-| `showcases/` | Android APK and optional Windows media/guest fixtures |
-| `tests/` | TypeScript unit and regression checks |
-| `docs/` | Public guides, qualification ledger and archived design specification |
-| `.github/workflows/` | Hosted qualification workflows; execution guarded to the CI fork |
+| Path                 | Purpose                                                               |
+| -------------------- | --------------------------------------------------------------------- |
+| `app/`               | Vinext app and versioned API route                                    |
+| `src/`               | VM schema, operations, persistence, storage, gateways and workers     |
+| `infra/`             | K3s/KubeVirt/CDI/CNPG deployment and least-privilege policies         |
+| `scripts/`           | Provisioning, API-only tests, media acquisition and verifiers         |
+| `showcases/`         | Android APK and optional Windows media/guest fixtures                 |
+| `tests/`             | TypeScript unit and regression checks                                 |
+| `docs/`              | Public guides, qualification ledger and archived design specification |
+| `.github/workflows/` | Hosted qualification workflows; execution guarded to the CI fork      |
 
 ## Roadmap and boundaries
 
