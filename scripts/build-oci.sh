@@ -20,7 +20,7 @@ cleanup() {
 trap cleanup EXIT
 mkdir "$work/context"
 # Only tracked application sources and locked dependencies enter the image.
-git archive HEAD app src package.json package-lock.json tsconfig.json vite.config.ts | tar -x -C "$work/context"
+git archive HEAD app src package.json package-lock.json tsconfig.json vite.config.ts LICENSE NOTICE | tar -x -C "$work/context"
 base="${VM_OCI_BASE_IMAGE:-docker.io/library/node:24-bookworm-slim}"
 ctr="$(b from --pull=always "$base")"
 b run --isolation chroot "$ctr" -- sh -ec 'apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*'
@@ -33,8 +33,8 @@ b config --env NODE_ENV=production --env HOST=0.0.0.0 --env PORT=3000 --user 100
 b commit --format oci "$ctr" localhost/vm-interface:ci
 b push --format oci localhost/vm-interface:ci "oci-archive:$work/image.tar:ci"
 # Check the archive is an actual OCI image layout before importing or publishing.
-tar -tf "$work/image.tar" | grep -Fx 'oci-layout'
-tar -tf "$work/image.tar" | grep -Fx 'index.json'
+sudo tar -tf "$work/image.tar" | grep -Fx 'oci-layout'
+sudo tar -tf "$work/image.tar" | grep -Fx 'index.json'
 if [ "$mode" = k3s ]; then
   sudo k3s ctr -n k8s.io images import --base-name localhost/vm-interface "$work/image.tar"
   sudo k3s ctr -n k8s.io images list -q | grep -Fx 'localhost/vm-interface:ci'

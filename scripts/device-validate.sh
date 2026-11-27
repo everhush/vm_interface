@@ -71,7 +71,7 @@ if [ "$profile" = windows ] || [ "$profile" = android ]; then
   kubectl -n vm-interface get pvc vm-media-stage -o json | node scripts/device_profile.ts verify-pvc "$profile"
 fi
 kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
-python3 scripts/check-rbac-ci.py
+node scripts/check-rbac-ci.ts
 export CONSOLE_CA_PATH="$tls/ca" RECOVERY_STATE_PATH="$tls/recovery.json"
 stage() { bash scripts/run-api-tests-ci.sh "$@"; }
 if [ "$profile" = core ]; then

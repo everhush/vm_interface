@@ -68,7 +68,7 @@ jobs:
           chmod 644 /tmp/console-tls.crt
           kubectl apply -f infra/app.yaml
           kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
-          python3 scripts/check-rbac-ci.py
+          node scripts/check-rbac-ci.ts
       - name: API smoke and tenant isolation
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-smoke.py

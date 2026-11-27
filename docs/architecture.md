@@ -25,3 +25,7 @@ Guest data, media staging, recordings and metadata have distinct lifetimes. CDI 
 The supported evaluation is a fresh disposable Linux device with real KVM. The pinned manifests provision K3s, KubeVirt, CDI and CNPG. The namespace deployment runs API, console, recording and reconciliation processes, with dedicated storage and scoped Kubernetes identities. The exchange broker is used for mounted file access. No public internet ingress or production identity provider is supplied. The application starts from locked npm dependencies; operator release manifests have exact integrity pins, not a blanket signature/SBOM claim.
 
 See [device validation](device-validation.md), [API](api.md), [security policy](../SECURITY.md), and [validation results](validation.md). The [original specification](product-specification.md) is an aspirational scope/acceptance record, not an implemented feature list.
+
+## Deployment profiles
+
+The application is packaged as an OCI image. Local disposable K3s uses an isolated Buildah image store and imports the image archive into K3s containerd; no separate container engine is used for application deployment. Remote managed Kubernetes uses a registry image pinned by digest, operator-installed KubeVirt/CDI/CNPG, and a provider CSI class named `vm-managed`. See [managed Kubernetes](managed-kubernetes.md). Managed-cluster execution is not yet qualified; no production claims.

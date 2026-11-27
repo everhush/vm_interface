@@ -43,7 +43,7 @@ jobs:
           chmod 644 /tmp/console-tls.crt
           kubectl apply -f infra/app.yaml
           kubectl -n vm-interface rollout status deployment/vm-api --timeout=300s
-          python3 scripts/check-rbac-ci.py
+          node scripts/check-rbac-ci.ts
       - name: Install pinned real expandable CSI driver
         run: bash scripts/provision-csi-growth-ci.sh
       - name: Exercise actual guest and native expansion using public API

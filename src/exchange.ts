@@ -4,6 +4,7 @@ import {ApiError,kube,owned,pvcPath,type Resource} from "./kube";
 import {diskNames} from "./spec";
 import {hasOwner,managedDisks} from "./storage";
 import {vmStorageClass,type ManagedStorageClass} from "./storage-class";
+import {brokerImage} from "./cluster-image";
 import {growthFor,growthState} from "./storage-growth-layout";
 const ns=()=>process.env.VM_NAMESPACE||"vm-interface";
 const podsPath=(id="")=>"/api/v1/namespaces/"+ns()+"/pods"+(id?"/"+id:"");
@@ -32,7 +33,7 @@ export function exchangePod(id:string,account:string,uid:string,token:string){
  return {apiVersion:"v1",kind:"Pod",metadata:{name:id+"-files",labels:{"vm-interface.io/account":account,"vm-interface.io/computer":id,"vm-interface.io/exchange-broker":"true"},ownerReferences:owner(id,uid)},spec:{
  automountServiceAccountToken:false,enableServiceLinks:false,restartPolicy:"Always",
  securityContext:{runAsNonRoot:true,runAsUser:107,runAsGroup:107,fsGroup:107,seccompProfile:{type:"RuntimeDefault"}},
- containers:[{name:"files",image:"vm-interface:ci",imagePullPolicy:"Never",command:["node","--import","tsx","src/run-exchange-broker.ts"],env:[{name:"EXCHANGE_TOKEN",value:token},{name:"TSX_DISABLE_CACHE",value:"1"}],ports:[{containerPort:8080}],resources:{requests:{cpu:"25m",memory:"64Mi"},limits:{cpu:"500m",memory:"256Mi"}},securityContext:{allowPrivilegeEscalation:false,readOnlyRootFilesystem:true,capabilities:{drop:["ALL"]}},volumeMounts:[{name:"exchange",mountPath:"/exchange"}],readinessProbe:{tcpSocket:{port:8080}}}],
+ containers:[{name:"files",...brokerImage(),command:["node","--import","tsx","src/run-exchange-broker.ts"],env:[{name:"EXCHANGE_TOKEN",value:token},{name:"TSX_DISABLE_CACHE",value:"1"}],ports:[{containerPort:8080}],resources:{requests:{cpu:"25m",memory:"64Mi"},limits:{cpu:"500m",memory:"256Mi"}},securityContext:{allowPrivilegeEscalation:false,readOnlyRootFilesystem:true,capabilities:{drop:["ALL"]}},volumeMounts:[{name:"exchange",mountPath:"/exchange"}],readinessProbe:{tcpSocket:{port:8080}}}],
  volumes:[{name:"exchange",persistentVolumeClaim:{claimName:diskNames(id).exchange}}]
  }};
 }
@@ -71,7 +72,7 @@ export async function exchangeRequest(id:string,account:string,method:"GET"|"PUT
   const next=await optional(podsPath(id+"-files"));if(!next)throw new ApiError(409,"Exchange broker not ready");
   verify(next,id,account,vm.metadata?.uid??"");pod=next as Pod;
  }
- const ip=pod.status?.podIP,token=pod.spec?.containers?.find(c=>c.name==="files"&&c.image==="vm-interface:ci")?.env?.find(x=>x.name==="EXCHANGE_TOKEN")?.value;
+ const ip=pod.status?.podIP,token=pod.spec?.containers?.find(c=>c.name==="files"&&c.image===brokerImage().image)?.env?.find(x=>x.name==="EXCHANGE_TOKEN")?.value;
  if(!ip||isIP(ip)!==4||!token||!/^[A-Za-z0-9_-]{43}$/.test(token)||pod.spec?.volumes?.length!==1||pod.spec.volumes[0].persistentVolumeClaim?.claimName!==diskNames(id).exchange)throw new ApiError(502,"Invalid exchange broker");
  if(bytes&&createHash("sha256").update(bytes).digest("hex")!==digest)throw new ApiError(422,"File checksum mismatch");
  const response=await fetch("http://"+ip+":8080"+path,{method,headers:{authorization:"Bearer "+token,...(digest?{"x-content-sha256":digest}:{}),...(bytes?{"content-type":"application/octet-stream"}:{})},...(bytes?{body:Uint8Array.from(bytes)}:{}),redirect:"error",signal:AbortSignal.timeout(15000)});
