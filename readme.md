@@ -6,7 +6,7 @@ VM Interface gives applications, developers and external automation systems a co
 
 [Apache-2.0](LICENSE) · [Documentation](docs/README.md) · [API guide](docs/api.md) · [Validation results](docs/validation.md) · [Contributing](CONTRIBUTING.md)
 
-> **Evaluation preview — hosted x86_64 KVM qualification passed on 27 November 2026.** Independent native-device acceptance ([#12](https://github.com/imxade/vm_interface/issues/12)) remains pending, including native ARM64 Android. This is not a production service or a stable/certified release. Use only clean, disposable, authorized devices.
+> **Evaluation preview — hosted x86_64 KVM qualification passed on 27 November 2026.** Independent native-device acceptance ([#12](https://github.com/everhush/vm_interface/issues/12)) remains pending, including native ARM64 Android. This is not a production service or a stable/certified release. Use only clean, disposable, authorized devices.
 
 ## Why VM Interface?
 
@@ -77,7 +77,7 @@ Full results and exact commit: [validation record](docs/validation.md). The runt
 Use Linux with Git, Node.js 24, npm, Bash, curl, FFmpeg/ffprobe (including `libx264` and `drawtext`), Tesseract with English language data, and DejaVu fonts installed. Internet access is required to download locked dependencies. On Ubuntu/Debian, the evidence prerequisites are `ffmpeg tesseract-ocr tesseract-ocr-eng fonts-dejavu-core`; install them through your distribution's trusted package manager.
 
 ```sh
-git clone https://github.com/imxade/vm_interface.git
+git clone https://github.com/everhush/vm_interface.git
 cd vm_interface
 git checkout main
 bash scripts/device-validate.sh checks
@@ -130,7 +130,7 @@ The final hosted candidate passed **152 automated tests** (93 TypeScript + 59 Py
 | [Real CSI expansion](https://github.com/xad3play/vm_interface/actions/runs/45954542680)                       | Pass                |
 | [Android media and signed APK preparation](https://github.com/xad3play/vm_interface/actions/runs/45954551058) | Pass (offline only) |
 
-Actions runs were executed in a CI-only synchronized fork. Access to historical run artifacts may require repository authorization and artifacts may expire. The durable [validation record](docs/validation.md) documents run IDs, artifact digests, observed results and limitations without publishing raw logs, guest data or credentials. The upstream main branch includes documentation/license-only changes after the exact tested commit. It does not claim a new same-SHA CI result.
+Historical Actions runs were executed in a CI-only synchronized fork. New qualification runs execute in the public upstream. Access to historical run artifacts may require repository authorization and artifacts may expire. The durable [validation record](docs/validation.md) documents run IDs, artifact digests, observed results and limitations without publishing raw logs, guest data or credentials. The upstream main branch includes documentation/license-only changes after the exact tested commit. It does not claim a new same-SHA CI result.
 
 ## Repository map
 
@@ -147,7 +147,7 @@ Actions runs were executed in a CI-only synchronized fork. Access to historical 
 
 ## Roadmap and boundaries
 
-Next milestone: [independent native-device acceptance (#12)](https://github.com/imxade/vm_interface/issues/12). Three consecutive comprehensive reviewed independent passes are required before stable release; current count is **0/3**. Use the [acceptance record template](docs/acceptance-record.md) to retain independent evidence and record the verdict without changing source. The current scope deliberately excludes a general dashboard, production identity/registration/OAuth, AI agents and production EKS/cloud deployment. See [release checklist](docs/release-checklist.md) and [original product specification](docs/product-specification.md) for the wider roadmap. Report defects rather than weakening test assertions.
+Next milestone: [independent native-device acceptance (#12)](https://github.com/everhush/vm_interface/issues/12). Three consecutive comprehensive reviewed independent passes are required before stable release; current count is **0/3**. Use the [acceptance record template](docs/acceptance-record.md) to retain independent evidence and record the verdict without changing source. The current scope deliberately excludes a general dashboard, production identity/registration/OAuth, AI agents and production EKS/cloud deployment. See [release checklist](docs/release-checklist.md) and [original product specification](docs/product-specification.md) for the wider roadmap. Report defects rather than weakening test assertions.
 
 ## License and security
 

@@ -11,6 +11,7 @@ if [ "$profile" = checks ]; then
   npm test
   npm run build
   node scripts/check-source-migration.ts
+  NODE_DISABLE_COMPILE_CACHE=1 node --import vite-plus/register --input-type=module -e 'await import("./src/exchange.ts"); await import("./scripts/android-guest-transfer.ts");'
   for f in scripts/*.sh showcases/android/*.sh; do bash -n "$f"; done
   exit 0
 fi

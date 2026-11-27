@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   checks:
-    if: github.repository == 'xad3play/vm_interface'
+    if: github.repository == 'everhush/vm_interface'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:

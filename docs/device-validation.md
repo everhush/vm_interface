@@ -9,13 +9,13 @@
 On a Linux machine with network access, Git, Node.js 24, npm, Bash, curl, FFmpeg/ffprobe with `libx264` and `drawtext`, Tesseract English language data, and DejaVu fonts:
 
 ```sh
-git clone https://github.com/imxade/vm_interface.git
+git clone https://github.com/everhush/vm_interface.git
 cd vm_interface
 git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba
 bash scripts/device-validate.sh checks
 ```
 
-This does not require KVM. It bootstraps the locked project-local Vite+ package, runs `vp check` (format/lint/typecheck), `vp test run`, `vp build`, the migration guard and shell syntax checks. Use Node.js 24.11+ (24.x). The CI-only fork `xad3play/vm_interface` executes these checks against exact synchronized upstream commits. The separate static CI workflow is reserved for the preparation branch; the implementation branch runs static and KVM checks in one workflow. Upstream job execution is disabled by repository guard. Do not interpret its success as guest conformance.
+This does not require KVM. It bootstraps the locked project-local Vite+ package, runs `vp check` (format/lint/typecheck), `vp test run`, `vp build`, the migration guard and shell syntax checks. Use Node.js 24.11+ (24.x). The public upstream `everhush/vm_interface` executes hosted checks on explicitly selected implementation and preparation branches. The separate static workflow is reserved for preparation branches; the implementation branch runs static and KVM checks in one workflow. Historical fork evidence applies only to its recorded commits. Do not interpret its success as guest conformance.
 
 ## 2. Dedicated device
 

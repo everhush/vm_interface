@@ -4,7 +4,7 @@ set -euo pipefail
 if [ "${VM_DISPOSABLE_DEVICE:-}" = true ]; then
   case "${GITHUB_RUN_ID:-}" in device-*) ;; *) echo 'Expected disposable device run identity' >&2; exit 1 ;; esac
 else
-  test "${GITHUB_REPOSITORY:-}" = xad3play/vm_interface
+  test "${GITHUB_REPOSITORY:-}" = everhush/vm_interface
   test "${RUNNER_ENVIRONMENT:-}" = github-hosted
 fi
 test "$#" -gt 0

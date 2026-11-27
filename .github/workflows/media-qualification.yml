@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   android-media:
-    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/media-qualification-v2'
+    if: github.repository == 'everhush/vm_interface' && github.ref_name == 'prep/media-qualification-v2'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -33,7 +33,7 @@ jobs:
           path: qualification/android/
           retention-days: 7
   windows-catalog:
-    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/media-qualification-v2'
+    if: github.repository == 'everhush/vm_interface' && github.ref_name == 'prep/media-qualification-v2'
     runs-on: windows-2025
     timeout-minutes: 15
     steps:
@@ -52,7 +52,7 @@ jobs:
           retention-days: 7
   catalog-iso:
     needs: windows-catalog
-    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/media-qualification-v2'
+    if: github.repository == 'everhush/vm_interface' && github.ref_name == 'prep/media-qualification-v2'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -75,7 +75,7 @@ jobs:
           path: qualification/iso/
           retention-days: 7
   android-apk:
-    if: github.repository == 'xad3play/vm_interface' && github.ref_name == 'prep/showcase-scenarios-v2'
+    if: github.repository == 'everhush/vm_interface' && github.ref_name == 'prep/showcase-scenarios-v2'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
