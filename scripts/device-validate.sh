@@ -77,7 +77,7 @@ stage() { bash scripts/run-api-tests-ci.sh "$@"; }
 if [ "$profile" = core ]; then
   stage node scripts/e2e-smoke.ts
   stage node scripts/e2e-persistent.ts
-  stage python3 scripts/e2e-data-disks.py
+  stage node scripts/e2e-data-disks.ts
   stage node --import tsx scripts/e2e-vnc.ts
   stage python3 scripts/e2e-api-control-proof.py
   stage node --import tsx scripts/e2e-input.ts

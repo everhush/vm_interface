@@ -8,6 +8,10 @@ export const sleep=(seconds:number)=>delay(seconds*1000);
 export const sha=(data:Buffer|Uint8Array)=>createHash("sha256").update(data).digest("hex");
 export const key=()=>randomUUID().replaceAll("-","");
 export type CallOptions={token?:string;body?:unknown;expected?:number|readonly number[];scheme?:string;idem?:string;phase?:string;raw?:Buffer|Uint8Array;headers?:Record<string,string>;timeout?:number};
+export class ResponseMismatch extends Error {
+ readonly status:number;readonly result:Record<string,unknown>;
+ constructor(method:string,path:string,status:number,body:Buffer){super(method+" "+path+": unexpected HTTP "+status);this.status=status;try{this.result=JSON.parse(body.toString("utf8"));}catch{this.result={};}}
+}
 type Trace={elapsedMs:number;method:string;path:string;status:number;expected:number;responseMs:number;phase?:string};
 async function boundedBody(response:Response,limit:number){
  if(!response.body)return Buffer.alloc(0);
@@ -35,7 +39,7 @@ export function client(options:{out?:string;automaticKeys?:boolean;timeout?:numb
    events.push(entry);appendFileSync(trace,JSON.stringify(entry)+"\n");
    if(o.phase||res.status!==expected)console.log(method,path,res.status,o.phase??"");
   }
-  assert(allowed.includes(res.status),method+" "+path+": HTTP "+res.status+" expected "+allowed.join("/"));
+  if(!allowed.includes(res.status))throw new ResponseMismatch(method,path,res.status,data);
   return {data,headers:res.headers,status:res.status};
  }
  return {A,B,events,trace,request,async call(method:string,path:string,o:CallOptions={}){const res=await request(method,path,o);return JSON.parse(res.data.toString("utf8"));},async binary(method:string,path:string,o:CallOptions={}){const res=await request(method,path,o);return [res.data,res.headers] as const;}};

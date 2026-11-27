@@ -33,7 +33,6 @@ function record(label:string,state:State){
  const summary={id:state.id??null,vmStatus:vs?.printableStatus??null,vmConditions:conditions(vs?.conditions),vmiUid:inst?.metadata.uid??null,vmiPhase:s?.phase??null,vmiConditions:conditions(s?.conditions)};
  appendFileSync("evidence/api-lifecycle.jsonl",JSON.stringify({stage:label,time:Date.now()/1000,...summary})+"\n");return summary;
 }
-let vm:string;
 async function waitFor(label:string,fn:(state:State)=>unknown,seconds=360){
  let previous="";const end=performance.now()+seconds*1000;
  while(performance.now()<end){const state:State=await call("GET","/computers/"+vm),summary=record(label,state),encoded=JSON.stringify(summary);if(encoded!==previous){console.log(label,summary);previous=encoded;}if(fn(state))return state;await sleep(5);}
@@ -59,7 +58,7 @@ try{
  await call("POST","/computers/plan",{body:spec,expected:409});const rejectedKey=key(),rejected=await call("POST","/computers",{body:spec,idem:rejectedKey,expected:409});assert.deepEqual(await call("POST","/computers",{body:spec,idem:rejectedKey,expected:409}),rejected);writeJson("evidence/account-quota.json",usage);
 }finally{for(const id of reserved)await call("DELETE","/computers/"+id,{idem:key(),expected:202});}
 await wait(async()=>(await call("GET","/account/quota")).usage.computers===0,120,"Quota reservations not released after VM deletion",3);
-const k=key(),created=await call("POST","/computers",{body:spec,idem:k,expected:202});vm=created.result.id;
+const k=key(),created=await call("POST","/computers",{body:spec,idem:k,expected:202});const vm:string=created.result.id;
 const path="/computers/"+vm;
 try{
  assert.deepEqual(await call("POST","/computers",{body:spec,idem:k,expected:202}),created);assert.deepEqual(await call("POST","/computers",{body:advanced,idem:k,expected:202}),created);

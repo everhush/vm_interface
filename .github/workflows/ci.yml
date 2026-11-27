@@ -78,7 +78,7 @@ jobs:
       - name: Independent data disk lifecycle, media and native export
         id: data_disks
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-data-disks.py
+        run: bash scripts/run-api-tests-ci.sh node scripts/e2e-data-disks.ts
       - name: Retain data disk partial evidence immediately on failed stage
         if: ${{ !cancelled() && steps.data_disks.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
