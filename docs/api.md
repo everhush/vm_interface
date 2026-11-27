@@ -10,7 +10,9 @@ Use an already deployed **disposable** environment from the [device guide](devic
 # Use Bash on the dedicated disposable device, with the API port-forward running.
 export API_URL=http://127.0.0.1:3000/api/v1
 set +x
-read -r -s -p 'Evaluation bearer token: ' VM_TOKEN; printf '\n'
+if [ -z "${VM_TOKEN:-}" ]; then
+  read -r -s -p 'Evaluation bearer token: ' VM_TOKEN; printf '\n'
+fi
 curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/account"
 curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/account/quota"
 curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/images"
@@ -48,6 +50,11 @@ CREATED=$(curl --fail-with-body --silent --show-error -X POST \
   -H "Authorization: Bearer $VM_TOKEN" \
   -H "Idempotency-Key: $CREATE_KEY" -H 'Content-Type: application/json' \
   --data-binary @"$VM_SPEC" "$API_URL/computers")
+```
+
+Only if creation returned successfully, extract and inspect the receipt below. If the connection failed or the outcome is uncertain, recover by `CREATE_KEY` using the receipt lookup described below; do not generate a replacement key.
+
+```sh
 printf '%s\n' "$CREATED"
 VM_ID=$(printf '%s' "$CREATED" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["id"])')
 OP_ID=$(printf '%s' "$CREATED" | python3 -c 'import json,sys; print(json.load(sys.stdin)["operationId"])')
@@ -84,7 +91,11 @@ curl --fail -X POST -H "Authorization: Bearer $VM_TOKEN" \
   -H "Idempotency-Key: $STOP_KEY" -H 'Content-Type: application/json' \
   --data '{}' "$API_URL/computers/$VM_ID/stop"
 curl --fail -H "Authorization: Bearer $VM_TOKEN" "$API_URL/computers/$VM_ID"
-# After observing stopped state, and only for this disposable smoke computer:
+```
+
+Repeat the state GET until `instance` is null and `desired.runStrategy` is `Halted`. Do not proceed merely because stop returned a receipt. After observing the stopped state, run the next block only for this disposable smoke computer:
+
+```sh
 DELETE_KEY=$(openssl rand -hex 16)
 curl --fail -X DELETE -H "Authorization: Bearer $VM_TOKEN" \
   -H "Idempotency-Key: $DELETE_KEY" "$API_URL/computers/$VM_ID"
@@ -100,7 +111,7 @@ curl --fail -H "Authorization: Bearer $VM_TOKEN" \
   -H "Idempotency-Key: $START_KEY" "$API_URL/operations/by-key"
 ```
 
-Use the actual receipt and resource state to determine what happened. The executable [smoke test](../scripts/e2e-smoke.py) is the reference for observed lifecycle, bounded waits, cleanup and rejection behavior. This walkthrough is documentation of the existing contract; the exact hosted tests, not this example alone, establish qualification.
+For an uncertain create, stop or delete, substitute the corresponding original `CREATE_KEY`, `STOP_KEY` or `DELETE_KEY` instead of `START_KEY`. Use the actual receipt and resource state to determine what happened. The executable [smoke test](../scripts/e2e-smoke.py) is the reference for observed lifecycle, bounded waits, cleanup and rejection behavior. This walkthrough is documentation of the existing contract; the exact hosted tests, not this example alone, establish qualification.
 
 ## Route groups
 
