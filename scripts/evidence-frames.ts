@@ -1,6 +1,6 @@
 /** Independently decode and OCR reported original MP4 frames. */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cirrosNormalize } from "./cirros-screen.ts";
@@ -13,6 +13,22 @@ export function decodedFrame(raw:string,index:number,dest:string){
 }
 export function ocrText(path:string){return execFileSync("tesseract",[path,"stdout","--psm","6","--dpi","180"],{encoding:"utf8",timeout:30000,stdio:["ignore","pipe","ignore"],env:{...process.env,OMP_THREAD_LIMIT:"1",OMP_NUM_THREADS:"1"}});}
 export function ocr(path:string,cirros=false){const text=ocrText(path);return cirros?cirrosNormalize(text):normalized(text);}
+/** Nearest-neighbor enlargement preserves pixels while making small compressed
+ * console glyphs legible. The same exact OCR marker rules apply to both reviewers.
+ * Never correct or substitute recognized words. */
+export function videoMarkerText(path:string,profile:string){
+ if(profile!=="functional")return ocr(path,profile==="control");
+ const header=readFileSync(path);
+ if(header.length<24||!header.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))throw Error("Invalid marker PNG");
+ const w=header.readUInt32BE(16),h=header.readUInt32BE(20);
+ if(w<1||h<1||w>1920||h>1200)throw Error("Unbounded marker frame dimensions");
+ const temp=mkdtempSync(join(tmpdir(),"vm-marker-"));
+ try{
+  const scaled=join(temp,"scaled.png");
+  execFileSync("ffmpeg",["-v","error","-i",path,"-vf","scale=iw*3:ih*3:flags=neighbor","-frames:v","1","-threads","1",scaled],{timeout:30000});
+  return ocr(scaled);
+ }finally{rmSync(temp,{recursive:true,force:true});}
+}
 export type FrameMeta={firstFrame:string;finalFrame:string;markers:{before:string;after:string}};
 export function verifyMarkerFrames(raw:string,folder:string,meta:FrameMeta,profile:string){
  const first=frameNumber(meta.firstFrame),last=frameNumber(meta.finalFrame);
@@ -28,7 +44,7 @@ export function verifyMarkerFrames(raw:string,folder:string,meta:FrameMeta,profi
   for(const [index,name,expected] of [[first,"video-first-marker.png",before],[last,"video-final-marker.png",after]] as const){
    const path=join(temp,name);decodedFrame(raw,index,path);
    if(!pixels(path).equals(pixels(join(folder,name))))throw Error("Marker frame does not match original video");
-   const text=ocr(path,profile==="control");
+   const text=videoMarkerText(path,profile);
    if(text.split(expected).length!==2||(index===first&&text.includes(after)))throw Error("Required unique marker absent or out of order");
   }
  }finally{rmSync(temp,{recursive:true,force:true});}

@@ -5,7 +5,7 @@ import {mkdtempSync,readdirSync,rmSync,readFileSync,writeFileSync,copyFileSync} 
 import {tmpdir} from "node:os";
 import {join,basename} from "node:path";
 import {client,key,sha,sleep,wait} from "./api-client.ts";
-import {ocr,ocrText,normalized} from "./evidence-frames.ts";
+import {videoMarkerText,ocrText,normalized} from "./evidence-frames.ts";
 import {cirrosNormalize} from "./cirros-screen.ts";
 export const batch=(text:string)=>({events:[...text].flatMap(ch=>[true,false].map(down=>({type:"key",keysym:ch.codePointAt(0)!,down})))});
 export const count=(text:string,marker:string)=>text.split(marker).length-1;
@@ -38,7 +38,7 @@ export function proofTools(out:string){
   try{
    ffmpeg(["-v","error","-i",raw,"-vf","fps=2",join(tmp,"frame-%05d.png")]);
    const frames=readdirSync(tmp).filter(x=>/^frame-\d{5}\.png$/.test(x)).sort();assert(frames.length>=4);
-   for(const frame of frames){const text=ocr(join(tmp,frame),first==="scriptstart");
+   for(const frame of frames){const text=videoMarkerText(join(tmp,frame),first==="scriptstart"?"control":"functional");
     if(!firstFrame&&count(text,first)===1&&!text.includes(second)){firstFrame=frame;copyFileSync(join(tmp,frame),file("video-first-marker.png"));}
     if(firstFrame&&text.includes(second)){assert.equal(count(text,second),1);finalFrame=frame;copyFileSync(join(tmp,frame),file("video-final-marker.png"));break;}
    }
