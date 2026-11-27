@@ -31,7 +31,7 @@ CSI guest exchange capacity increased from 1,020,702,720 to 2,077,073,408 bytes,
 
 ## Reproduction
 
-Run [the device guide](device-validation.md) on authorized disposable equipment, not an existing cluster. For the exact hosted implementation use `git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba`. To inspect retained core artifacts without KVM, extract the archive into a private directory and run:
+Run [the device guide](device-validation.md) on authorized disposable equipment, not an existing cluster. For the exact hosted implementation use `git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba`. To inspect historical retained core artifacts without KVM, use the verifier in a separate worktree at that historical commit, not the newly migrated TypeScript verifier (which requires a guest Node runtime receipt). Extract the archive into a private directory and run:
 
 ```sh
  # Use the verifier from an exact checkout of historical candidate 7e095afe6274137104f15caf9cbaef7738d6a9ba.

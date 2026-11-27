@@ -114,7 +114,7 @@ Use `node scripts/write-showcase-scenario.ts windows windows-scenario.json` or `
 
 ### Standalone Linux device profile
 
-On a separate disposable native x86_64 KVM device, `bash scripts/device-validate.sh linux --confirm-disposable` runs the full Linux application installation, control, archive, recording and cold-resize/reboot proof. It uses the pinned Fedora catalog image and requires no Windows installer, external APK, scenario or licensing credentials. Verify independently with `node scripts/verify-evidence.ts --root evidence --profile linux`.
+On a separate disposable native x86_64 KVM device, `bash scripts/device-validate.sh linux --confirm-disposable` runs the full Linux application installation, control, archive, recording and cold-resize/reboot proof. It uses the pinned Fedora catalog image and requires no Windows installer, external APK, scenario or licensing credentials. The client compresses the actual Linux x64 Node 24 executable into bounded exchange chunks; the guest reconstructs it offline, checks its executable digest and version, then runs the actual TypeScript application. The guest runtime receipt and chunk provenance must match the HTTP trace and independent verifier. Use the official self-contained Linux x64 Node 24 distribution (a dynamically linked distribution build may require unavailable guest libraries). Verify independently with `node scripts/verify-evidence.ts --root evidence --profile linux`.
 
 ## Optional CSI storage growth evaluation
 

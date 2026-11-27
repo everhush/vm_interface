@@ -11,6 +11,7 @@ if [ "$profile" = checks ]; then
   npm run lint
   npm test
   npm run build
+  node scripts/check-source-migration.ts
   for f in scripts/*.sh showcases/android/*.sh; do bash -n "$f"; done
   exit 0
 fi
