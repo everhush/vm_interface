@@ -1,6 +1,6 @@
 # Documentation
 
-Start with the [project README](../readme.md). VM Interface is an Apache-2.0 evaluation source preview: the previous hosted x86_64 KVM qualification is historical; migrated-candidate qualification and native-device acceptance remain pending. It is not a hosted service or a production-ready platform.
+Start with the [project README](../readme.md). VM Interface is an Apache-2.0 evaluation source preview: the migrated hosted x86_64 KVM qualification is complete; independent native-device acceptance remains pending. It is not a hosted service or a production-ready platform.
 
 | I want to… | Read |
 | --- | --- |
@@ -18,7 +18,7 @@ Start with the [project README](../readme.md). VM Interface is an Apache-2.0 eva
 ## Which source should I use?
 
 - Browse or build the current `main` source for the evaluation preview. The legacy default branch is kept aligned.
-- The migrated candidate is `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. Follow the [migration record](toolchain-migration.md); for #12 acceptance use it only after the issue explicitly approves the exact candidate. Historical evidence is not new same-SHA qualification.
+- For reproducibility and issue #12 use exact hosted-qualified `34652dc2fffd585e8e95aac1a2df63b3552da8f8` and follow the [migration record](toolchain-migration.md) and device guide. Documentation-only successors do not constitute new same-SHA CI.
 - The original specification and engineering log preserve prior decisions and failures, including superseded Windows requirements. They are historical, not the current feature list or a request to restart development.
 
 ## Common questions

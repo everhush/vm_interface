@@ -15,7 +15,8 @@
         "Consolidated candidate 48cf699 static CI 45770044021 passed: locked typecheck/lint/build and TS/Python test suites.",
         "Pinned provisioning asset SHA256/size and K3s/CDI/KubeVirt/CNPG API discovery gates; actual hosted deployment.",
         "37c26f0: 79 TS + 34 Python tests, typecheck/lint/build passed.",
-        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Native KVM, provisioning, deployment, locked static tests and actual guest boot."
+        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Native KVM, provisioning, deployment, locked static tests and actual guest boot.",
+        "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
       ],
       "pending": [
         "Independent native host review; operator/container publisher provenance review."
@@ -29,9 +30,10 @@
         45770044021,
         45784791470,
         45794567249,
-        45954535380
+        45954535380,
+        46077980605
       ],
-      "status": "migration-requalification-pending",
+      "status": "hosted-qualified-independent-acceptance-pending",
       "preparedInCandidate": [
         "one-command dedicated device provisioning for x86 and ARM64, host KVM preflight",
         "separate consolidated non-KVM checks workflow"
@@ -48,7 +50,8 @@
         "idempotency replay",
         "hashed account keys and scoped permissions",
         "45780959318: actual API smoke and durable recovery across deployment restart; idempotent replay and same instance UID.",
-        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Strict schema, dry-run, account/key isolation, operation receipts and recovery, quotas."
+        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Strict schema, dry-run, account/key isolation, operation receipts and recovery, quotas.",
+        "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
       ],
       "pending": [
         "Independent device review; cancellation only where supported; production identity deferred."
@@ -57,9 +60,10 @@
         45542879476,
         45544070366,
         45780959318,
-        45954535380
+        45954535380,
+        46077980605
       ],
-      "status": "migration-requalification-pending",
+      "status": "hosted-qualified-independent-acceptance-pending",
       "preparedInCandidate": [
         "durable observed operation convergence and restart test",
         "redacted audit, per-account request limits and bounded bodies",
@@ -75,7 +79,8 @@
         "cold CPU/RAM",
         "guest status",
         "45780959318: native create/start/restart/stop, persistent lifecycle.",
-        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Lifecycle, BIOS/UEFI, cold hardware resizing, guest persistence and hard reset."
+        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Lifecycle, BIOS/UEFI, cold hardware resizing, guest persistence and hard reset.",
+        "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
       ],
       "pending": [
         "Conditional live CPU/RAM update, virtio-mem, migration, GPU and other device profiles require separate eligible-device qualification."
@@ -84,9 +89,10 @@
         45542879476,
         45550528465,
         45780959318,
-        45954535380
+        45954535380,
+        46077980605
       ],
-      "status": "migration-requalification-pending",
+      "status": "hosted-qualified-independent-acceptance-pending",
       "preparedInCandidate": [
         "hard reset, boot-order change, conditional ARM64 UEFI uploaded disk",
         "native QEMU virtio-mem growth/reclaim evidence from 45550528465 (not KubeVirt live resize)",
@@ -108,7 +114,8 @@
         "45784791470: native CSI policy sentinel and recording claim denied, exact PVC UIDs preserved; boot PVC to 8 GiB and exchange guest statvfs 1020702720 to 2077073408 bytes; actual challenge and bundle SHA256.",
         "45837699861 direct/resumable/dual CDI and public acquisition/cache passed; registry create/valid upload succeeded; replay transport failed before reuse. Early screenshots did not establish login.",
         "a1d7861 run 45846381246: all four media modes actual CDI and guest login, 239 actual matching calls; registry immutable reuse across distinct PVC UIDs. CSI 45846834995 independently verified.",
-        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Direct/resumable/dual/registered CDI imports, cache, independent disks, byte-level cloning/export, VirtioFS, real CSI expansion."
+        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Direct/resumable/dual/registered CDI imports, cache, independent disks, byte-level cloning/export, VirtioFS, real CSI expansion.",
+        "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
       ],
       "pending": [
         "Native Android SAF/exchange; boot virtual disk/filesystem growth and snapshots not certified."
@@ -123,9 +130,11 @@
         45846381246,
         45846834995,
         45954535380,
-        45954542680
+        45954542680,
+        46077980605,
+        46078053324
       ],
-      "status": "migration-requalification-pending",
+      "status": "hosted-qualified-independent-acceptance-pending",
       "preparedInCandidate": [
         "product VirtioFS, bounded file exchange, authorized direct/resumable CDI imports, conditional Windows/Android exchange profiles",
         "independent auxiliary disk import, quota and transfer status",
@@ -156,7 +165,8 @@
         "45770716860: real RFB observers passed; recording test exposed asynchronous CirrOS kernel log interrupting second marker, no original MP4 certified.",
         "45780959318: original API H.264 recording 44.5s, 750335 bytes, SHA256 cee693b3cf74c537bbbf4cc218d31dd7f7e53e1a5492d4bc03785570e3767a9c; decoded exact ordered markers and redacted trace; recording authorization lifecycle passed.",
         "a1d7861 native input takeover/revocation, HTTP input replay, reset and recording lifecycle passed; control marker interrupted by kernel at 99s.",
-        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: RFB, screenshots, original recordings, actual USB tablet input, input takeover, revocation, replay and reset."
+        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: RFB, screenshots, original recordings, actual USB tablet input, input takeover, revocation, replay and reset.",
+        "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
       ],
       "pending": [
         "Independent device and image-specific display/input review; no true multitouch claim."
@@ -168,9 +178,10 @@
         45770716860,
         45780959318,
         45846381246,
-        45954535380
+        45954535380,
+        46077980605
       ],
-      "status": "migration-requalification-pending",
+      "status": "hosted-qualified-independent-acceptance-pending",
       "preparedInCandidate": [
         "API input lease, video capture, actual script-driven proof with original MP4 and trace, standalone verifier",
         "Independent raw video frame decode, pixel comparison and ordered OCR verification",
@@ -188,7 +199,8 @@
         "key and ticket isolation and revocation",
         "45780959318: durable recovery passed.",
         "a1d7861 native private tunnel, actual guest HTTP, loopback adapter, isolation, revocation, stop and idle/recovery passed.",
-        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Private TCP tunnel, isolation, revocation, idle convergence, API restart recovery and quota cleanup."
+        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Private TCP tunnel, isolation, revocation, idle convergence, API restart recovery and quota cleanup.",
+        "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
       ],
       "pending": [
         "Independent device review; public ingress and broader node/storage fault and operational limits not certified."
@@ -198,9 +210,10 @@
         45544070366,
         45780959318,
         45846381246,
-        45954535380
+        45954535380,
+        46077980605
       ],
-      "status": "migration-requalification-pending",
+      "status": "hosted-qualified-independent-acceptance-pending",
       "preparedInCandidate": [
         "private TCP tunnel, redacted audit, idle stop and recovery tests",
         "Scoped virt-api tunnel ingress, bounded binary relay drain/revocation; actual local WebSocket regression passed on 37c26f0."
@@ -213,7 +226,8 @@
       "verified": [
         "Historical Fedora native VirtioFS infrastructure compatibility; previous Windows media evidence no longer mandatory.",
         "45837699861 d9fecaa: native Linux package install, guest computation, pointer receipt, archive, original MP4 22s, native clone byte divergence, cold resize/reboot and persistent challenge passed. Artifact 15131826399 independently decoded and reboot marker verified; hosted final OCR timeout still failed combined verifier.",
-        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Fedora x86_64 application installation, actual pointer receipt, guest computation/archive, original recording, clone and cold-resize persistence."
+        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Fedora x86_64 application installation, actual pointer receipt, guest computation/archive, original recording, clone and cold-resize persistence.",
+        "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
       ],
       "pending": [
         "Independent clean x86_64 device reproduction."
@@ -223,9 +237,10 @@
         45625087154,
         45645803256,
         45837699861,
-        45954535380
+        45954535380,
+        46077980605
       ],
-      "status": "migration-requalification-pending",
+      "status": "hosted-qualified-independent-acceptance-pending",
       "preparedInCandidate": [
         "Reproducible client-owned Linux ZIP package; API upload, verified guest install/launch via lease, actual challenge ZIP and SHA256, original API MP4, persistence and cold resize/restart; independent verifier.",
         "Guest block disk serial, random challenge write, cold CDI clone, independent clone mutation and source preservation; guest Fedora version and actual RPM license inventory.",
@@ -243,7 +258,8 @@
         "45770845250: actual pinned Android archive and signed APK v3 prepared; artifact 15094046905. Guest compatibility unverified.",
         "45782398435: actual pinned media, publisher attestation, signed APK 3.0 and both offline scenario preflights; no guest boot certified.",
         "a1d7861 45846852839 exact pinned media, signed APK and both offline scenarios passed.",
-        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Pinned ARM64 disk inputs, signed APK v3 and both transfer scenarios passed offline preparation."
+        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Pinned ARM64 disk inputs, signed APK v3 and both transfer scenarios passed offline preparation.",
+        "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: pinned Android inputs and APK scenarios passed offline preparation; native compatibility unverified."
       ],
       "pending": [
         "Actual native AArch64 KVM boot/display, SAF or authorized private ADB, APK execution, result, resize/persistence and original recording."
@@ -257,7 +273,8 @@
         45782398435,
         45846852839,
         45954535380,
-        45954551058
+        45954551058,
+        46077983994
       ],
       "status": "offline-preparation-passed-native-acceptance-pending",
       "preparedInCandidate": [
@@ -277,7 +294,8 @@
         "465cfa4 static 45810437981, Android 45810778040 and real CSI 45810766327 passed; full 45813447072 failed input prompt, Linux pointer, CDI rejection transport, ISO transport; original control recording passed. Diagnostic 45808210022 passed input/reset and BIOS+UEFI but Linux and CDI failed.",
         "d9fecaa static, Android and real CSI passed; 45837699861 failed registry replay, control readiness, input marker, network reconnect and reboot OCR timeout. e2b351d static 45844514806 passed 141 tests.",
         "a1d7861 static 144 tests and Android/CSI passed; native core failed export DELETE transport, downstream quota and control marker, missing combined verifier.",
-        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Exact hosted core, CSI and Android preparation completed; artifact integrity and original recordings independently reviewed."
+        "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Exact hosted core, CSI and Android preparation completed; artifact integrity and original recordings independently reviewed.",
+        "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
       ],
       "pending": [
         "Three consecutive comprehensive independent native-device reviews (0/3); release certification remains pending."
@@ -303,9 +321,13 @@
         45846381246,
         45954535380,
         45954542680,
-        45954551058
+        45954551058,
+        46077697248,
+        46077980605,
+        46078053324,
+        46077983994
       ],
-      "status": "migration-requalification-pending",
+      "status": "hosted-qualified-independent-acceptance-pending",
       "preparedInCandidate": [
         "consolidated branch, device docs, evidence verifier and independent static checks",
         "validation-only handoff issue #12; hosted readiness gate passed; independent acceptance not started",
@@ -317,7 +339,7 @@
     }
   ],
   "candidateBranch": "implementation/issue13-exact-final",
-  "candidateStatus": "migration-hosted-core-pending-independent-acceptance-not-started",
+  "candidateStatus": "ready-for-independent-native-device-acceptance",
   "nonKvmLocalEvidence": {
     "scope": "isolated local tests on Node 22 transpiled with TypeScript 5.8 and Python; not full Node 24 build",
     "passed": [
@@ -354,10 +376,27 @@
     "upstream": "everhush/vm_interface",
     "mode": "public-upstream-explicit-qualification-branches",
     "duplicatePolicy": "cancel superseded same-ref runs; no scheduled runs",
-    "status": "exact-candidate-core-pending"
+    "status": "hosted-qualification-completed"
   },
-  "hostedQualifiedCommit": null,
-  "hostedQualification": null,
+  "hostedQualifiedCommit": "34652dc2fffd585e8e95aac1a2df63b3552da8f8",
+  "hostedQualification": {
+    "date": "2026-11-27",
+    "commit": "34652dc2fffd585e8e95aac1a2df63b3552da8f8",
+    "repository": "everhush/vm_interface",
+    "runs": {
+      "static": 46077697248,
+      "core": 46077980605,
+      "csi": 46078053324,
+      "android": 46077983994
+    },
+    "typescriptTests": 158,
+    "pythonTests": 0,
+    "testFiles": 59,
+    "nativeCoreStages": 13,
+    "independentArtifactReview": true,
+    "independentDeviceAcceptance": false,
+    "docsOnlySuccessorsDoNotChangeEvidenceProvenance": true
+  },
   "historicalHostedQualification": {
     "repository": "xad3play/vm_interface",
     "date": "2026-11-27",
@@ -391,13 +430,13 @@
     "testFiles": 59,
     "failedTests": 0,
     "skippedOrTodoTests": 0,
-    "coreStatus": "in-progress",
+    "coreStatus": "passed-reviewed",
     "csiStatus": "passed-reviewed",
     "androidPreparationStatus": "passed-reviewed",
     "guestAndroidCompatibilityVerified": false,
     "managedRuntimeCertified": false,
     "independentDeviceAcceptance": false,
-    "primaryPromotionApproved": false,
+    "primaryPromotionApproved": true,
     "sourceInventory": "docs/toolchain-migration.md",
     "legacyTestInventory": {
       "pythonModules": 23,
@@ -413,8 +452,55 @@
       "persistent system and exchange lifecycle",
       "independent data disk lifecycle, media and native export",
       "Linux installation, archive, native clone and original recording",
-      "actual CDI disk import"
+      "actual CDI disk import",
+      "authorized ISO boot configuration",
+      "VNC transport",
+      "original API control recording",
+      "input ownership, pointer, keyboard and reset isolation",
+      "private network isolation and tunnel",
+      "recording lifecycle and authorization",
+      "actual guest VirtioFS exchange and bundle",
+      "idle-stop semantics",
+      "restart recovery",
+      "VirtioFS infrastructure compatibility",
+      "network/media/video evidence verification",
+      "final diagnostics and cleanup"
     ],
-    "coreActiveStage": "Actual authorized ISO import and boot configuration"
+    "nativeCoreStages": 13,
+    "artifacts": {
+      "static": {
+        "id": 15236116330,
+        "sha256": "14399d6101b3289da5e1cf87e5fa774fa696a271795c4d8d57e371ef06981c97"
+      },
+      "core": {
+        "id": 15237129511,
+        "sha256": "cb501ac76070d63f1e0d7607861f3971fbb6242e46b7ff96f94e47c6676af3fb"
+      },
+      "csi": {
+        "id": 15235639964,
+        "sha256": "7f434757b857a2d235692176f870da43085c7e18f933c3c9d7d3e20dcf8b801f"
+      },
+      "android": {
+        "id": 15235503423,
+        "sha256": "6d5c29a1e48fb0c787ad97605040208356580f9d446f73be89f3ef17bebba80b"
+      }
+    },
+    "coreIndependentReview": {
+      "control": {
+        "seconds": 21.5,
+        "bytes": 809056,
+        "matchingCalls": 127,
+        "sha256": "e93a0329b2d8448849c1a1e3eec83d77746e0b988833617e46369daa5a692b1c"
+      },
+      "functional": {
+        "seconds": 18.5,
+        "bytes": 79090,
+        "matchingCalls": 223,
+        "sha256": "5cdc413484cc0c3d81f2ba0290ca055ded0e2b554708fecdabeaa320466216a9"
+      },
+      "mediaMatchingCalls": 239,
+      "networkCalls": 47,
+      "guestResourcesAbsent": true
+    }
   }
 }

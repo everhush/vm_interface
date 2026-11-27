@@ -1,7 +1,7 @@
 # Kubernetes and Vite+ migration record — issue #13
 
 **Candidate:** [`34652dc2fffd585e8e95aac1a2df63b3552da8f8`](https://github.com/everhush/vm_interface/commit/34652dc2fffd585e8e95aac1a2df63b3552da8f8)  
-**Status:** implementation staged; exact native core qualification still in progress; CSI and Android preparation passed. This is not an approval to execute issue #12, nor a stable release. The final evidence verdict must be recorded before primary promotion.
+**Status:** Exact hosted qualification and independent artifact review completed on 2026-11-27 UTC. Eligible for source-preview promotion and issue #12 validation-only handoff; not a stable release or independent device acceptance.
 
 ## Source inventory
 
@@ -86,7 +86,7 @@ The former daemon-specific build files are replaced by [daemonless OCI build](..
 | Gate | Run | Verdict |
 | --- | --- | --- |
 | Locked Vite+ static | [46077697248](https://github.com/everhush/vm_interface/actions/runs/46077697248) | PASS: 158/158 tests in 59 files; zero failed/skipped/todo; format, type-aware lint/check, build, loader and source guard passed. |
-| Native core | [46077980605](https://github.com/everhush/vm_interface/actions/runs/46077980605) | In progress; isolated actual KVM and OCI deployment, API smoke and tenant isolation, persistent system/exchange, independent data disk/media/export, and Linux installation/archive/native clone/original recording passed. Native CDI import passed; authorized ISO boot and remaining stages pending. |
+| Native core | [46077980605](https://github.com/everhush/vm_interface/actions/runs/46077980605) | PASS: all 13 native API stages, actual restart recovery, VirtioFS compatibility probe and all evidence verifiers. Independent archive review passed. |
 | Real CSI expansion | [46078053324](https://github.com/everhush/vm_interface/actions/runs/46078053324) | PASS: real expandable CSI, actual VirtioFS guest capacity growth, unchanged PVC/DataVolume identities, 206 matching HTTP status pairs and both admission denials. |
 | Android inputs | [46077983994](https://github.com/everhush/vm_interface/actions/runs/46077983994) | PASS: pinned disks, signed APK and both scenario preflights. Native boot and guest compatibility unverified. |
 
@@ -96,6 +96,7 @@ Independently reviewed archived artifact checksums:
 | --- | --- |
 | [Static report 15236116330](https://github.com/everhush/vm_interface/actions/runs/46077697248/artifacts/15236116330) | `14399d6101b3289da5e1cf87e5fa774fa696a271795c4d8d57e371ef06981c97` |
 | [Locked dependencies 15236226055](https://github.com/everhush/vm_interface/actions/runs/46077697248/artifacts/15236226055) | `caa125fb59cc49be4c4a59c364deb45cf9791790c6d1da92c0e160c811b6d38c` |
+| [Core evidence 15237129511](https://github.com/everhush/vm_interface/actions/runs/46077980605/artifacts/15237129511) | `cb501ac76070d63f1e0d7607861f3971fbb6242e46b7ff96f94e47c6676af3fb` |
 | [CSI evidence 15235639964](https://github.com/everhush/vm_interface/actions/runs/46078053324/artifacts/15235639964) | `7f434757b857a2d235692176f870da43085c7e18f933c3c9d7d3e20dcf8b801f` |
 | [Android inputs 15235503423](https://github.com/everhush/vm_interface/actions/runs/46077983994/artifacts/15235503423) | `6d5c29a1e48fb0c787ad97605040208356580f9d446f73be89f3ef17bebba80b` |
 
@@ -103,4 +104,22 @@ Independent CSI review matched the actual guest capacity 1020702720→2077073408
 
 The core workflow's static report and locked dependencies were independently compared against the standalone static qualification: all 158 test identities/statuses match and the lock bytes are identical (SHA-256 `d011617a998a5deea42f25c0a0ea6eb697e427f520bac2dda68738f6ea9fbc4e`).
 
-The final native evidence must bind to the same candidate and run identities; verify original video, actual guest bytes, storage and network identities, and complete cleanup. Do not mix historical artifacts or count hosted qualification as an independent device review. #12 remains unstarted (0/3). Do not promote the candidate until its final native results and independent artifact review are recorded.
+## Independent native core artifact review
+
+All 13 named native API stages exited zero; actual KVM/OCI deployment, isolation, persistent disks, data disk import/export, Fedora 44 native application, CDI import, BIOS/UEFI ISO boot, VNC, original control recording, keyboard/pointer ownership and hard reset, private TCP tunneling, recording authorization, guest exchange and idle-stop passed. Restart recovery, the isolated infrastructure VirtioFS compatibility probe and all hosted evidence verifiers passed. Independent archive review verified the exact source/run, ZIP SHA-256 `cb501ac76070d63f1e0d7607861f3971fbb6242e46b7ff96f94e47c6676af3fb`, CRC and original recording frames, exact guest bytes and cleanup. Core artifact [15237129511](https://github.com/everhush/vm_interface/actions/runs/46077980605/artifacts/15237129511).
+
+| Original recording | Duration | Bytes | Matching API calls | SHA-256 |
+| --- | ---: | ---: | ---: | --- |
+| Control, H.264 | 21.5 s | 809056 | 127 | `e93a0329b2d8448849c1a1e3eec83d77746e0b988833617e46369daa5a692b1c` |
+| Fedora functional, H.264 | 18.5 s | 79090 | 223 | `5cdc413484cc0c3d81f2ba0290ca055ded0e2b554708fecdabeaa320466216a9` |
+| Recording lifecycle, H.264 | 7.5 s | 1065014 | — | `b048a22b8dce731f9caba266734d2ec19b49afc1967a2ecaf0ff885858d83405` |
+
+Independently decoded all original MP4s and matched control/functional original pixels and chronological exact OCR markers. Actual Fedora 44 x86_64 installed and ran the exact TypeScript guest application and ZIP writer (Git blob identities checked). Node v24.22.3 guest runtime receipt and seven actual runtime upload chunks matched. Verified 4096-byte challenge SHA-256 `7b5b831110f20860bc352c8596ae1397d6ec0a0dc37251f905dd1b0d9a9e8756`, actual computed result, ZIP archive bytes, QEMU USB tablet receipt, original/clone byte inversion, separate clone PVC, replacement VMI and visible reboot persistence. Verified four native CDI modes (35 direct, 48 resumable, 45 dual, 111 URL/registered; 239 matching status pairs), actual login screenshots, exact pins/cache and registered-source independence; network 47 HTTP/upgrade calls and identical native guest/relay response bodies. Independently checked BIOS/UEFI exact boot marker and five original input/reset screenshots, recorded authorization/deletion, real exchange challenge and 4117-byte result (bundle SHA-256 `393395c5dbd49d85b726328419fcad3c657af09d5af1191982ebc3c0dee755f3`), recovery, idle, zero data-disk quota on cleanup and no remaining guest VM/VMI or guest PVCs.
+
+Android preparation archive verified the pinned disk manifests, both scenario preflight hashes and APK SHA-256 `c7e7743df447e1233bf442d41913b9fc84398e6c3781f9ef81f243779cb32074` (12709 bytes); APK package/version 3.0/3, hosted v1/v2/v3 signatures and local JAR signature verified. Disposable signing identity only, not production signing approval. Actual guest boot and compatibility remain unverified.
+
+Supporting diagnostic core [46077339894](https://github.com/everhush/vm_interface/actions/runs/46077339894) on `21de1b3c1eb460dac0e3f98ec906838bf9a0dd9f` also passed all native stages and independent review, but it is not the final evidence source. Exact-candidate results above govern handoff.
+
+## Handoff boundary
+
+All required hosted gates passed on the identical executable commit. Documentation-only descendants are not new same-SHA test runs; their complete tree comparison must leave executable source, tests, dependency lock, CI and infrastructure unchanged. Use the exact tested SHA for #12. Do not count hosted qualification as an independent device review. #12 remains unstarted (0/3) and requires clean independent x86_64 Linux and native AArch64 Android devices. Managed EKS/AKS runtime, Android guest boot, boot virtual disk/filesystem growth, and conditional hardware features are not certified by this record. No paid provisioning, schedules, stable release or binary publication.

@@ -1,6 +1,21 @@
 # Qualification and reproducibility record
 
-> **Migration handoff pending:** see [the current Kubernetes/Vite+ migration record](toolchain-migration.md). The record below is historical and does not qualify the migrated implementation. Do not start #12 on a new candidate until explicit same-commit approval.
+## Current qualification — Kubernetes/Vite+ migration (#13)
+
+**Date:** 2026-11-27 UTC. **Exact hosted-tested implementation:** [`34652dc2fffd585e8e95aac1a2df63b3552da8f8`](https://github.com/everhush/vm_interface/commit/34652dc2fffd585e8e95aac1a2df63b3552da8f8). **Status:** all required hosted lanes passed and retained evidence independently reviewed; ready for #12 validation-only handoff, 0/3 independent passes. Not a stable release or production/managed-cluster certification.
+
+All 13 named native API stages exited zero; actual KVM/OCI deployment, isolation, persistent disks, data disk import/export, Fedora 44 native application, CDI import, BIOS/UEFI ISO boot, VNC, original control recording, keyboard/pointer ownership and hard reset, private TCP tunneling, recording authorization, guest exchange and idle-stop passed. Restart recovery, the isolated infrastructure VirtioFS compatibility probe and all hosted evidence verifiers passed. Independent archive review verified the exact source/run, ZIP SHA-256 `cb501ac76070d63f1e0d7607861f3971fbb6242e46b7ff96f94e47c6676af3fb`, CRC and original recording frames, exact guest bytes and cleanup.
+
+| Workflow | Result |
+| --- | --- |
+| [46077697248 — static](https://github.com/everhush/vm_interface/actions/runs/46077697248) | 158/158 TypeScript tests, 59 files, no failed/skipped/todo; Vite+ check/build/loader/guard passed |
+| [46077980605](https://github.com/everhush/vm_interface/actions/runs/46077980605) — native core | All 13 stages, recovery, compatibility, original videos and verifiers passed |
+| [46078053324 — CSI](https://github.com/everhush/vm_interface/actions/runs/46078053324) | Real CSI driver, guest exchange growth 1020702720→2077073408 bytes, unchanged PVCs, 206 matched calls |
+| [46077983994 — Android preparation](https://github.com/everhush/vm_interface/actions/runs/46077983994) | Signed APK and pinned media/scenarios; boot and guest compatibility not verified |
+
+The complete [migration record](toolchain-migration.md) includes original artifact IDs and SHA-256 digests, source inventory, original recording details and verification limitations. Core archive [15237129511](https://github.com/everhush/vm_interface/actions/runs/46077980605/artifacts/15237129511). Reproduce using `git checkout 34652dc2fffd585e8e95aac1a2df63b3552da8f8` and the current [device guide](device-validation.md); documentation-only successors do not create new executable evidence provenance.
+
+## Historical pre-migration qualification (superseded for current execution)
 
 **Date:** 2026-11-27. **Hosted-tested source:** [`7e095afe6274137104f15caf9cbaef7738d6a9ba`](https://github.com/imxade/vm_interface/commit/7e095afe6274137104f15caf9cbaef7738d6a9ba). **Historical status at the recorded checkpoint:** ready for #12 independent native-device acceptance; not certified for production or stable release. The main source distribution adds license and documentation after that source commit. The hosted run evidence refers to the exact SHA above, not a later documentation commit.
 
@@ -33,7 +48,7 @@ CSI guest exchange capacity increased from 1,020,702,720 to 2,077,073,408 bytes,
 
 ## Reproduction
 
-The following describes the historical evidence environment, not a current device-validation instruction. For the migrated candidate see the [migration record](toolchain-migration.md) and await explicit #12 approval. To inspect historical retained core artifacts without KVM, use the verifier in a separate worktree at that historical commit, not the newly migrated TypeScript verifier (which requires a guest Node runtime receipt). Extract the archive into a private directory and run:
+The following describes the historical evidence environment, not a current device-validation instruction. For the migrated candidate see the [migration record](toolchain-migration.md) and the current exact hosted qualification above. To inspect historical retained core artifacts without KVM, use the verifier in a separate worktree at that historical commit, not the newly migrated TypeScript verifier (which requires a guest Node runtime receipt). Extract the archive into a private directory and run:
 
 Use the historical checkout's own [device guide](https://github.com/imxade/vm_interface/blob/7e095afe6274137104f15caf9cbaef7738d6a9ba/docs/device-validation.md) and its original verifier commands. The current TypeScript scripts are for the migrated source and its matching evidence, not a drop-in verifier for artifacts created before migration.
 

@@ -6,7 +6,7 @@ VM Interface gives applications, developers and external automation systems a co
 
 [Apache-2.0](LICENSE) · [Documentation](docs/README.md) · [API guide](docs/api.md) · [Validation results](docs/validation.md) · [Contributing](CONTRIBUTING.md)
 
-> **Evaluation preview — Kubernetes/Vite+ migration qualification is in progress.** Prior hosted results are historical; see the [migration record](docs/toolchain-migration.md) for the exact new candidate. Independent native-device acceptance ([#12](https://github.com/everhush/vm_interface/issues/12)) remains pending, including native ARM64 Android. This is not a production service or a stable/certified release. Use only clean, disposable, authorized devices.
+> **Evaluation preview — Kubernetes/Vite+ migration hosted qualification passed on 27 November 2026 UTC.** See the [migration record](docs/toolchain-migration.md) for the exact independently reviewed candidate. Independent native-device acceptance ([#12](https://github.com/everhush/vm_interface/issues/12)) remains pending, including native ARM64 Android. This is not a production service or a stable/certified release. Use only clean, disposable, authorized devices.
 
 ## Why VM Interface?
 
@@ -25,7 +25,7 @@ A full VM offers its own operating system, kernel, firmware, disks and desktop/c
 - Remote console workflows where a human and external automation can share observation but only the current controller can send input.
 - Account-isolated VM environments that exchange files, run guest services through scoped tunnels and produce original test recordings.
 
-These are examples of historically hosted-qualified building blocks, not a promise of a hosted SaaS, turnkey multi-user desktop, or arbitrary OS compatibility.
+These are examples of hosted-qualified building blocks, not a promise of a hosted SaaS, turnkey multi-user desktop, or arbitrary OS compatibility.
 
 ## Architecture at a glance
 
@@ -55,7 +55,7 @@ Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/K
 
 ## Current capability status
 
-| Capability                                                                                | Historical qualification                                                                                                                      |
+| Capability                                                                                | Qualification                                                                                                                      |
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | x86_64 lifecycle, account isolation, quotas, restart/recovery                             | Hosted native KVM passed                                                                                                           |
 | BIOS/UEFI boot, persistent system/exchange and data disks, cold CPU/RAM change            | Hosted native KVM passed                                                                                                           |
@@ -90,7 +90,7 @@ This bootstraps the locked project-local Vite+ CLI with `npm ci`, then runs `vp 
 **Warning:** the native validation workflow provisions a new K3s cluster, downloads guest images and uses local disks and elevated privileges. Never run it on a personal production workstation, existing cluster or shared persistent runner. Review the scripts first and obtain operator consent. Use a clean source checkout; keep guest media, credentials and other private files outside the source checkout and OCI build context. Require real `/dev/kvm`, Buildah, sudo, Node.js 24, a C compiler, curl, OpenSSL, Git, FFmpeg/ffprobe, Tesseract and skopeo. The core preflight requires at least 6 GiB RAM and 35 GiB free root storage; large-media profiles require 12 GiB and 100 GiB. No TCG fallback.
 
 ```sh
-# Only after issue #12 explicitly approves this exact migrated candidate:
+# Reproduce the exact hosted-qualified implementation:
 git checkout 34652dc2fffd585e8e95aac1a2df63b3552da8f8
 sudo "$(command -v node)" scripts/device-preflight.ts --architecture amd64
 bash scripts/device-validate.sh core --confirm-disposable
@@ -122,15 +122,16 @@ See the [API guide](docs/api.md#walkthrough-create-and-operate-a-smoke-vm) for a
 
 ## Evidence
 
-The previous hosted candidate passed **152 automated tests** (93 TypeScript + 59 Python), all **13 recorded core native stages**, real CSI qualification and Android input preparation. Both original H.264 guest recordings were independently decoded and matched to actual API traces and guest results.
+The migrated hosted candidate passed **158 TypeScript tests in 59 files** (no skipped, failed or todo tests), all **13 recorded core native stages**, real CSI qualification and Android input preparation. Original H.264 guest recordings, actual guest/clone and exchange bytes, native CDI and network traces and cleanup were independently verified.
 
-| Hosted workflow                                                                                               | Result              |
-| ------------------------------------------------------------------------------------------------------------- | ------------------- |
-| [Core KVM + static checks](https://github.com/xad3play/vm_interface/actions/runs/45954535380)                 | Pass                |
-| [Real CSI expansion](https://github.com/xad3play/vm_interface/actions/runs/45954542680)                       | Pass                |
-| [Android media and signed APK preparation](https://github.com/xad3play/vm_interface/actions/runs/45954551058) | Pass (offline only) |
+| Hosted workflow | Result |
+| --- | --- |
+| [Locked Vite+ static checks](https://github.com/everhush/vm_interface/actions/runs/46077697248) | Pass |
+| [Core KVM + static checks](https://github.com/everhush/vm_interface/actions/runs/46077980605) | Pass |
+| [Real CSI expansion](https://github.com/everhush/vm_interface/actions/runs/46078053324) | Pass |
+| [Android media and signed APK preparation](https://github.com/everhush/vm_interface/actions/runs/46077983994) | Pass (offline only) |
 
-The preceding table is historical, not a result on the new implementation. See the [migration record](docs/toolchain-migration.md) for current candidate results and evidence. Historical Actions runs were executed in a CI-only synchronized fork. New qualification runs execute in the public upstream. Access to historical run artifacts may require repository authorization and artifacts may expire. The durable [validation record](docs/validation.md) documents run IDs, artifact digests, observed results and limitations without publishing raw logs, guest data or credentials. The upstream main branch includes documentation/license-only changes after the exact tested commit. It does not claim a new same-SHA CI result.
+Exact source: `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. See the [migration record](docs/toolchain-migration.md) and [validation record](docs/validation.md) for original artifacts, SHA-256 digests, observed results and explicit limits. Historical pre-transfer CI evidence is separate; public upstream qualification used standard GitHub-hosted runners. Documentation-only successors do not constitute a new same-SHA CI result. Artifact access and retention are subject to GitHub; no raw logs, guest media or credentials are redistributed here.
 
 ## Repository map
 
@@ -147,7 +148,7 @@ The preceding table is historical, not a result on the new implementation. See t
 
 ## Roadmap and boundaries
 
-After #13 qualification and explicit handoff approval, the next milestone is [independent native-device acceptance (#12)](https://github.com/everhush/vm_interface/issues/12). Three consecutive comprehensive reviewed independent passes are required before stable release; current count is **0/3**. Use the [acceptance record template](docs/acceptance-record.md) to retain independent evidence and record the verdict without changing source. The current scope deliberately excludes a general dashboard, production identity/registration/OAuth, AI agents and production EKS/cloud deployment. See [release checklist](docs/release-checklist.md) and [original product specification](docs/product-specification.md) for the wider roadmap. Report defects rather than weakening test assertions.
+Next milestone: [independent native-device acceptance (#12)](https://github.com/everhush/vm_interface/issues/12). Three consecutive comprehensive reviewed independent passes are required before stable release; current count is **0/3**. Use the [acceptance record template](docs/acceptance-record.md) to retain independent evidence and record the verdict without changing source. The current scope deliberately excludes a general dashboard, production identity/registration/OAuth, AI agents and production EKS/cloud deployment. See [release checklist](docs/release-checklist.md) and [original product specification](docs/product-specification.md) for the wider roadmap. Report defects rather than weakening test assertions.
 
 ## License and security
 

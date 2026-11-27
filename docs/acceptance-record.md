@@ -1,6 +1,6 @@
 # Independent device acceptance — review record template
 
-Use this template for each comprehensive iteration of [issue #12](https://github.com/everhush/vm_interface/issues/12). This is a record, not a new test specification or a passing result. The migrated qualification candidate is `34652dc2fffd585e8e95aac1a2df63b3552da8f8`; it is not yet approved. Record only the exact source explicitly approved in #12 after all required hosted gates and evidence review; follow the [device guide](device-validation.md) and issue for exact execution and scope.
+Use this template for each comprehensive iteration of [issue #12](https://github.com/everhush/vm_interface/issues/12). This is a record, not a new test specification or a passing result. The approved exact hosted-qualified source is `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. All required hosted gates and independent artifact review passed; independent device execution is unstarted, 0/3. follow the [device guide](device-validation.md) and issue for exact execution and scope.
 
 Keep the filled record and original evidence private until reviewed for credentials, guest data and licensing. Retain failed iterations as well as successful ones. Do not execute source changes under this validation-only issue.
 

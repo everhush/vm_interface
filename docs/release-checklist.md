@@ -7,12 +7,14 @@ This is the preparation checklist for an evaluation source preview. It does not 
 - Project introduction, architecture, safe quickstart, API guide, source map and clear supported/conditional capability table.
 - Apache-2.0 LICENSE and NOTICE, contribution and security reporting guidance, third-party licensing boundaries.
 - Dated hosted validation record, exact evidence commit/run IDs/checksums, current requirement ledger and preserved original specification/history.
-- Locked dependency graph and reproducible checks, with public upstream CI guards in the migrated candidate; see the [migration record](toolchain-migration.md).
+- Locked dependency graph and reproducible checks, with public upstream CI guards in the hosted-qualified migrated candidate; see the [migration record](toolchain-migration.md).
 - No tracked guest media, APKs, raw recordings, .env files or private-key filenames in the reviewed primary candidate. No raw artifact ZIP is committed.
 - Relative Markdown links in the public documentation checked against the tracked tree; a limited credential-pattern scan of the public documents found no private-key markers, GitHub token patterns, AWS access key patterns or inline database credential URLs. This is not a secret scan of all source or history.
 - Documentation index, explicit smoke VM walkthrough and independent acceptance record template prepared. Compare the complete primary tree against the hosted SHA in [validation.md](validation.md) to ensure executable source, tests, dependency lock and infrastructure remain unchanged.
 
 ## Publication audit — primary source preview
+
+Current exact hosted qualification: `34652dc2fffd585e8e95aac1a2df63b3552da8f8` (all four hosted gates passed and evidence independently reviewed). See [migration record](toolchain-migration.md). Any source-preview promotion is a fast-forward of qualified executable content and documentation-only successors; keep `main`/`master` aligned. Do not start #12 under this implementation issue or publish a stable release. The prior publication audit below is historical.
 
 The review on 2026-11-27 inspected the previously finalized tree `40ef574c216030b5ff132c6d0443296203ed6af0` against exact hosted qualification `7e095afe6274137104f15caf9cbaef7738d6a9ba`. Both primary refs were identical. The Git tree contained 218 blobs: 196 unchanged, 6 modified and 16 added, with no deletions. All executable sources, dependencies, tests, deployment manifests and workflows matched; only documentation, license, issue/PR templates and `.gitignore` differed. Subsequent quickstart and publication-guidance edits are also non-runtime; recheck the complete tree comparison before any publication.
 
