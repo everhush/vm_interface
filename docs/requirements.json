@@ -398,6 +398,22 @@
     "managedRuntimeCertified": false,
     "independentDeviceAcceptance": false,
     "primaryPromotionApproved": false,
-    "sourceInventory": "docs/toolchain-migration.md"
+    "sourceInventory": "docs/toolchain-migration.md",
+    "legacyTestInventory": {
+      "pythonModules": 23,
+      "pythonCases": 59,
+      "migratedTypescriptSuites": 21,
+      "migratedPassingCases": 60,
+      "otherPassingCases": 98,
+      "scope": "Source module crosswalk and retained exact static test report; grouped or expanded cases are not necessarily one-to-one."
+    },
+    "coreCompletedStages": [
+      "actual KVM provisioning and daemonless OCI deployment",
+      "API smoke and tenant isolation",
+      "persistent system and exchange lifecycle",
+      "independent data disk lifecycle, media and native export",
+      "Linux installation, archive, native clone and original recording"
+    ],
+    "coreActiveStage": "Actual CDI disk import"
   }
 }

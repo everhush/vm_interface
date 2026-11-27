@@ -7,6 +7,8 @@
 
 Compared the transferred baseline `d2f4eb11cd1c6084a97021e1c74cde2ffa2a9036` and candidate `34652dc2fffd585e8e95aac1a2df63b3552da8f8` using complete Git trees. Baseline: 219 tracked blobs; candidate: 231 tracked blobs. The baseline contained 65 Python files plus `Dockerfile` and `.dockerignore`. None remains in the candidate. The active manifest/lock use Vite+ 1.8.0, Vite+ core 8.3.8001 and Vitest 5.1.1; no ESLint, typescript-eslint or tsx installed package remains. The Vinext application runtime is retained. The source migration guard checks tracked executable content and dependency/configuration regressions; external OCI registry references are allowed.
 
+The original 23 Python test modules define 59 test methods. The corresponding 21 TypeScript suites contain 60 passing cases in the independently reviewed exact static report, with 98 further passing cases in the other suites (158 total). Some cases are grouped, split or expanded, so count comparison is not proof of assertion-by-assertion equivalence. The Android archive/APK and Windows catalog/driver tests retain their negative input, exact-byte and signer/metadata checks; native Linux guest archive, pointer and persistence checks now use actual Node runtime evidence.
+
 The following file-level crosswalk identifies the migrated implementations and tests, including consolidated test modules. It is an inventory, not a substitute for runtime qualification or a proof of equivalence by filename.
 
 | Baseline Python path | Candidate TypeScript path |
@@ -84,7 +86,7 @@ The former daemon-specific build files are replaced by [daemonless OCI build](..
 | Gate | Run | Verdict |
 | --- | --- | --- |
 | Locked Vite+ static | [46077697248](https://github.com/everhush/vm_interface/actions/runs/46077697248) | PASS: 158/158 tests in 59 files; zero failed/skipped/todo; format, type-aware lint/check, build, loader and source guard passed. |
-| Native core | [46077980605](https://github.com/everhush/vm_interface/actions/runs/46077980605) | In progress; isolated actual KVM and OCI deployment passed. Final verdict pending. |
+| Native core | [46077980605](https://github.com/everhush/vm_interface/actions/runs/46077980605) | In progress; isolated actual KVM and OCI deployment, API smoke and tenant isolation, persistent system/exchange, independent data disk/media/export, and Linux installation/archive/native clone/original recording passed. Native CDI import and remaining stages pending. |
 | Real CSI expansion | [46078053324](https://github.com/everhush/vm_interface/actions/runs/46078053324) | PASS: real expandable CSI, actual VirtioFS guest capacity growth, unchanged PVC/DataVolume identities, 206 matching HTTP status pairs and both admission denials. |
 | Android inputs | [46077983994](https://github.com/everhush/vm_interface/actions/runs/46077983994) | PASS: pinned disks, signed APK and both scenario preflights. Native boot and guest compatibility unverified. |
 
