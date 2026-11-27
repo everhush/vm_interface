@@ -4,6 +4,8 @@ import {execFileSync} from "node:child_process";
 import {mkdtempSync,writeFileSync,rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
+import {gunzipSync} from "node:zlib";
+import {randomBytes} from "node:crypto";
 import {APP,packageBytes,launcherCloud,verifyArchive,verifyPlatform,verifyPointerReceipt,runtimeParts,verifyRuntime} from "../scripts/linux-showcase-fixture.ts";
 import {sha} from "../scripts/api-client.ts";
 import {ZipReader} from "../scripts/zip-reader.ts";
@@ -19,3 +21,5 @@ test("inventory and tablet challenge",()=>{
  const data=Buffer.from("actual"),v={device:"QEMU USB Tablet",absoluteX:12000,absoluteY:20000,leftPress:true,leftRelease:true,challengeSha256:sha(data)};assert.deepEqual(verifyPointerReceipt(Buffer.from(JSON.stringify(v)),data),v);
  for(const change of [{leftPress:false},{leftRelease:false},{absoluteY:-1},{absoluteX:true},{device:"keyboard"},{challengeSha256:"0".repeat(64)}])assert.throws(()=>verifyPointerReceipt(Buffer.from(JSON.stringify({...v,...change})),data));
 });
+
+test("runtime upload chunks are bounded and reconstruct exactly",()=>{const bytes=randomBytes(8*1024*1024),parts=runtimeParts(bytes,"v24.1.0");assert(parts.chunks.length>=2);assert(parts.chunks.every(p=>p.bytes.length<=7*1024*1024&&p.sha256===sha(p.bytes)));assert(gunzipSync(Buffer.concat(parts.chunks.map(p=>p.bytes))).equals(bytes));assert.equal(parts.executableSha256,sha(bytes));});

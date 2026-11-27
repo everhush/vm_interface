@@ -23,7 +23,7 @@ function writeBlock(p:string,b:Buffer){
  const fd=openSync(p,"r+");try{let n=0;while(n<b.length){const m=writeSync(fd,b,n,b.length-n,n);assert(m>0);n+=m;}fsyncSync(fd);}finally{closeSync(fd);}assert(readBlock(p).equals(b));
 }
 async function pointer(challenge:Buffer){
- const names=readdirSync("/sys/class/input").filter(n=>/^event\d+$/.test(n)).map(n=>({node:n,name:readFileSync("/sys/class/input/"+n+"/device/name","utf8").trim()})).filter(v=>/tablet/i.test(v.name));
+ const names:{node:string;name:string}[]=[];for(const n of readdirSync("/sys/class/input").filter(n=>/^event\d+$/.test(n))){try{const name=readFileSync("/sys/class/input/"+n+"/device/name","utf8").trim();if(/tablet/i.test(name))names.push({node:n,name});}catch(e){if((e as NodeJS.ErrnoException).code!=="ENOENT")throw e;}}
  assert.equal(names.length,1,"Expected exactly one native tablet");
  const fd=openSync("/dev/input/"+names[0].node,constants.O_RDONLY|constants.O_NONBLOCK);
  let x:number|undefined,y:number|undefined,pressed=false,released=false;
