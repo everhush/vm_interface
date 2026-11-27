@@ -37,7 +37,7 @@ Run [the device guide](device-validation.md) on authorized disposable equipment,
 python3 scripts/verify-evidence.py --root /path/to/core-artifact --profile core --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba
 node scripts/verify_media_evidence.ts --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
 node scripts/verify_network_evidence.ts --root /path/to/core-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba --run-id 45954535380
-python3 scripts/verify_csi_evidence.py --root /path/to/csi-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba
+node scripts/verify_csi_evidence.ts --root /path/to/csi-artifact --commit 7e095afe6274137104f15caf9cbaef7738d6a9ba
 ```
 
 Verify original artifact hashes and inspect actual guest frames and returned bytes. Artifact verifiers do not independently certify hardware. Private CI access and artifact retention may limit availability; no raw logs, media or guest data are redistributed here. Historical iterations and failures are preserved in [implementation.md](implementation.md). [Machine-readable requirement ledger](requirements.json).
