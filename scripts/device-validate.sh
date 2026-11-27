@@ -85,7 +85,7 @@ if [ "$profile" = core ]; then
   node scripts/verify_network_evidence.ts --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/network-independent-verification.json
   stage node --import tsx scripts/e2e-recording.ts
   stage node scripts/e2e-exchange.ts
-  stage python3 scripts/e2e-api-functional-proof.py
+  stage node scripts/e2e-api-functional-proof.ts
   stage node scripts/e2e-idle.ts
   stage bash scripts/e2e-media-ci.sh
   node scripts/verify_media_evidence.ts --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/media-evidence-verification.json
@@ -96,7 +96,7 @@ if [ "$profile" = core ]; then
   stage node scripts/e2e-recovery.ts after
   node scripts/probe-virtiofs-ci.ts
 elif [ "$profile" = linux ]; then
-  stage python3 scripts/e2e-api-functional-proof.py
+  stage node scripts/e2e-api-functional-proof.ts
 else
   stage python3 scripts/showcase-native.py "$profile" "$@"
 fi

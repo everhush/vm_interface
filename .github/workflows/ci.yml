@@ -99,7 +99,7 @@ jobs:
       - name: Linux installation, archive, native clone and original recording
         id: linux_proof
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.client_tools.outcome == 'success' }}
-        run: bash scripts/run-api-tests-ci.sh python3 scripts/e2e-api-functional-proof.py
+        run: bash scripts/run-api-tests-ci.sh node scripts/e2e-api-functional-proof.ts
       - name: Retain linux-partial-evidence immediately on failed stage
         if: ${{ !cancelled() && steps.linux_proof.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
