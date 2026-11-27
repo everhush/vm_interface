@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   prepare:
-    if: github.repository == 'xad3play/vm_interface' && github.ref == 'refs/heads/prep/vite-plus-migration'
+    if: github.repository == 'everhush/vm_interface' && github.ref == 'refs/heads/prep/vite-plus-migration'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -18,10 +18,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Resolve pinned toolchain lock
+      - name: Resolve pinned toolchain lock on the public standard runner
         run: |
           set -euo pipefail
           node -e 'const [major,minor]=process.versions.node.split(".").map(Number); if(major!==24||minor<11)throw new Error("Node 24.11+ required")'
+          npm view vite-plus@1.8.0 dependencies.vite dependencies.vitest --json
           npm install --package-lock-only --no-audit --no-fund
           npm ci --no-audit --no-fund
           ./node_modules/.bin/vp toolchain
