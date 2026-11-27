@@ -94,9 +94,9 @@ jobs:
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs qualification/apk/proof.apk > qualification/apk/signature.txt
           "$ANDROID_HOME/build-tools/34.0.0/aapt2" dump badging qualification/apk/proof.apk > qualification/apk/badging.txt
           grep -F "versionName='2.0'" qualification/apk/badging.txt
-          python3 scripts/write-showcase-scenario.py windows qualification/apk/windows-scenario.json
-          python3 scripts/write-showcase-scenario.py android qualification/apk/android-scenario.json
-          PYTHONPATH=scripts python3 -c 'from pathlib import Path; from showcase_inputs import load_scenario; [load_scenario(Path("qualification/apk/"+p+"-scenario.json"),p) for p in ("windows","android")]'
+          node scripts/write-showcase-scenario.ts windows qualification/apk/windows-scenario.json
+          node scripts/write-showcase-scenario.ts android qualification/apk/android-scenario.json
+          node --input-type=module -e 'import {loadScenario} from "./scripts/showcase-inputs.ts"; for(const p of ["windows","android"])loadScenario("qualification/apk/"+p+"-scenario.json",p)'
           (cd qualification/apk; sha256sum proof.apk *-scenario.json > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         if: always()

@@ -28,9 +28,9 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/qualify-android-media.sh qualification/android --retain-disks
-          python3 scripts/prepared_android.py qualification/android --preflight-only > qualification/android/preflight.json
-          python3 scripts/prepared_android.py qualification/android --preflight-only --transfer adb-saf --authorize-android-debug > qualification/android/adb-preflight.json
-          python3 -c 'import json; p=json.load(open("qualification/android/preflight.json")); assert p["localInputsVerified"] is True and p["guestCompatibilityVerified"] is False; print(json.dumps(p,indent=2))'
+          node scripts/prepared-android.ts qualification/android --preflight-only > qualification/android/preflight.json
+          node scripts/prepared-android.ts qualification/android --preflight-only --transfer adb-saf --authorize-android-debug > qualification/android/adb-preflight.json
+          node -e 'const p=JSON.parse(require("node:fs").readFileSync("qualification/android/preflight.json","utf8"));require("node:assert/strict").ok(p.localInputsVerified===true&&p.guestCompatibilityVerified===false);console.log(JSON.stringify(p,null,2))'
       - uses: actions/upload-artifact@v4
         if: always()
         with:

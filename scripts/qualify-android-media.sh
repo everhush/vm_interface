@@ -9,7 +9,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 archive="$(node scripts/fetch-pinned-media.ts android "$work")"
 gh attestation verify "$archive" --repo jqssun/android-lineage-qemu --format json > "$out/android-attestation.json"
-python3 scripts/prepare_android.py "$archive" "$work/disks" --authorized > "$out/android-disk-manifest.json"
+node scripts/prepare-android.ts "$archive" "$work/disks" --authorized > "$out/android-disk-manifest.json"
 test -f "$ANDROID_HOME/platforms/android-34/android.jar"
 test -x "$ANDROID_HOME/build-tools/34.0.0/apksigner"
 bash showcases/android/build-apk.sh "$out/proof.apk" > "$out/apk-build.txt"
@@ -20,6 +20,6 @@ grep -F "versionName='3.0'" "$out/apk-badging.txt"
 (cd "$out"; sha256sum proof.apk > apk.sha256)
 # Retain only metadata and our fixture APK, not third-party disk images.
 
-python3 scripts/write-showcase-scenario.py android "$out/android-scenario.json"
-python3 scripts/write-showcase-scenario.py android "$out/android-adb-scenario.json" --android-transfer adb-saf
+node scripts/write-showcase-scenario.ts android "$out/android-scenario.json"
+node scripts/write-showcase-scenario.ts android "$out/android-adb-scenario.json" --android-transfer adb-saf
 if [ "${2:-}" = --retain-disks ]; then mv "$work/disks" "$out/disks"; fi
