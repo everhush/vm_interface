@@ -7,7 +7,7 @@ This is the preparation checklist for an evaluation source preview. It does not 
 - Project introduction, architecture, safe quickstart, API guide, source map and clear supported/conditional capability table.
 - Apache-2.0 LICENSE and NOTICE, contribution and security reporting guidance, third-party licensing boundaries.
 - Dated hosted validation record, exact evidence commit/run IDs/checksums, current requirement ledger and preserved original specification/history.
-- Locked dependency graph and reproducible checks, existing CI-only fork guard unchanged.
+- Locked dependency graph and reproducible checks, with public upstream CI guards in the migrated candidate; see the [migration record](toolchain-migration.md).
 - No tracked guest media, APKs, raw recordings, .env files or private-key filenames in the reviewed primary candidate. No raw artifact ZIP is committed.
 - Relative Markdown links in the public documentation checked against the tracked tree; a limited credential-pattern scan of the public documents found no private-key markers, GitHub token patterns, AWS access key patterns or inline database credential URLs. This is not a secret scan of all source or history.
 - Documentation index, explicit smoke VM walkthrough and independent acceptance record template prepared. Compare the complete primary tree against the hosted SHA in [validation.md](validation.md) to ensure executable source, tests, dependency lock and infrastructure remain unchanged.
@@ -20,11 +20,11 @@ The upstream had 67 retained branches (62 unique heads), no tags or GitHub relea
 
 A targeted content review covered the five CI workflows, `infra/app.yaml`, `infra/namespace.yaml`, `src/db.ts`, `src/auth.ts`, `scripts/device-validate.sh`, `scripts/provision-ci.sh` and `scripts/showcase-native.ts`. No matches for checked private key, GitHub/AWS/Google token, JWT, credential-in-URL or long literal credential patterns were found. This is a limited pattern review, **not a comprehensive secret scan**, dependency vulnerability audit or approval of public visibility. Complete history, issues/PRs, private attachments and artifacts still require an authorized maintainer review. Keep private guest media and credentials outside the source checkout; the OCI builder archives an explicit allowlist of tracked application files.
 
-## Before making a private repository public
+## Historical publication checklist and continuing public-source review
 
 - [ ] Maintainer explicitly approves source visibility and reviews **all** reachable branches/tags and complete git history for credentials, confidential data, third-party source/media and inappropriate personal information; review issue/PR bodies, attachments and Actions logs/artifacts as well. Rotate any exposed credential and remediate before publication. A current-tree filename review is not a full secret scan.
 - [ ] Review license/ownership of contributed source and dependency obligations, notices and guest media terms. Do not redistribute external binaries or images without authorization.
-- [ ] Set the default branch to `main` in repository settings (keep the legacy `master` aligned until changed). The connected integration cannot change this setting or configure branch protection; do not interpret alignment as a settings update. Configure branch protection, review requirements, security/private vulnerability reporting and Actions permissions; keep the CI-only fork separation.
+- [ ] Set the default branch to `main` in repository settings (keep the legacy `master` aligned until changed). The connected integration cannot change this setting or configure branch protection; do not interpret alignment as a settings update. Configure branch protection, review requirements, security/private vulnerability reporting and Actions permissions; keep qualification restricted to the authorized public upstream and explicit implementation/preparation branches.
 - [ ] Choose visibility, repository description/topics and access permissions in repository settings; avoid publishing private CI artifacts automatically. Source preview status and qualification boundaries must remain visible. Do not imply a public CI badge means main's post-qualification documentation commit ran native tests.
 
 ## Maintainer settings and suggested public presentation

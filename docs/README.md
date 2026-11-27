@@ -1,6 +1,6 @@
 # Documentation
 
-Start with the [project README](../readme.md). VM Interface is an Apache-2.0 evaluation source preview: hosted x86_64 KVM qualification is complete, and native-device acceptance remains pending. It is not a hosted service or a production-ready platform.
+Start with the [project README](../readme.md). VM Interface is an Apache-2.0 evaluation source preview: the previous hosted x86_64 KVM qualification is historical; migrated-candidate qualification and native-device acceptance remain pending. It is not a hosted service or a production-ready platform.
 
 | I want to… | Read |
 | --- | --- |
@@ -8,7 +8,7 @@ Start with the [project README](../readme.md). VM Interface is an Apache-2.0 eva
 | Try the API and build a client | [API guide and lifecycle walkthrough](api.md) |
 | Export a stopped VM's disk or exchange bundle | [Disk export](disk-export.md) |
 | Reproduce the evaluation safely on real hardware | [Device validation](device-validation.md) |
-| Check exactly what has passed, on which source | [Qualification record](validation.md) |
+| Check exactly what has passed, on which source | [Qualification record](validation.md), [Kubernetes/Vite+ migration](toolchain-migration.md) |
 | Review a complete native-device iteration | [Acceptance record template](acceptance-record.md) |
 | Contribute or report a defect | [Contributing](../CONTRIBUTING.md), [security policy](../SECURITY.md) |
 | Understand what must happen before publication | [Release checklist](release-checklist.md), [third-party terms](../THIRD_PARTY.md) |
@@ -17,7 +17,7 @@ Start with the [project README](../readme.md). VM Interface is an Apache-2.0 eva
 ## Which source should I use?
 
 - Browse or build the current `main` source for the evaluation preview. The legacy default branch is kept aligned.
-- For reproducibility and issue #12 acceptance, check out the exact hosted-qualified `7e095afe6274137104f15caf9cbaef7738d6a9ba` and follow the current device guide. The later license/documentation changes are not a new same-SHA CI result.
+- The migrated candidate is `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. Follow the [migration record](toolchain-migration.md); for #12 acceptance use it only after the issue explicitly approves the exact candidate. Historical evidence is not new same-SHA qualification.
 - The original specification and engineering log preserve prior decisions and failures, including superseded Windows requirements. They are historical, not the current feature list or a request to restart development.
 
 ## Common questions
@@ -32,4 +32,4 @@ Start with the [project README](../readme.md). VM Interface is an Apache-2.0 eva
 
 **Where are the original recordings?** They remain in retained CI artifacts linked from the qualification record. Access and retention are subject to GitHub and the CI repository. The source tree does not redistribute recordings, VM images, private guest data or generated APKs.
 
-**What is the next milestone?** Independent native-device acceptance in [issue #12](https://github.com/imxade/vm_interface/issues/12); three consecutive comprehensive reviews, currently 0/3.
+**What is the next milestone?** Independent native-device acceptance in [issue #12](https://github.com/everhush/vm_interface/issues/12); three consecutive comprehensive reviews, currently 0/3.

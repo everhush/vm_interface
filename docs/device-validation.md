@@ -1,6 +1,6 @@
 # Device validation handoff
 
-> **Current qualification (2026-11-27):** the hosted core, native CSI evaluation and Android offline preparation all passed on exact commit `7e095afe6274137104f15caf9cbaef7738d6a9ba`. #12 is ready but independent device acceptance remains 0/3. See [validation.md](validation.md). The instructions below are for authorized disposable devices; this is not a certified release.
+> **Current migration candidate:** `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. Static and Android preparation passed; full native core and CSI are pending. See [the migration record](toolchain-migration.md). Do not start #12 independent acceptance until the issue explicitly approves this candidate. The prior hosted results in [validation.md](validation.md) are historical.
 
 **This is not a certified release.** Hosted x86_64 and offline Android input checks passed. Independent device acceptance, including native ARM64 guest runtime, remains essential. Run the locked checks on each validation checkout; do not use on production systems.
 
@@ -11,7 +11,8 @@ On a Linux machine with network access, Git, Node.js 24, npm, Bash, curl, FFmpeg
 ```sh
 git clone https://github.com/everhush/vm_interface.git
 cd vm_interface
-git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba
+# Only after explicit #12 approval of this exact candidate:
+git checkout 34652dc2fffd585e8e95aac1a2df63b3552da8f8
 bash scripts/device-validate.sh checks
 ```
 
@@ -90,7 +91,7 @@ To verify already downloaded evidence independently (no KVM needed): `node scrip
 
 ### Pinned two-disk Android media (offline qualified; native boot pending)
 
-The LineageOS 23.2 ARM64 bundle from release v2026.10.18 passed publisher-attestation verification, exact archive SHA256 and QCOW2 checks on fork run 45623125031. The signed proof APK was built and checked in the same job. That initial artifact is historical. For the current exact-candidate preparation, use [run 45954551058 and artifact 15177888333](https://github.com/xad3play/vm_interface/actions/runs/45954551058/artifacts/15177888333), the committed pinned manifests, and the [validation record](validation.md). This does not certify boot or the exchange mount.
+The LineageOS 23.2 ARM64 bundle from release v2026.10.18 passed publisher-attestation verification, exact archive SHA256 and QCOW2 checks on fork run 45623125031. The signed proof APK was built and checked in the same job. That initial artifact is historical. For the migrated candidate's exact preparation, use [run 46077983994 and artifact 15235503423](https://github.com/everhush/vm_interface/actions/runs/46077983994/artifacts/15235503423), the committed pinned manifests, and the [validation record](validation.md). This does not certify boot or the exchange mount.
 
 Use an authorized SDK/image and run the acquisition workflow or reproduce its steps using scripts/fetch-pinned-media.ts, scripts/qualify-android-media.sh and the pinned sources. Use vda as --media and vdb as --auxiliary-media with the matching hashes and capacities in the disk manifest (6 GiB and 18 GiB respectively). No bundled NVRAM or unsigned recovery is imported. The ARM64 showcase explicitly selects `storage.exchangeTag: share`, matching the LineageOS virtio-common fstab (`share /mnt/vendor/shared virtiofs`); the backend claim stays account-owned. The source tree is corroboration, not proof that the pinned build mounts or exposes it through SAF. The large-media disposable profile reserves a 20 GiB staging PVC, caps staged data at 16 GiB and verifies API/reconciler settings. Verify native boot, effective tag, and user-authorized SAF read/write without bypassing signatures or SELinux.
 
@@ -107,7 +108,7 @@ node showcases/windows/build-catalog-iso.ts --authorized --iso /path/to/virtio-w
 
 Retain the actual output digest, not a digest from a different build (ISO metadata can vary). Add --auxiliary-media /path/to/VMDRIVERS.iso --auxiliary-sha256 <actual-output-sha256> --auxiliary-gib 1 to the Windows command. The image contains bootstrap.ps1, which verifies exact component bytes and signer identities, uses normal signed driver installation and requires the actual API-uploaded challenge before VMDRIVERSREADY. The older MSI packager is retained for historical review only; it is not the qualified input path.
 
-Windows media and scenario are historical/optional. Hosted Linux qualification passed; native ARM64 Android and independent device acceptance remain outstanding under ready issue #12.
+Windows media and scenario are historical/optional. Hosted Linux qualification passed; native ARM64 Android and independent device acceptance remain outstanding under issue #12, after explicit approval of the migrated candidate.
 
 ### Bundled scenario recipes (prepared, not runtime-qualified)
 Use `node scripts/write-showcase-scenario.ts windows windows-scenario.json` or `node scripts/write-showcase-scenario.ts android android-scenario.json` to create the concrete client recipe. Windows uses authorized installation and login checkpoints before recording, then actual 7-Zip GUI evidence. Android requires fixture APK version 3.0, adds a post-upload installation and authorized Storage Access Framework directory selection checkpoint, then clicks the exact unique visible Compute proof label using OCR from actual API screenshots. The APK reads the fresh 4096-byte API-uploaded challenge using the user-granted directory, computes its SHA256 and publishes a challenge-bound result/checksum. Version 2.0 static-output evidence is historical only. No fabricated click coordinates or recording of credentials. These prepared recipes still require guest qualification on the exact media; missing mount/provider or ambiguous OCR is an explicit failure, not a fallback. The new APK must be rebuilt and independently signature-checked; version 1.0 artifact is historical only. The prepared Android client rechecks the actual APK signature and package/version metadata using the authorized portable Java apksigner.jar (set ANDROID_HOME to the SDK containing build-tools 34.0.0, APKSIGNER_JAR to its verified JAR, or use apksigner in PATH) and a bounded standard-library binary-manifest reader; no x86-only aapt2 executable is required on ARM64. The adb-saf launch additionally checks native adb before provisioning. If the guest requires the same test RSA key to be reauthorized after a cold restart, the operator may approve it at an unrecorded checkpoint; authentication and SELinux enforcement must remain enabled.

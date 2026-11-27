@@ -1,6 +1,8 @@
 # Qualification and reproducibility record
 
-**Date:** 2026-11-27. **Hosted-tested source:** [`7e095afe6274137104f15caf9cbaef7738d6a9ba`](https://github.com/imxade/vm_interface/commit/7e095afe6274137104f15caf9cbaef7738d6a9ba). **Status:** ready for #12 independent native-device acceptance; not certified for production or stable release. The main source distribution adds license and documentation after that source commit. The hosted run evidence refers to the exact SHA above, not a later documentation commit.
+> **Migration handoff pending:** see [the current Kubernetes/Vite+ migration record](toolchain-migration.md). The record below is historical and does not qualify the migrated implementation. Do not start #12 on a new candidate until explicit same-commit approval.
+
+**Date:** 2026-11-27. **Hosted-tested source:** [`7e095afe6274137104f15caf9cbaef7738d6a9ba`](https://github.com/imxade/vm_interface/commit/7e095afe6274137104f15caf9cbaef7738d6a9ba). **Historical status at the recorded checkpoint:** ready for #12 independent native-device acceptance; not certified for production or stable release. The main source distribution adds license and documentation after that source commit. The hosted run evidence refers to the exact SHA above, not a later documentation commit.
 
 ## Exact hosted results
 
@@ -31,7 +33,7 @@ CSI guest exchange capacity increased from 1,020,702,720 to 2,077,073,408 bytes,
 
 ## Reproduction
 
-Run [the device guide](device-validation.md) on authorized disposable equipment, not an existing cluster. For the exact hosted implementation use `git checkout 7e095afe6274137104f15caf9cbaef7738d6a9ba`. To inspect historical retained core artifacts without KVM, use the verifier in a separate worktree at that historical commit, not the newly migrated TypeScript verifier (which requires a guest Node runtime receipt). Extract the archive into a private directory and run:
+The following describes the historical evidence environment, not a current device-validation instruction. For the migrated candidate see the [migration record](toolchain-migration.md) and await explicit #12 approval. To inspect historical retained core artifacts without KVM, use the verifier in a separate worktree at that historical commit, not the newly migrated TypeScript verifier (which requires a guest Node runtime receipt). Extract the archive into a private directory and run:
 
 Use the historical checkout's own [device guide](https://github.com/imxade/vm_interface/blob/7e095afe6274137104f15caf9cbaef7738d6a9ba/docs/device-validation.md) and its original verifier commands. The current TypeScript scripts are for the migrated source and its matching evidence, not a drop-in verifier for artifacts created before migration.
 
