@@ -8,22 +8,33 @@ The exact executable qualification is [`34652dc2fffd585e8e95aac1a2df63b3552da8f8
 
 ## Branch inventory — snapshot, not an execution receipt
 
-At review: 76 branches at 68 distinct heads, no open pull requests, no GitHub releases, and all four required hosted runs terminal success on the exact source. See [branch-cleanup.tsv](branch-cleanup.tsv) for every observed name and full SHA. GitHub comparisons against the reviewed primary showed 28 non-primary branches contained in main (zero ahead), and 46 divergent branches with unique commits.
+Pre-consolidation snapshot: 76 branches at 68 distinct heads, no open pull requests, and all four recorded hosted runs terminal success on the exact source. See [branch-cleanup.tsv](branch-cleanup.tsv) for every observed name and full SHA. GitHub comparisons against the reviewed primary showed 28 non-primary branches contained in main (zero ahead), and 46 divergent branches with unique commits.
 
 | Decision | Branches | Action |
 | --- | ---: | --- |
 | primary | 2 | Retain main and current default master; change default through Settings first |
-| qualification | 4 | Retain exact core, static, Android and CSI entry refs for reproducibility; all at the qualified SHA |
+| qualification | 4 | Prune after CI routing consolidation; all at the qualified SHA already contained in main |
 | prune-candidate | 24 | Ancestor/equal to primary, no unique commits; safe candidates after checking current heads and open PRs |
-| archive-review | 46 | Preserve; unique history requires archive and patch review before pruning |
+| archive-review | 46 | Preserved by the archival commit below; keep until backup is verified |
 
-The four qualification refs are `implementation/issue13-exact-final`, `prep/kubernetes-typescript`, `prep/android-prepared-ci` and `prep/storage-growth-ci`. The existing workflows are branch-targeted and manually dispatchable; do not create duplicate push runs just to refresh documentation or clean refs. Old preparation aliases can be removed after current-head checks; a commit SHA, not a branch name, defines historical evidence. Review any old branch links in issues/PRs when removing refs.
+## CI routing and archival preservation
 
-The three divergent Vite+ preparation heads (`d7430de`, `648fe8e`, `b5ec916`) contain superseded variants of the migration guard, evidence tests, exchange code and CI preparation workflow. Their final-source equivalents are present or the temporary preparation workflow was retired. Byte-for-byte equality is not asserted; use patch review, not a wholesale merge. Older divergent preparation/probe heads are historical experiments, not automatically approved product code. Do not discard their unique commits just to obtain a short branch list.
+All 46 divergent branch heads were re-compared against the pre-consolidation primary `32b5df69f6bdf7e546cd8063d0c8e33ac8a2e1dc`. Forty-three were imported historical snapshots and three were intermediate Vite+ migration branches. The comparisons identified legacy Python/Docker tooling, retired workflows, diagnostics, and superseded implementations; byte-for-byte patch equivalence is not asserted. No old code was merged into main.
+
+The dedicated archive reference `archive/pre-consolidation-20261128` points to [`6d4aede927e8060a0a2f7a124263f04efdcb9d6a`](https://github.com/everhush/vm_interface/commit/6d4aede927e8060a0a2f7a124263f04efdcb9d6a), whose 47 direct parents are the pre-consolidation primary and all 46 divergent heads. Its tree is identical to that primary tree. This preserves every unique commit and tree through a reachable ref without integrating obsolete code. The 28 other non-primary heads are already ancestors of main. The archive is a preservation reference, not a product branch or new test result. Keep it until a verified private bundle or archival tag exists.
+
+CI runs are independent of preparation branch names:
+
+- Native core and its static prerequisite run on runtime/test/dependency changes pushed to main; also manually dispatchable.
+- Static checks run on pull requests targeting main, workflow-file changes pushed to main, and manual dispatch; concurrency is per event and ref.
+- Android input and CSI qualification run by explicit manual dispatch.
+- Media qualification runs by explicit manual dispatch with a lane selector for all, Windows media, Android media, or showcase scenarios. Preparation does not certify actual guest execution.
+
+Historical runs retain their original commit and branch provenance. The qualified executable SHA is still `34652dc2fffd585e8e95aac1a2df63b3552da8f8`; changed routing is not a new same-SHA qualification result. See [migration evidence](toolchain-migration.md).
 
 ## Maintainer cleanup procedure
 
-The source maintenance connection cannot change the default branch, delete refs, create tags or configure rulesets. **No branch deletion or settings change has been performed by this review.** A repository administrator must complete these actions. Use an authenticated local terminal or GitHub Settings. Do not enter tokens into issue bodies, shell history or this repository.
+The source maintenance connection cannot change the default branch, delete refs, create tags or configure rulesets. The account has administrator access; these operations require an authenticated owner terminal or repository UI. **No original branch deletion or default-branch settings change has been performed by this review.** A repository administrator must complete these actions. Use an authenticated local terminal or GitHub Settings. Do not enter tokens into issue bodies, shell history or this repository.
 
 1. Verify the repository URL, current main/master, open pull requests and active Actions runs. Set the default branch to `main` at [repository settings](https://github.com/everhush/vm_interface/settings) (or `gh repo edit everhush/vm_interface --default-branch main` with an already-authenticated owner CLI). Keep master until the default is changed and external references are reviewed. Configure appropriate branch protection/review requirements, private vulnerability reporting, least-privilege Actions permissions, and the description/topics in the [release checklist](release-checklist.md).
 2. From a fresh **full** clone, create and verify a private backup bundle before deleting any branch. Keep the backup outside the repository; it can contain historical material and must not be published.
@@ -38,13 +49,13 @@ git bundle create ../vm-interface-before-prune.bundle --all
 git bundle verify ../vm-interface-before-prune.bundle
 ```
 
-3. Review the `prune-candidate` rows in the snapshot. The following is a **read-only dry run**, requiring Bash. It refuses moved refs and non-ancestors. Verify there are still no open PRs or active workflows using the selected refs. Missing/moved/protected branches require a fresh audit.
+3. Review the `prune-candidate` and `qualification` rows in the snapshot. The following is a **read-only dry run**, requiring Bash. It refuses moved refs and non-ancestors. Verify there are still no open PRs or active workflows using the selected refs. Missing/moved/protected branches require a fresh audit.
 
 ```bash
 set -euo pipefail
 git fetch origin --prune
 while IFS=$'\t' read -r branch sha decision ancestry; do
-  [[ "$decision" == prune-candidate ]] || continue
+  [[ "$decision" == prune-candidate || "$decision" == qualification ]] || continue
   ref="refs/heads/$branch"
   remote=$(git ls-remote --heads origin "$ref" | cut -f1)
   [[ "$remote" == "$sha" ]] || { printf 'SKIP changed/missing: %s\n' "$branch"; continue; }
@@ -66,7 +77,7 @@ git merge-base --is-ancestor "$sha" refs/remotes/origin/main &&
   git push --force-with-lease="$ref:$sha" origin ":$ref"
 ```
 
-5. For the divergent rows, first inspect `git log origin/main..origin/<branch>` and `git diff origin/main...origin/<branch>`. Keep any useful changes separate, validate them as a new candidate if they affect executable content, and archive superseded experiments in a verified private bundle or a reviewed historical ref before approving deletion. The current snapshot is not proof of patch equivalence. Never merge obsolete trees into main merely to mark a branch merged. Recheck the primary tree and branch inventory after cleanup.
+5. For divergent rows, verify each exact SHA is reachable from the archival commit and included in the private bundle. Review any remaining unique patch before integrating it; no wholesale merges. The archive ref can be converted into the archival tag `archive-pre-consolidation-20261128` only after an independently verified complete private bundle is safely retained. Recheck current refs, active workflows and open pull requests before leased deletion. The desired final branch list is main and master; no deletion is recorded here. See [branch cleanup script](branch-prune.sh) for a guarded dry run and explicit apply mode. From an authenticated full clone of current main, use `bash docs/branch-prune.sh --dry-run`. After setting the default to main and reviewing the dry run, use `bash docs/branch-prune.sh --apply`. It validates the full branch inventory, verifies a private backup by restoring it, creates the archive tag, and attempts atomic exact-head leased deletions; it refuses unexpected refs, open PRs, active workflows or changed branch heads. Do not publish the private backup.
 
 ## Public source and release boundary
 

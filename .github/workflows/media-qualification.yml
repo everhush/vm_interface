@@ -1,8 +1,17 @@
 name: Pinned showcase media qualification (no KVM)
 on:
-  push:
-    branches: ['prep/media-qualification-v2', 'prep/showcase-scenarios-v2']
   workflow_dispatch:
+    inputs:
+      lane:
+        description: 'Media preparation lane (no native guest certification)'
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - windows-media
+          - android-media
+          - showcase-scenarios
 permissions:
   contents: read
   attestations: read
@@ -12,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   android-media:
-    if: github.repository == 'everhush/vm_interface' && github.ref_name == 'prep/media-qualification-v2'
+    if: github.repository == 'everhush/vm_interface' && (inputs.lane == 'all' || inputs.lane == 'android-media')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -33,7 +42,7 @@ jobs:
           path: qualification/android/
           retention-days: 7
   windows-catalog:
-    if: github.repository == 'everhush/vm_interface' && github.ref_name == 'prep/media-qualification-v2'
+    if: github.repository == 'everhush/vm_interface' && (inputs.lane == 'all' || inputs.lane == 'windows-media')
     runs-on: windows-2025
     timeout-minutes: 15
     steps:
@@ -52,7 +61,7 @@ jobs:
           retention-days: 7
   catalog-iso:
     needs: windows-catalog
-    if: github.repository == 'everhush/vm_interface' && github.ref_name == 'prep/media-qualification-v2'
+    if: github.repository == 'everhush/vm_interface' && (inputs.lane == 'all' || inputs.lane == 'windows-media')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -75,7 +84,7 @@ jobs:
           path: qualification/iso/
           retention-days: 7
   android-apk:
-    if: github.repository == 'everhush/vm_interface' && github.ref_name == 'prep/showcase-scenarios-v2'
+    if: github.repository == 'everhush/vm_interface' && (inputs.lane == 'all' || inputs.lane == 'showcase-scenarios')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

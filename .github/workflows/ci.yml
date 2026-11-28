@@ -1,7 +1,18 @@
 name: API and real KVM smoke
 on:
   push:
-    branches: ['implementation/**']
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'src/**'
+      - 'scripts/**'
+      - 'infra/**'
+      - 'showcases/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vite.config.ts'
   workflow_dispatch:
 permissions:
   contents: read

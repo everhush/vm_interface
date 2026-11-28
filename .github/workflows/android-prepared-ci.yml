@@ -1,7 +1,5 @@
 name: Pinned Android native inputs (no KVM)
 on:
-  push:
-    branches: ['prep/android-prepared-ci']
   workflow_dispatch:
 permissions:
   contents: read

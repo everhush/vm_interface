@@ -137,7 +137,7 @@ The migrated hosted candidate passed **158 TypeScript tests in 59 files** (no sk
 | [Real CSI expansion](https://github.com/everhush/vm_interface/actions/runs/46078053324) | Pass |
 | [Android media and signed APK preparation](https://github.com/everhush/vm_interface/actions/runs/46077983994) | Pass (offline only) |
 
-Exact source: `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. See the [migration record](docs/toolchain-migration.md) and [validation record](docs/validation.md) for original artifacts, SHA-256 digests, observed results and explicit limits. Historical pre-transfer CI evidence is separate; public upstream qualification used standard GitHub-hosted runners. Documentation-only successors do not constitute a new same-SHA CI result. Artifact access and retention are subject to GitHub; no raw logs, guest media or credentials are redistributed here.
+Exact source: `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. See the [migration record](docs/toolchain-migration.md) and [validation record](docs/validation.md) for original artifacts, SHA-256 digests, observed results and explicit limits. Historical pre-transfer CI evidence is separate; public upstream qualification used standard GitHub-hosted runners. Later primary documentation and CI routing changes do not represent new same-SHA qualification runs. Artifact access and retention are subject to GitHub; no raw logs, guest media or credentials are redistributed here.
 
 ## Repository map
 
@@ -150,7 +150,7 @@ Exact source: `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. See the [migration rec
 | `showcases/`         | Android APK and Windows media/guest fixtures                 |
 | `tests/`             | TypeScript unit and regression checks                                 |
 | `docs/`              | Public guides, qualification ledger and operational documentation |
-| `.github/workflows/` | Hosted qualification workflows; guarded to public upstream      |
+| `.github/workflows/` | Primary-branch checks and manual qualification workflows      |
 
 ## License and security
 

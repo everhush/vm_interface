@@ -1,7 +1,5 @@
 name: Real CSI expansion qualification
 on:
-  push:
-    branches: ['prep/storage-growth-ci']
   workflow_dispatch:
 permissions:
   contents: read

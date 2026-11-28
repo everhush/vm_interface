@@ -359,7 +359,6 @@
       "status": "qualification-pending"
     }
   ],
-  "candidateBranch": "implementation/issue13-exact-final",
   "candidateStatus": "hosted-qualified-tested-scope-windows-showcase-required-before-comprehensive-acceptance",
   "nonKvmLocalEvidence": {
     "scope": "isolated local tests on Node 22 transpiled with TypeScript 5.8 and Python; not full Node 24 build",
@@ -528,5 +527,16 @@
     "linux-x86_64",
     "windows-x86_64",
     "android-arm64"
-  ]
+  ],
+  "currentCiRouting": {
+    "primary": "main",
+    "static": "pull requests targeting main, main workflow-file changes, manual dispatch",
+    "core": "main executable/test/dependency changes, manual dispatch",
+    "androidAndCsi": "manual dispatch",
+    "media": "manual dispatch with lane selection",
+    "qualificationCommit": "34652dc2fffd585e8e95aac1a2df63b3552da8f8",
+    "archiveCommit": "6d4aede927e8060a0a2f7a124263f04efdcb9d6a"
+  },
+  "historicalQualificationBranch": "implementation/issue13-exact-final",
+  "candidateBranch": "main"
 }

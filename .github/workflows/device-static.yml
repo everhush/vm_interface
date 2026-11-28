@@ -1,7 +1,11 @@
 name: Consolidated device candidate static checks
 on:
+  pull_request:
+    branches: [main]
   push:
-    branches: ['prep/device-validation', 'prep/issue-12-consolidated', 'prep/linux-showcase', 'prep/kubernetes-typescript']
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -9,7 +13,7 @@ defaults:
   run:
     shell: bash
 concurrency:
-  group: device-candidate-static
+  group: device-candidate-static-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   checks:

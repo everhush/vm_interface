@@ -54,6 +54,10 @@ Use the historical checkout's own [device guide](https://github.com/imxade/vm_in
 
 Verify original artifact hashes and inspect actual guest frames and returned bytes. Artifact verifiers do not independently certify hardware. Private CI access and artifact retention may limit availability; no raw logs, media or guest data are redistributed here. Historical iterations and failures are preserved in [implementation.md](implementation.md). [Machine-readable requirement ledger](requirements.json).
 
+## CI routing maintenance
+
+The five workflow entry points now use primary-branch changes, pull requests and explicit manual dispatch; historical runs retain their exact branch/commit provenance. Application source, dependency lock, test bodies and deployment definitions have not been changed by this routing consolidation. The earlier hosted evidence does not establish a new qualification on the routing-only successor. See [repository maintenance](repository-maintenance.md).
+
 ## Remaining acceptance (issue #12)
 
 - Independent clean x86_64 KVM core and Linux application validation.
