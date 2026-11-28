@@ -23,9 +23,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Resolve lock only for initial framework migration
-        if: hashFiles('package-lock.json') == ''
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Require committed dependency lock
+        run: test -s package-lock.json
       - name: Retain generated lock
         uses: actions/upload-artifact@v4
         with:
@@ -33,9 +32,6 @@ jobs:
           path: package-lock.json
           if-no-files-found: error
           retention-days: 7
-      - name: Record lock for source reconciliation
-        run: |
-          node --input-type=module -e 'import {readFileSync} from "node:fs"; const b=readFileSync("package-lock.json").toString("base64"); for(let i=0;i<b.length;i+=3000)console.log("VM_NEXT_LOCK:"+b.slice(i,i+3000));'
       - run: bash scripts/install-evidence-tools.sh
       - run: bash scripts/device-validate.sh checks
         env:

@@ -1,7 +1,7 @@
 name: API and real KVM smoke
 on:
   push:
-    branches: [main]
+    branches: [nextjs]
     paths:
       - 'app/**'
       - 'src/**'

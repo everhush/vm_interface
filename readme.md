@@ -1,6 +1,6 @@
 # VM Interface
 
-**Branch scope:** Next.js compatibility candidate. Existing primary-branch hosted evidence is retained for comparison; this branch requires its own locked build, HTTP checks and native integration evidence before claiming runtime parity.
+**Branch scope:** Official Next.js compatibility candidate. The initial Next.js build, 158 tests in 59 files, and production HTTP authorization smoke passed. Native KVM integration remains a separate parity gate. See [Next.js compatibility evidence](docs/nextjs-compatibility.md).
 
 **A programmable, API-first platform for real virtual machines on Kubernetes.**
 
@@ -87,7 +87,7 @@ Use Linux with Git, Node.js 24, npm, Bash, curl, FFmpeg/ffprobe (including `libx
 ```sh
 git clone https://github.com/everhush/vm_interface.git
 cd vm_interface
-git checkout main
+git checkout nextjs
 bash scripts/device-validate.sh checks
 ```
 
