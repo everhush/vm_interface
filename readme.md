@@ -64,8 +64,8 @@ Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/K
 | Fedora 44 application install/run, archive, guest result, original recording              | Hosted native KVM passed                                                                                                           |
 | VirtioFS file exchange and private TCP tunnel                                             | Hosted native KVM passed                                                                                                           |
 | CSI growth                                                                                | Qualified evaluation driver; guest exchange growth and unchanged PVC identities verified; guest boot filesystem growth not claimed |
-| Android ARM64                                                                             | Offline media and APK preparation verified; native runtime not certified                                      |
-| Windows                                                                                   | Driver and media preparation verified; native installation and application execution not certified                                                      |
+| Android ARM64                                                                             | Offline media and APK preparation verified; native runtime not certified                                                           |
+| Windows                                                                                   | Driver and media preparation verified; native installation and application execution not certified                                 |
 | GPU, live migration/resize, virtio-mem, snapshots and additional hardware/OS combinations | Conditional or unverified; never assume availability                                                                               |
 
 Full results and exact commit: [validation record](docs/validation.md). The runtime capability/schema endpoints are authoritative for allowed configurations; a supported request is not a guarantee of guest conformance.
@@ -130,27 +130,27 @@ See the [API guide](docs/api.md#walkthrough-create-and-operate-a-smoke-vm) for a
 
 The migrated hosted candidate passed **158 TypeScript tests in 59 files** (no skipped, failed or todo tests), all **13 recorded core native stages**, real CSI qualification and Android input preparation. Original H.264 guest recordings, actual guest/clone and exchange bytes, native CDI and network traces and cleanup were independently verified.
 
-| Hosted workflow | Result |
-| --- | --- |
-| [Locked Vite+ static checks](https://github.com/everhush/vm_interface/actions/runs/46077697248) | Pass |
-| [Core KVM + static checks](https://github.com/everhush/vm_interface/actions/runs/46077980605) | Pass |
-| [Real CSI expansion](https://github.com/everhush/vm_interface/actions/runs/46078053324) | Pass |
+| Hosted workflow                                                                                               | Result              |
+| ------------------------------------------------------------------------------------------------------------- | ------------------- |
+| [Locked Vite+ static checks](https://github.com/everhush/vm_interface/actions/runs/46077697248)               | Pass                |
+| [Core KVM + static checks](https://github.com/everhush/vm_interface/actions/runs/46077980605)                 | Pass                |
+| [Real CSI expansion](https://github.com/everhush/vm_interface/actions/runs/46078053324)                       | Pass                |
 | [Android media and signed APK preparation](https://github.com/everhush/vm_interface/actions/runs/46077983994) | Pass (offline only) |
 
 Exact source: `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. See the [migration record](docs/toolchain-migration.md) and [validation record](docs/validation.md) for original artifacts, SHA-256 digests, observed results and explicit limits. Historical pre-transfer CI evidence is separate; public upstream qualification used standard GitHub-hosted runners. Later primary documentation and CI routing changes do not represent new same-SHA qualification runs. Artifact access and retention are subject to GitHub; no raw logs, guest media or credentials are redistributed here.
 
 ## Repository map
 
-| Path                 | Purpose                                                               |
-| -------------------- | --------------------------------------------------------------------- |
-| `app/`               | Vinext app and versioned API route                                    |
-| `src/`               | VM schema, operations, persistence, storage, gateways and workers     |
-| `infra/`             | K3s/KubeVirt/CDI/CNPG deployment and least-privilege policies         |
-| `scripts/`           | Provisioning, API-only tests, media acquisition and verifiers         |
-| `showcases/`         | Android APK and Windows media/guest fixtures                 |
-| `tests/`             | TypeScript unit and regression checks                                 |
+| Path                 | Purpose                                                           |
+| -------------------- | ----------------------------------------------------------------- |
+| `app/`               | Vinext app and versioned API route                                |
+| `src/`               | VM schema, operations, persistence, storage, gateways and workers |
+| `infra/`             | K3s/KubeVirt/CDI/CNPG deployment and least-privilege policies     |
+| `scripts/`           | Provisioning, API-only tests, media acquisition and verifiers     |
+| `showcases/`         | Android APK and Windows media/guest fixtures                      |
+| `tests/`             | TypeScript unit and regression checks                             |
 | `docs/`              | Public guides, qualification ledger and operational documentation |
-| `.github/workflows/` | Primary-branch checks and manual qualification workflows      |
+| `.github/workflows/` | Primary-branch checks and manual qualification workflows          |
 
 ## License and security
 

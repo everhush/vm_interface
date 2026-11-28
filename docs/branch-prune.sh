@@ -11,7 +11,8 @@ case "$remote" in
 esac
 git fetch origin --prune --tags
 [[ "$(git rev-parse --is-shallow-repository)" == false ]] || { echo "Full clone required"; exit 1; }
-[[ "$(git rev-parse refs/remotes/origin/main)" == "$(git rev-parse refs/remotes/origin/master)" ]] || { echo "Primary refs diverged"; exit 1; }
+master_sha="$(git rev-parse refs/remotes/origin/master)"
+git merge-base --is-ancestor "$master_sha" refs/remotes/origin/main || { echo "Master contains unmerged history"; exit 1; }
 archive='6d4aede927e8060a0a2f7a124263f04efdcb9d6a'
 archive_ref='refs/heads/archive/pre-consolidation-20261128'
 [[ "$(git rev-parse refs/remotes/origin/archive/pre-consolidation-20261128)" == "$archive" ]] || { echo "Archive ref moved"; exit 1; }
@@ -32,7 +33,7 @@ while IFS=$'\t' read -r branch sha decision ancestry; do
   printf 'Eligible: %s %s\n' "$branch" "$sha"
 done < docs/branch-cleanup.tsv
 [[ "${#refs[@]}" == 74 ]] || { echo "Expected 74 reviewed secondary refs"; exit 1; }
-expected_refs="$(printf '%s\n' refs/heads/main refs/heads/master "$archive_ref" "${refs[@]}" | LC_ALL=C sort)"
+expected_refs="$(printf '%s\n' refs/heads/main refs/heads/master refs/heads/nextjs refs/heads/prototype-submission "$archive_ref" "${refs[@]}" | LC_ALL=C sort)"
 actual_refs="$(git ls-remote --heads origin | cut -f2 | LC_ALL=C sort)"
 [[ "$actual_refs" == "$expected_refs" ]] || { echo "Remote branch inventory changed"; exit 1; }
 [[ "$mode" == --apply ]] || { echo "Dry run only. No refs deleted."; exit 0; }
@@ -48,12 +49,12 @@ backup="$(mktemp -d "$HOME/vm-interface-before-prune.XXXXXXXX")"
 git bundle create "$backup/repository.bundle" --all
 git bundle verify "$backup/repository.bundle"
 git clone --mirror "$backup/repository.bundle" "$backup/restore.git"
-for sha in "${shas[@]}" "$archive"; do
+for sha in "${shas[@]}" "$archive" "$master_sha" "$(git rev-parse refs/remotes/origin/main)" "$(git rev-parse refs/remotes/origin/nextjs)" "$(git rev-parse refs/remotes/origin/prototype-submission)"; do
   git -C "$backup/restore.git" cat-file -e "$sha^{commit}"
 done
 git -C "$backup/restore.git" fsck --connectivity-only
 printf 'Verified private backup: %s\n' "$backup/repository.bundle"
-# Keep the archive reachable as a tag, so only main and master need remain as branches.
+# Keep the archive reachable as a tag, so only main and the two explicitly retained work branches remain.
 tag='archive-pre-consolidation-20261128'
 if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
   [[ "$(git ls-remote --tags origin "refs/tags/$tag" | cut -f1)" == "$archive" ]] || { echo "Archive tag conflict"; exit 1; }
@@ -61,7 +62,7 @@ else
   git push origin "$archive:refs/tags/$tag"
 fi
 [[ "$(git ls-remote --tags origin "refs/tags/$tag" | cut -f1)" == "$archive" ]] || exit 1
-# Atomic, exact-head leased deletions. No primary refs are modified.
+# Atomic, exact-head leased deletions. Main and both retained work branches are not modified.
 declare -a leases=() deletes=()
 for i in "${!refs[@]}"; do
   leases+=("--force-with-lease=${refs[i]}:${shas[i]}")
@@ -69,9 +70,11 @@ for i in "${!refs[@]}"; do
 done
 leases+=("--force-with-lease=$archive_ref:$archive")
 deletes+=(":$archive_ref")
+leases+=("--force-with-lease=refs/heads/master:$master_sha")
+deletes+=(":refs/heads/master")
 git push --atomic "${leases[@]}" origin "${deletes[@]}"
 git fetch origin --prune
 remaining="$(git ls-remote --heads origin | cut -f2 | LC_ALL=C sort)"
-[[ "$remaining" == "$(printf '%s\n' refs/heads/main refs/heads/master)" ]] || { echo "Unexpected remaining branch inventory; inspect manually"; exit 1; }
+[[ "$remaining" == "$(printf '%s\n' refs/heads/main refs/heads/nextjs refs/heads/prototype-submission | LC_ALL=C sort)" ]] || { echo "Unexpected remaining branch inventory; inspect manually"; exit 1; }
 git ls-remote --heads origin
 echo "Pruning completed. Retain the private backup."
