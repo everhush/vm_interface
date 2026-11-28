@@ -19,7 +19,9 @@ if [ "$profile" = checks ]; then
   node scripts/verify-static-test-report.ts "$test_report"
   npm run build
   node scripts/check-source-migration.ts
-  NODE_DISABLE_COMPILE_CACHE=1 node --import tsx --input-type=module -e 'await import("./src/exchange.ts"); await import("./scripts/android-guest-transfer.ts");'
+  # Exercise the broker dependency graph without a writable temporary directory.
+  TMPDIR=/dev/null NODE_DISABLE_COMPILE_CACHE=1 TSX_DISABLE_CACHE=1 node --import tsx --input-type=module -e 'await import("./src/exchange.ts"); await import("./src/exchange-files.ts");'
+  NODE_DISABLE_COMPILE_CACHE=1 node --import tsx --input-type=module -e 'await import("./scripts/android-guest-transfer.ts");'
   for f in scripts/*.sh showcases/android/*.sh; do bash -n "$f"; done
   exit 0
 fi

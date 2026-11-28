@@ -113,6 +113,8 @@ export function exchangePod(id: string, account: string, uid: string, token: str
           env: [
             { name: "EXCHANGE_TOKEN", value: token },
             { name: "NODE_DISABLE_COMPILE_CACHE", value: "1" },
+            // tsx has its own disk cache; the broker root filesystem is read-only.
+            { name: "TSX_DISABLE_CACHE", value: "1" },
           ],
           ports: [{ containerPort: 8080 }],
           resources: {

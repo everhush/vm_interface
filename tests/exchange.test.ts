@@ -37,6 +37,7 @@ test("VirtioFS uses distinct owned PVC and counts all reservations", () => {
   assert.deepEqual(p.spec.containers[0].env, [
     { name: "EXCHANGE_TOKEN", value: "a".repeat(43) },
     { name: "NODE_DISABLE_COMPILE_CACHE", value: "1" },
+    { name: "TSX_DISABLE_CACHE", value: "1" },
   ]);
   const policy = readFileSync(new URL("../infra/exchange-policy.yaml", import.meta.url), "utf8");
   assert.ok(
@@ -46,6 +47,12 @@ test("VirtioFS uses distinct owned PVC and counts all reservations", () => {
   );
   assert.ok(policy.includes("c.env[1].name == \x27NODE_DISABLE_COMPILE_CACHE\x27"));
   assert.ok(policy.includes("!has(c.env[1].valueFrom)"));
+  assert.ok(policy.includes("size(c.env) == 3"));
+  assert.ok(policy.includes("c.env[2].name == 'TSX_DISABLE_CACHE'"));
+  assert.ok(policy.includes("c.env[2].value == '1'"));
+  assert.ok(policy.includes("!has(c.env[2].valueFrom)"));
+  assert.equal(p.spec.containers[0].securityContext.readOnlyRootFilesystem, true);
+  assert.equal(p.spec.volumes.length, 1);
   assert.equal(p.spec.volumes[0].persistentVolumeClaim.claimName, id + "-exchange");
   assert.equal(exchangePVC(id, "alpha", "uid", "1").metadata.ownerReferences[0].uid, "uid");
   assert.equal(computerSpec.safeParse({ ...s, image: "cirros-smoke" }).success, false);
