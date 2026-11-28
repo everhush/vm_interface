@@ -27,11 +27,15 @@ test("growth policy retains dynamic PVC resource checks and fails closed", () =>
     assert.ok(raw.includes(s));
 });
 
-test("exchange broker admission requires the exact Vite+ loader and only its scoped token plus fixed compile-cache setting", () => {
+test("exchange broker admission requires the exact tsx loader, scoped token and both fixed cache settings", () => {
   const raw = readFileSync(new URL("../infra/exchange-policy.yaml", import.meta.url), "utf8");
   for (const expected of [
     "['node','--import','tsx','src/run-exchange-broker.ts']",
-    "size(c.env) == 2",
+    "size(c.env) == 3",
+    "c.env[2].name == 'TSX_DISABLE_CACHE'",
+    "has(c.env[2].value)",
+    "c.env[2].value == '1'",
+    "!has(c.env[2].valueFrom)",
     "c.env[1].name == 'NODE_DISABLE_COMPILE_CACHE'",
     "c.env[1].value == '1'",
     "!has(c.env[1].valueFrom)",
