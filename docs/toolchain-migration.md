@@ -1,7 +1,7 @@
 # Kubernetes and Vite+ migration record — issue #13
 
 **Candidate:** [`34652dc2fffd585e8e95aac1a2df63b3552da8f8`](https://github.com/everhush/vm_interface/commit/34652dc2fffd585e8e95aac1a2df63b3552da8f8)  
-**Status:** Exact hosted qualification and independent artifact review completed on 2026-11-27 UTC. Promoted to primary source preview; issue #12 validation-only handoff ready; not a stable release or independent device acceptance.
+**Status:** Exact hosted qualification and independent artifact review completed on 2026-11-27 UTC. Promoted to primary source preview; existing tested scope hosted-qualified; comprehensive acceptance requires #33; not a stable release or independent device acceptance.
 
 ## Source inventory
 
@@ -79,7 +79,7 @@ The following file-level crosswalk identifies the migrated implementations and t
 | `showcases/windows/test_catalog_iso.py` | [`tests/windows-driver-iso.test.ts`](../tests/windows-driver-iso.test.ts) |
 | `showcases/windows/test_driver_iso.py` | [`tests/windows-driver-iso.test.ts`](../tests/windows-driver-iso.test.ts) |
 
-The former daemon-specific build files are replaced by [daemonless OCI build](../scripts/build-oci.sh), [OCI tools](../scripts/install-oci-tools.sh) and [Kubernetes deployment manifests](../infra/app.yaml). Local K3s/containerd remains the native evaluation profile. [Managed Kubernetes](managed-kubernetes.md) describes explicit kubeconfig/context, registry digest and KVM/CNI/CSI prerequisites for EKS/AKS; no managed runtime certification or paid provisioning is asserted.
+The former daemon-specific build files are replaced by [daemonless OCI build](../scripts/build-oci.sh), [OCI tools](../scripts/install-oci-tools.sh) and [Kubernetes deployment manifests](../infra/app.yaml). Local K3s/containerd remains the native evaluation profile. [Managed Kubernetes](managed-kubernetes.md) describes explicit kubeconfig/context, registry digest and KVM/CNI/CSI prerequisites for native Kubernetes; no managed runtime certification or paid provisioning is asserted.
 
 ## Exact-candidate qualification
 
@@ -126,4 +126,4 @@ The migrated implementation is already incorporated into `main`. The retained hi
 
 ## Handoff boundary
 
-All required hosted gates passed on the identical executable commit. Documentation-only descendants are not new same-SHA test runs; their complete tree comparison must leave executable source, tests, dependency lock, CI and infrastructure unchanged. Use the exact tested SHA for #12. Do not count hosted qualification as an independent device review. #12 remains unstarted (0/3) and requires clean independent x86_64 Linux and native AArch64 Android devices. Managed EKS/AKS runtime, Android guest boot, boot virtual disk/filesystem growth, and conditional hardware features are not certified by this record. No paid provisioning, schedules, stable release or binary publication.
+All four recorded hosted gates passed on the identical executable commit. These runs did not include native Windows. Documentation-only descendants are not new same-SHA test runs; their complete tree comparison must leave executable source, tests, dependency lock, CI and infrastructure unchanged. Use the exact tested SHA when reproducing this recorded evidence; approve a consolidated candidate after mandatory Windows qualification #33 before comprehensive #12. Do not count hosted qualification as an independent device review. #12 remains unstarted (0/3) and requires independent Linux x86_64, Windows x86_64 and native AArch64 Android demonstrations. Production Kubernetes runtime, Android guest boot, boot virtual disk/filesystem growth, and conditional hardware features are not certified by this record. No paid provisioning, schedules, stable release or binary publication.

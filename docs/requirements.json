@@ -1,6 +1,5 @@
 {
   "version": 1,
-  "baselineReadme": "docs/product-specification.md",
   "comprehensiveConsecutivePasses": 0,
   "requiredPasses": 3,
   "requirements": [
@@ -222,9 +221,9 @@
     },
     {
       "issue": 7,
-      "scope": "Linux x86_64 API-only demonstration (owner replaced Windows 2026-11-25)",
+      "scope": "Linux x86_64 API-only demonstration",
       "verified": [
-        "Historical Fedora native VirtioFS infrastructure compatibility; previous Windows media evidence no longer mandatory.",
+        "Historical Fedora native VirtioFS infrastructure compatibility; Windows media preparation is separate from Linux qualification.",
         "45837699861 d9fecaa: native Linux package install, guest computation, pointer receipt, archive, original MP4 22s, native clone byte divergence, cold resize/reboot and persistent challenge passed. Artifact 15131826399 independently decoded and reboot marker verified; hosted final OCR timeout still failed combined verifier.",
         "2026-11-27 hosted qualification at 7e095afe6274137104f15caf9cbaef7738d6a9ba: Fedora x86_64 application installation, actual pointer receipt, guest computation/archive, original recording, clone and cold-resize persistence.",
         "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
@@ -298,7 +297,7 @@
         "2026-11-27 migrated exact hosted qualification 34652dc2fffd585e8e95aac1a2df63b3552da8f8: relevant required hosted gates passed and independent artifact review completed; see docs/toolchain-migration.md."
       ],
       "pending": [
-        "Three consecutive comprehensive independent native-device reviews (0/3); release certification remains pending."
+        "Mandatory Windows showcase #33 and consolidated verifier qualification; three comprehensive independent Linux/Windows/Android reviews #12 (0/3)."
       ],
       "evidence": [
         45542879476,
@@ -336,10 +335,32 @@
         "Unified disposable-device and hosted API transports."
       ],
       "historicalStatus": "hosted-qualified-independent-acceptance-pending"
+    },
+    {
+      "issue": 33,
+      "scope": "Mandatory Windows x86_64 API-only demonstration",
+      "verified": [
+        "Historical signed driver catalog and driver ISO preparation; no native Windows runtime evidence."
+      ],
+      "pending": [
+        "Authorized Windows installation media, native installation/boot, actual application execution, byte transfer, persistent lifecycle, recording and independent verifier qualification."
+      ],
+      "status": "implementation-and-native-qualification-pending"
+    },
+    {
+      "issue": 32,
+      "scope": "Production deployment on native Kubernetes",
+      "verified": [
+        "Generic digest-pinned Kubernetes deployment rendering."
+      ],
+      "pending": [
+        "Production-representative native Kubernetes runtime, storage/network/security/upgrade and recovery qualification."
+      ],
+      "status": "qualification-pending"
     }
   ],
   "candidateBranch": "implementation/issue13-exact-final",
-  "candidateStatus": "ready-for-independent-native-device-acceptance",
+  "candidateStatus": "hosted-qualified-tested-scope-windows-showcase-required-before-comprehensive-acceptance",
   "nonKvmLocalEvidence": {
     "scope": "isolated local tests on Node 22 transpiled with TypeScript 5.8 and Python; not full Node 24 build",
     "passed": [
@@ -502,5 +523,10 @@
       "networkCalls": 47,
       "guestResourcesAbsent": true
     }
-  }
+  },
+  "requiredShowcases": [
+    "linux-x86_64",
+    "windows-x86_64",
+    "android-arm64"
+  ]
 }

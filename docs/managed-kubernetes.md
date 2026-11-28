@@ -1,6 +1,6 @@
 # Managed Kubernetes evaluation deployment
 
-K3s on a clean local device remains the native evaluation profile. EKS and AKS are candidate remote Kubernetes platforms, not a separate VM backend. Use an authorized **dedicated evaluation cluster** and explicit kubeconfig context. Do not provision paid resources automatically or install these cluster-scoped admission policies on a shared cluster.
+K3s on a clean local device remains the native evaluation profile. Production targets native Kubernetes on operator-authorized infrastructure, without dependency on a named cloud provider. Use an authorized **dedicated evaluation cluster** and explicit kubeconfig context. Do not provision paid resources automatically or install these cluster-scoped admission policies on a shared cluster.
 
 ## Required infrastructure
 
@@ -58,4 +58,4 @@ kubectl --context "$CONTEXT" -n vm-interface rollout status deployment/vm-api --
 node scripts/check-rbac-ci.ts --context "$CONTEXT" --storage-class vm-managed
 ```
 
-Use private operator-authorized API/TLS access; no public load balancer is configured. Validate actual KVM, CNI isolation, storage and evidence on the target cluster before claiming support. Hosted K3s qualification does not prove EKS or AKS runtime compatibility. Preserve issue #12's independent native-device criteria.
+Use private operator-authorized API/TLS access; no public load balancer is configured. Validate actual KVM, CNI isolation, storage and evidence on the target cluster before claiming support. Hosted K3s qualification does not establish production Kubernetes runtime compatibility; see issue #32. Preserve issue #12's independent native-device criteria.

@@ -24,7 +24,7 @@ Guest data, media staging, recordings and metadata have distinct lifetimes. CDI 
 
 The supported evaluation is a fresh disposable Linux device with real KVM. The pinned manifests provision K3s, KubeVirt, CDI and CNPG. The namespace deployment runs API, console, recording and reconciliation processes, with dedicated storage and scoped Kubernetes identities. The exchange broker is used for mounted file access. No public internet ingress or production identity provider is supplied. The application starts from locked npm dependencies; operator release manifests have exact integrity pins, not a blanket signature/SBOM claim.
 
-See [device validation](device-validation.md), [API](api.md), [security policy](../SECURITY.md), and [validation results](validation.md). The [original specification](product-specification.md) is an aspirational scope/acceptance record, not an implemented feature list.
+See [device validation](device-validation.md), [API](api.md), [security policy](../SECURITY.md), and [validation results](validation.md).
 
 ## Deployment profiles
 

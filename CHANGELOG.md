@@ -8,7 +8,7 @@
 - Kubernetes/KubeVirt/CDI/CNPG deployment with daemonless OCI builds and pinned provisioning sources; persistent disks, verified media imports, independent registered images, clone/export and CSI evaluation.
 - Authenticated RFB/WSS display, screenshots, input leases, actual guest keyboard and tablet proof, consented original MP4 recording and private guest TCP tunneling.
 - Native Fedora x86_64 application installation, guest file/archive integrity, original recordings, cold CPU/RAM resize and persistence.
-- Android ARM64 pinned media, signed APK and both transfer scenarios prepared; actual native guest compatibility not yet qualified. Windows remains optional and historical.
+- Android ARM64 pinned media, signed APK and both transfer scenarios prepared; actual native guest compatibility not yet qualified. Windows driver/media preparation is available; native Windows installation and application execution are not yet qualified.
 - Consolidated Python-to-TypeScript migration (65 files), locked Vite+ 1.8.0, Vinext runtime, source migration guard and complete static test-report validation. No standalone ESLint/tsx or Dockerfile workflow remains in current source.
 - Apache-2.0 licensing, README and public documentation, API walkthrough, security and contribution guidance, database schema/upgrade guide, qualification ledger and branch cleanup inventory.
 
@@ -31,4 +31,4 @@ The pre-migration executable commit `7e095afe6274137104f15caf9cbaef7738d6a9ba` p
 
 ### Remaining release gates
 
-Independent native-device acceptance [#12](https://github.com/everhush/vm_interface/issues/12) remains unstarted (0/3). No stable version or release tag has been published. Production identity/dashboard, managed-cloud runtime certification, production migration/backup qualification and conditional hardware features remain outside the verified evaluation scope. See [release checklist](docs/release-checklist.md).
+Mandatory Windows showcase [#33](https://github.com/everhush/vm_interface/issues/33) remains outstanding alongside native Android. Independent native-device acceptance [#12](https://github.com/everhush/vm_interface/issues/12) remains unstarted (0/3). No stable version or release tag has been published. Production identity/dashboard, managed-cloud runtime certification, production migration/backup qualification and conditional hardware features remain outside the verified evaluation scope. See [release checklist](docs/release-checklist.md).

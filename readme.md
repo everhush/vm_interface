@@ -51,7 +51,7 @@ flowchart LR
     R --> K
 ```
 
-Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/KVM supplies guest execution, while CloudNativePG/PostgreSQL stores durable account and operation state. Console, exchange and recording workers are separate services in the deployment. [Architecture and trust boundaries](docs/architecture.md). [Dedicated managed Kubernetes evaluation](docs/managed-kubernetes.md) uses explicit context, immutable registry digest and eligible KVM/CSI/CNI; no EKS/AKS runtime certification is claimed.
+Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/KVM supplies guest execution, while CloudNativePG/PostgreSQL stores durable account and operation state. Console, exchange and recording workers are separate services in the deployment. [Architecture and trust boundaries](docs/architecture.md). [Dedicated managed Kubernetes evaluation](docs/managed-kubernetes.md) uses explicit context, immutable registry digest and eligible KVM/CSI/CNI; no production runtime certification is claimed.
 
 ## Current capability status
 
@@ -65,7 +65,7 @@ Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/K
 | VirtioFS file exchange and private TCP tunnel                                             | Hosted native KVM passed                                                                                                           |
 | CSI growth                                                                                | Qualified evaluation driver; guest exchange growth and unchanged PVC identities verified; guest boot filesystem growth not claimed |
 | Android ARM64                                                                             | Offline media and APK preparation verified; native runtime not certified                                      |
-| Windows                                                                                   | Optional historical experiments; not a release requirement or certified guest                                                      |
+| Windows                                                                                   | Driver and media preparation verified; native installation and application execution not certified                                                      |
 | GPU, live migration/resize, virtio-mem, snapshots and additional hardware/OS combinations | Conditional or unverified; never assume availability                                                                               |
 
 Full results and exact commit: [validation record](docs/validation.md). The runtime capability/schema endpoints are authoritative for allowed configurations; a supported request is not a guarantee of guest conformance.
@@ -147,9 +147,9 @@ Exact source: `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. See the [migration rec
 | `src/`               | VM schema, operations, persistence, storage, gateways and workers     |
 | `infra/`             | K3s/KubeVirt/CDI/CNPG deployment and least-privilege policies         |
 | `scripts/`           | Provisioning, API-only tests, media acquisition and verifiers         |
-| `showcases/`         | Android APK and optional Windows media/guest fixtures                 |
+| `showcases/`         | Android APK and Windows media/guest fixtures                 |
 | `tests/`             | TypeScript unit and regression checks                                 |
-| `docs/`              | Public guides, qualification ledger and archived design specification |
+| `docs/`              | Public guides, qualification ledger and operational documentation |
 | `.github/workflows/` | Hosted qualification workflows; guarded to public upstream      |
 
 ## License and security

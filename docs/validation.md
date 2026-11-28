@@ -2,7 +2,7 @@
 
 ## Current qualification — Kubernetes/Vite+ migration (#13)
 
-**Date:** 2026-11-27 UTC. **Exact hosted-tested implementation:** [`34652dc2fffd585e8e95aac1a2df63b3552da8f8`](https://github.com/everhush/vm_interface/commit/34652dc2fffd585e8e95aac1a2df63b3552da8f8). **Status:** all required hosted lanes passed and retained evidence independently reviewed; ready for #12 validation-only handoff, 0/3 independent passes. Not a stable release or production/managed-cluster certification.
+**Date:** 2026-11-27 UTC. **Exact hosted-tested implementation:** [`34652dc2fffd585e8e95aac1a2df63b3552da8f8`](https://github.com/everhush/vm_interface/commit/34652dc2fffd585e8e95aac1a2df63b3552da8f8). **Status:** all required hosted lanes passed and retained evidence independently reviewed; hosted-qualified tested scope; mandatory Windows #33 outstanding before comprehensive #12 handoff, 0/3 independent passes. Not a stable release or production/managed-cluster certification.
 
 All 13 named native API stages exited zero; actual KVM/OCI deployment, isolation, persistent disks, data disk import/export, Fedora 44 native application, CDI import, BIOS/UEFI ISO boot, VNC, original control recording, keyboard/pointer ownership and hard reset, private TCP tunneling, recording authorization, guest exchange and idle-stop passed. Restart recovery, the isolated infrastructure VirtioFS compatibility probe and all hosted evidence verifiers passed. Independent archive review verified the exact source/run, ZIP SHA-256 `cb501ac76070d63f1e0d7607861f3971fbb6242e46b7ff96f94e47c6676af3fb`, CRC and original recording frames, exact guest bytes and cleanup.
 
@@ -57,8 +57,9 @@ Verify original artifact hashes and inspect actual guest frames and returned byt
 ## Remaining acceptance (issue #12)
 
 - Independent clean x86_64 KVM core and Linux application validation.
+- Mandatory native Windows x86_64 installation, application execution, byte transfer, persistence and original recording after #33 implementation and hosted/native qualification.
 - Native AArch64 Linux KVM with real ARM64 Android boot/display, APK installation and execution, authorized VirtioFS/SAF or authenticated private ADB transfer, actual result, persistent resize and original recording.
 - Conditional eligible-device tests for hardware/storage profiles; do not advertise unsupported GPU, live migration, live resize, virtio-mem or snapshots.
 - Three consecutive comprehensive reviewed independent-device passes on the approved exact candidate; **0/3**, not started. Failures route back to implementation issues.
 
-Hosted qualification is not production authentication, production security audit, OS licensing approval, EKS validation or general hardware conformance. The README describes an evaluation preview; no stable release tag or publication is authorized by this record.
+Hosted qualification is not production authentication, production security audit, OS licensing approval, production Kubernetes validation or general hardware conformance. The README describes an evaluation preview; no stable release tag or publication is authorized by this record.

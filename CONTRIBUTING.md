@@ -1,6 +1,6 @@
 # Contributing
 
-VM Interface is an API-first, evaluation-stage open-source project. Read the [README](readme.md), [architecture](docs/architecture.md), [API guide](docs/api.md) and [scope/requirements](docs/product-specification.md) before proposing changes.
+VM Interface is an API-first, evaluation-stage open-source project. Read the [README](readme.md), [architecture](docs/architecture.md), [API guide](docs/api.md) and [requirements ledger](docs/requirements.json) before proposing changes.
 
 1. Branch from current `main`; make focused, reviewable changes and add regression tests.
 2. Use Linux, Node.js 24.11+ (24.x), Bash, curl, FFmpeg/ffprobe with `libx264` and `drawtext`, Tesseract English language data, and DejaVu fonts. Run `bash scripts/device-validate.sh checks` (locked install, Vite+ format/typecheck/lint, tests and build). For interactive development use `npm run dev`, `npm run fmt`, `npm run check`, and `npm test`; these invoke the pinned local Vite+ CLI.
