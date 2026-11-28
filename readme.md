@@ -6,11 +6,11 @@ VM Interface gives applications, developers and external automation systems a co
 
 [Apache-2.0](LICENSE) · [Documentation](docs/README.md) · [API guide](docs/api.md) · [Validation results](docs/validation.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-> **Evaluation preview — Kubernetes/Vite+ migration hosted qualification passed on 27 November 2026 UTC.** See the [migration record](docs/toolchain-migration.md) for the exact independently reviewed candidate. Independent native-device acceptance ([#12](https://github.com/everhush/vm_interface/issues/12)) remains pending, including native ARM64 Android. This is not a production service or a stable/certified release. Use only clean, disposable, authorized devices.
+> **Evaluation preview — hosted qualification completed on 27 November 2026 UTC.** See the [qualification record](docs/validation.md) for tested configurations and limitations. This is a source evaluation, not a production service. Use only clean, disposable, authorized devices.
 
 ## Why VM Interface?
 
-A full VM offers its own operating system, kernel, firmware, disks and desktop/console rather than an application container alone. VM Interface puts a deliberately bounded, account-scoped API in front of KubeVirt. The client chooses how to operate the computer — a script, a human using a console client, or external automation. VM Interface is not an AI model, agent runtime, workflow engine or cloud-capacity manager.
+A full VM offers its own operating system, kernel, firmware, disks and desktop/console rather than an application container alone. VM Interface puts a deliberately bounded, account-scoped API in front of KubeVirt. The client chooses how to operate the computer — a script, a human using a console client, or external automation. VM Interface provides the virtual computers and their management APIs.
 
 - **One control surface:** declare a computer, dry-run configuration, track asynchronous operations and observe actual state.
 - **Persistent computers:** retain system and exchange disks across stop/start, manage additional disks, import authorized media and export or clone owned storage.
@@ -64,7 +64,7 @@ Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/K
 | Fedora 44 application install/run, archive, guest result, original recording              | Hosted native KVM passed                                                                                                           |
 | VirtioFS file exchange and private TCP tunnel                                             | Hosted native KVM passed                                                                                                           |
 | CSI growth                                                                                | Qualified evaluation driver; guest exchange growth and unchanged PVC identities verified; guest boot filesystem growth not claimed |
-| Android ARM64                                                                             | Pinned media, APK and scenarios prepared; actual guest boot and runtime pending native device                                      |
+| Android ARM64                                                                             | Offline media and APK preparation verified; native runtime not certified                                      |
 | Windows                                                                                   | Optional historical experiments; not a release requirement or certified guest                                                      |
 | GPU, live migration/resize, virtio-mem, snapshots and additional hardware/OS combinations | Conditional or unverified; never assume availability                                                                               |
 
@@ -74,7 +74,7 @@ Full results and exact commit: [validation record](docs/validation.md). The runt
 
 The current `main` already contains the consolidated Kubernetes-only implementation: Vinext and TypeScript on Node.js 24, the pinned Vite+ toolchain, daemonless OCI image construction, and KubeVirt-managed guests. All 65 former Python files are accounted for in the [migration inventory](docs/toolchain-migration.md); no legacy Python source or Dockerfile is required. Database schema initialization and compatibility upgrades are centralized in [`src/db.ts`](src/db.ts); see the [schema and upgrade guide](docs/database-schema.md).
 
-Use `main` for evaluation source and the exact tested SHA below for reproducing hosted evidence. Historical development branches are not separate installations or required migration steps. See [repository maintenance](docs/repository-maintenance.md) for the branch policy and cleanup inventory.
+Use `main` for evaluation source and the exact tested SHA below for reproducing hosted evidence. Historical development branches are not separate installations or required migration steps. See [repository maintenance](docs/repository-maintenance.md) for repository conventions.
 
 ## Getting started
 
@@ -102,7 +102,7 @@ sudo "$(command -v node)" scripts/device-preflight.ts --architecture amd64
 bash scripts/device-validate.sh core --confirm-disposable
 ```
 
-This installs the pinned operators and application, creates ephemeral test identities, exercises the product APIs and retains an `evidence/` directory. It retains the disposable cluster for inspection; the operator owns disposal. The Linux application showcase is included in core and available separately on a fresh host via the `linux` profile. For native ARM64 preparation and optional CSI evaluation, follow the [device guide](docs/device-validation.md).
+This installs the pinned operators and application, creates ephemeral test identities, exercises the product APIs and retains an `evidence/` directory. It retains the disposable cluster for inspection; the operator owns disposal. The Linux application showcase is included in core and available separately on a fresh host via the `linux` profile. For additional evaluation profiles, follow the [device guide](docs/device-validation.md).
 
 ### 3. Explore the API
 
@@ -151,10 +151,6 @@ Exact source: `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. See the [migration rec
 | `tests/`             | TypeScript unit and regression checks                                 |
 | `docs/`              | Public guides, qualification ledger and archived design specification |
 | `.github/workflows/` | Hosted qualification workflows; guarded to public upstream      |
-
-## Roadmap and release boundaries
-
-Next milestone: [independent native-device acceptance (#12)](https://github.com/everhush/vm_interface/issues/12). Three consecutive comprehensive reviewed independent passes are required before stable release; current count is **0/3**. Use the [acceptance record template](docs/acceptance-record.md) to retain independent evidence and record the verdict without changing source. The current scope deliberately excludes a general dashboard, production identity/registration/OAuth, AI agents and production EKS/cloud deployment. See the [release checklist](docs/release-checklist.md) and [original product specification](docs/product-specification.md) for the wider roadmap. Report defects rather than weakening test assertions.
 
 ## License and security
 
