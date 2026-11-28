@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { proofTools, batch } from "./proof-tools.ts";
-import { sha, key, sleep, wait, writeJson, type CallOptions } from "./api-client.ts";
+import { sha, key, sleep, wait, writeJson, waitForEmptyExchange, type CallOptions } from "./api-client.ts";
 import {
   packageBytes,
   launcherCloud,
@@ -123,6 +123,7 @@ try {
     raw: data,
     headers: headers(digest),
   });
+  await waitForEmptyExchange(h.request, p);
   const upload = await call("PUT", p + "/files/challenge.bin", {
     expected: 202,
     raw: data,

@@ -2,9 +2,9 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";
-import { client, key, sha, wait, writeJson } from "./api-client.ts";
+import { client, key, sha, wait, writeJson, waitForEmptyExchange } from "./api-client.ts";
 import { tarMembers } from "./verify_csi_evidence.ts";
-const { call, binary, B } = client({ timeout: 45 });
+const { call, binary, B, request } = client({ timeout: 45 });
 const cloud =
   "#!/bin/bash\nset -eu\nmkdir -p /mnt/exchange\nmodprobe virtiofs || true\nmount -t virtiofs exchange /mnt/exchange\ntest \"$(findmnt -n -o FSTYPE /mnt/exchange)\" = virtiofs\ncd /mnt/exchange\ntest -f in-challenge.bin\numask 002\n(cat in-challenge.bin; printf '\\nactual-fedora-guest\\n') > .result.tmp\nmv .result.tmp out-result.bin\nsha256sum out-result.bin | cut -d ' ' -f 1 > .digest.tmp\nmv .digest.tmp out-result.bin.sha256\nsync\n";
 const spec = {
@@ -37,6 +37,7 @@ try {
     idem: key(),
     expected: 404,
   });
+  await waitForEmptyExchange(request, path);
   await call("PUT", upload, {
     raw: payload,
     headers: headers("0".repeat(64)),

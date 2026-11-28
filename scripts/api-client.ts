@@ -147,3 +147,35 @@ export async function wait<T>(
 }
 export const writeJson = (path: string, value: unknown) =>
   writeFileSync(path, JSON.stringify(value, null, 2) + "\n");
+
+/** A fresh exchange broker starts asynchronously; only its explicit readiness conflicts are retryable. */
+export async function waitForEmptyExchange(
+  request: ReturnType<typeof client>["request"],
+  path: string,
+  seconds = 120,
+  interval = 1.5,
+) {
+  await wait(
+    async () => {
+      const response = await request("GET", path + "/files", {
+        expected: [200, 409],
+        phase: "exchange broker readiness",
+        timeout: 45,
+      });
+      const result = JSON.parse(response.data.toString("utf8"));
+      if (response.status === 409) {
+        assert(
+          ["Exchange broker not ready; retry", "Exchange broker not ready"].includes(result.error),
+          "Unexpected exchange conflict: " + result.error,
+        );
+        return false;
+      }
+      assert.equal(response.status, 200);
+      assert.deepEqual(result, [], "Fresh exchange already contains guest output");
+      return true;
+    },
+    seconds,
+    "Exchange broker did not become ready",
+    interval,
+  );
+}
