@@ -72,9 +72,9 @@ Full results and exact commit: [validation record](docs/validation.md). The runt
 
 ## Implementation and migration
 
-The current `main` already contains the consolidated Kubernetes-only implementation: Vinext and TypeScript on Node.js 24, the pinned Vite+ toolchain, daemonless OCI image construction, and KubeVirt-managed guests. All 65 former Python files are accounted for in the [migration inventory](docs/toolchain-migration.md); no legacy Python source or Dockerfile is required. Database schema initialization and compatibility upgrades are centralized in [`src/db.ts`](src/db.ts); see the [schema and upgrade guide](docs/database-schema.md).
+The current `master` already contains the consolidated Kubernetes-only implementation: Vinext and TypeScript on Node.js 24, the pinned Vite+ toolchain, daemonless OCI image construction, and KubeVirt-managed guests. All 65 former Python files are accounted for in the [migration inventory](docs/toolchain-migration.md); no legacy Python source or Dockerfile is required. Database schema initialization and compatibility upgrades are centralized in [`src/db.ts`](src/db.ts); see the [schema and upgrade guide](docs/database-schema.md).
 
-Use `main` for evaluation source and the exact tested SHA below for reproducing hosted evidence. Historical development branches are not separate installations or required migration steps. See [repository maintenance](docs/repository-maintenance.md) for repository conventions.
+Use `master` for evaluation source and the exact tested SHA below for reproducing hosted evidence. Historical development branches are not separate installations or required migration steps. See [repository maintenance](docs/repository-maintenance.md) for repository conventions.
 
 ## Getting started
 
@@ -85,7 +85,7 @@ Use Linux with Git, Node.js 24, npm, Bash, curl, FFmpeg/ffprobe (including `libx
 ```sh
 git clone https://github.com/everhush/vm_interface.git
 cd vm_interface
-git checkout main
+git checkout master
 bash scripts/device-validate.sh checks
 ```
 

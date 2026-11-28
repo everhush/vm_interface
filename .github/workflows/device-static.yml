@@ -1,9 +1,9 @@
 name: Consolidated device candidate static checks
 on:
   pull_request:
-    branches: [main]
+    branches: [master]
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - '.github/workflows/**'
       - 'readme.md'

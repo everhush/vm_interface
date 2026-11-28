@@ -1,7 +1,7 @@
 name: API and real KVM smoke
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'app/**'
       - 'src/**'

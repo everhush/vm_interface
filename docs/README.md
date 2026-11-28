@@ -19,7 +19,7 @@ Start with the [project README](../readme.md). VM Interface is an Apache-2.0 eva
 
 ## Which source should I use?
 
-- Browse or build the current `main` source for the evaluation preview. `main` is the sole primary source. The legacy default branch is slated for retirement after the administrator selects `main`.
+- Browse or build the current `master` source for the evaluation preview. `master` is the sole primary and configured default branch. The redundant `main` branch is slated for retirement after verifying its ancestry and preserving history.
 - For reproducibility and issue #12 use exact hosted-qualified `34652dc2fffd585e8e95aac1a2df63b3552da8f8` and follow the [migration record](toolchain-migration.md) and device guide. Documentation-only successors do not constitute new same-SHA CI.
 - The engineering log records past test results; the current issue tracker defines active work.
 
