@@ -1,6 +1,6 @@
 # Architecture and operating model
 
-VM Interface is a versioned, declarative virtualization control plane, not a hypervisor implementation. The product API is implemented in Vinext/TypeScript. KubeVirt reconciles desired VM/VMI state and delegates guest execution to QEMU/KVM. CDI provisions disks; K3s hosts the operators and application. PostgreSQL (CloudNativePG, Drizzle) retains account-scoped durable operations, quotas, credentials and other service state.
+VM Interface is a versioned, declarative virtualization control plane, not a hypervisor implementation. The product API is implemented in Next.js/TypeScript. KubeVirt reconciles desired VM/VMI state and delegates guest execution to QEMU/KVM. CDI provisions disks; K3s hosts the operators and application. PostgreSQL (CloudNativePG, Drizzle) retains account-scoped durable operations, quotas, credentials and other service state.
 
 | Layer | Source / responsibility |
 | --- | --- |

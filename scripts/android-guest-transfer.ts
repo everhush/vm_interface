@@ -290,7 +290,7 @@ export class AndroidGuestTransfer {
     };
     this.relay = spawn(
       process.execPath,
-      ["--import", "vite-plus/register", join(ROOT, "scripts/guest-tcp-relay.ts")],
+      ["--import", "tsx", join(ROOT, "scripts/guest-tcp-relay.ts")],
       { cwd: ROOT, env, stdio: ["ignore", "pipe", "ignore"] },
     );
     const port = await childReady(this.relay);

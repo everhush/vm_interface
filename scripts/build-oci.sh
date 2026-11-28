@@ -20,7 +20,7 @@ cleanup() {
 trap cleanup EXIT
 mkdir "$work/context"
 # Only tracked application sources and locked dependencies enter the image.
-git archive HEAD app src package.json package-lock.json tsconfig.json vite.config.ts LICENSE NOTICE | tar -x -C "$work/context"
+git archive HEAD app src package.json package-lock.json tsconfig.json next.config.ts LICENSE NOTICE | tar -x -C "$work/context"
 base="${VM_OCI_BASE_IMAGE:-docker.io/library/node:24-bookworm-slim}"
 ctr="$(b from --pull=always "$base")"
 b run --isolation chroot "$ctr" -- sh -ec 'apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*'
@@ -29,7 +29,7 @@ b copy "$ctr" "$work/context/package.json" "$work/context/package-lock.json" /ap
 b run --isolation chroot "$ctr" -- npm ci --no-audit --no-fund
 b copy "$ctr" "$work/context/" /app/
 b run --isolation chroot "$ctr" -- npm run build
-b config --env NODE_ENV=production --env HOST=0.0.0.0 --env PORT=3000 --user 1000 --port 3000 --entrypoint '[]' --cmd '["npm","run","start","--","--host","0.0.0.0","--port","3000"]' "$ctr"
+b config --env NODE_ENV=production --env HOST=0.0.0.0 --env PORT=3000 --user 1000 --port 3000 --entrypoint '[]' --cmd '["npm","run","start","--","--hostname","0.0.0.0","--port","3000"]' "$ctr"
 b commit --format oci "$ctr" localhost/vm-interface:ci
 b push --format oci localhost/vm-interface:ci "oci-archive:$work/image.tar:ci"
 # Check the archive is an actual OCI image layout before importing or publishing.

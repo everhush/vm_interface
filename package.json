@@ -3,40 +3,30 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vp dev",
-    "build": "vp build",
-    "start": "vinext start",
-    "check": "vp check --continue-on-error",
-    "typecheck": "vp check --no-fmt --no-lint",
-    "lint": "vp lint",
-    "fmt": "vp fmt",
-    "test": "vp test run"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx scripts/run-static-tests.ts"
   },
   "dependencies": {
-    "vinext": "^1.0.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-server-dom-webpack": "^19.2.0",
-    "zod": "^4.1.0",
-    "drizzle-orm": "^0.44.0",
-    "postgres": "^3.4.7",
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7",
+    "drizzle-orm": "0.44.7",
+    "postgres": "3.4.9",
     "rfb2": "1.1.0",
-    "ws": "8.18.3"
+    "ws": "8.18.3",
+    "tsx": "4.23.15"
   },
   "devDependencies": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
-    "@vitejs/plugin-react": "^6.0.0",
-    "@vitejs/plugin-rsc": "latest",
-    "typescript": "^5.9.3",
-    "@types/node": "^24.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@types/ws": "8.18.1",
-    "vite-plus": "1.8.0"
-  },
-  "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
-    "vitest": "5.1.1"
+    "typescript": "5.9.3",
+    "@types/node": "24.19.4",
+    "@types/react": "19.3.2",
+    "@types/react-dom": "19.3.0",
+    "@types/ws": "8.18.1"
   },
   "engines": {
     "node": "^24.11.0"

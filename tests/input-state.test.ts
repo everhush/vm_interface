@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { HeldInput } from "../src/input-state";
 test("ownership generation changes release held keys and buttons before new input", () => {

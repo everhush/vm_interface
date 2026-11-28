@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { verifyStaticReport, MINIMUM_TESTS } from "../scripts/verify-static-test-report.ts";
 

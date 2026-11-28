@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, createConnection, type Server, type Socket } from "node:net";
 import { once } from "node:events";

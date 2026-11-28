@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { isMain } from "./tooling.ts";
+const forbiddenDependency = (name: string) =>
+  /^(?:vinext|vite(?:$|-)|vitest(?:$|-)|@vitejs\/|@vitest\/|@vinext\/|@voidzero-dev\/vite|react-server-dom-webpack$)/.test(name);
 export function migrationViolations(path: string, content: string) {
   const errors: string[] = [];
   if (
@@ -11,29 +13,25 @@ export function migrationViolations(path: string, content: string) {
     )
   )
     errors.push("legacy tracked file");
-  if (/(?:^|\/)(?:eslint\.config\.[^/]+|\.eslintrc(?:\.[^/]+)?|\.eslintignore)$/.test(path))
-    errors.push("legacy lint config");
+  if (/(?:^|\/)vite\.config\.[^/]+$/.test(path)) errors.push("removed framework configuration");
   if (path === "package.json") {
     const pkg = JSON.parse(content) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
       scripts?: Record<string, string>;
     };
-    const vite = { ...pkg.dependencies, ...pkg.devDependencies }.vite;
-    if (vite && !vite.startsWith("npm:@voidzero-dev/vite-plus-core@"))
-      errors.push("standalone Vite dependency");
-    for (const name of ["eslint", "typescript-eslint", "tsx", "vitest", "oxlint", "oxfmt"])
-      if (name in { ...pkg.dependencies, ...pkg.devDependencies })
-        errors.push("standalone tool dependency: " + name);
+    for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }))
+      if (forbiddenDependency(name)) errors.push("removed framework dependency: " + name);
     for (const command of Object.values(pkg.scripts ?? {}))
-      if (/(?:^|[;&|]\s*)(?:eslint|tsx|tsc|vite|vitest|oxlint|oxfmt)(?:\s|$)/.test(command))
-        errors.push("standalone tool command: " + command);
+      if (/(?:^|[;&|]\s*)(?:vp|vite|vinext|vitest)(?:\s|$)/.test(command))
+        errors.push("removed framework command: " + command);
   }
   if (path === "package-lock.json") {
     const lock = JSON.parse(content) as { packages?: Record<string, unknown> };
-    for (const name of Object.keys(lock.packages ?? {}))
-      if (/(?:^|\/)node_modules\/(?:eslint|typescript-eslint|tsx)$/.test(name))
-        errors.push("legacy installed dependency: " + name);
+    for (const name of Object.keys(lock.packages ?? {})) {
+      const pkg = name.split("node_modules/").at(-1) ?? "";
+      if (forbiddenDependency(pkg)) errors.push("removed installed dependency: " + name);
+    }
   }
   if (
     !/^(?:scripts\/|tests\/|src\/|app\/|infra\/|showcases\/|\.github\/workflows\/|package\.json$)/.test(
@@ -45,10 +43,7 @@ export function migrationViolations(path: string, content: string) {
   if (path === "scripts/check-source-migration.ts" || path === "tests/source-migration.test.ts")
     return errors;
   const checks: [RegExp, string][] = [
-    [
-      /\bTSX_DISABLE_CACHE\b|\bnode\s+--import(?:\s+|=)tsx\b|["']--import["']\s*,\s*["']tsx["']|\bfrom\s+["']node:test["']/,
-      "legacy loader or test runner",
-    ],
+    [/\b(?:vite-plus\/register|vite-plus\/test)\b|\bfrom\s+["\x27](?:vinext|vite|vitest)["\x27]/, "removed framework loader or test runner"],
     [
       /(?:^|[;&|]\s*)[ \t]*(?:sudo[ \t]+)?(?:[^\s;|&]+\/)?python(?:2|3(?:\.\d+)?)?(?=[ \t\r\n;&|]|$)/im,
       "shell interpreter command",

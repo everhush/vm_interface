@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { displayToken, validTicket } from "../src/console-tickets";
 test("display credentials are distinct from account bearer credentials", () => {

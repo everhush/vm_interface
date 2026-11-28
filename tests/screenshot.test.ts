@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { requireOwnedRunningInstance, validateScreenshot } from "../src/screenshot";
 import type { Resource } from "../src/kube";

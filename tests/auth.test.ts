@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { accountFor } from "../src/auth";
 const secret = "a".repeat(32);

@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { batchSpec, validateBatchGeometry } from "../src/input-batch";
 test("input batches are bounded strict and validated before sending", () => {

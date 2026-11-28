@@ -60,7 +60,7 @@ spec:
       - name: console
         image: localhost/vm-interface:ci
         imagePullPolicy: Never
-        command: ["node","--import","vite-plus/register","src/run-console-gateway.ts"]
+        command: ["node","--import","tsx","src/run-console-gateway.ts"]
         ports:
         - containerPort: 3443
         env:
@@ -85,7 +85,7 @@ spec:
       - name: recording
         image: localhost/vm-interface:ci
         imagePullPolicy: Never
-        command: ["node","--import","vite-plus/register","src/run-recording-worker.ts"]
+        command: ["node","--import","tsx","src/run-recording-worker.ts"]
         env:
         - name: DATABASE_URL
           valueFrom: {secretKeyRef: {name: vm-db-app, key: uri}}
@@ -103,7 +103,7 @@ spec:
       - name: reconcile
         image: localhost/vm-interface:ci
         imagePullPolicy: Never
-        command: ["node","--import","vite-plus/register","src/run-operation-reconciler.ts"]
+        command: ["node","--import","tsx","src/run-operation-reconciler.ts"]
         env:
         - name: DATABASE_URL
           valueFrom: {secretKeyRef: {name: vm-db-app, key: uri}}

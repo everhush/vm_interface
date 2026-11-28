@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parsePgm, cropForOcr, exactMarker } from "../scripts/iso-marker.ts";
 test("exact and not fuzzy", () => {

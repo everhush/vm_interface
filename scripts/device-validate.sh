@@ -19,7 +19,7 @@ if [ "$profile" = checks ]; then
   node scripts/verify-static-test-report.ts "$test_report"
   npm run build
   node scripts/check-source-migration.ts
-  NODE_DISABLE_COMPILE_CACHE=1 node --import vite-plus/register --input-type=module -e 'await import("./src/exchange.ts"); await import("./scripts/android-guest-transfer.ts");'
+  NODE_DISABLE_COMPILE_CACHE=1 node --import tsx --input-type=module -e 'await import("./src/exchange.ts"); await import("./scripts/android-guest-transfer.ts");'
   for f in scripts/*.sh showcases/android/*.sh; do bash -n "$f"; done
   exit 0
 fi
@@ -84,12 +84,12 @@ if [ "$profile" = core ]; then
   stage node scripts/e2e-smoke.ts
   stage node scripts/e2e-persistent.ts
   stage node scripts/e2e-data-disks.ts
-  stage node --import vite-plus/register scripts/e2e-vnc.ts
+  stage node --import tsx scripts/e2e-vnc.ts
   stage node scripts/e2e-api-control-proof.ts
-  stage node --import vite-plus/register scripts/e2e-input.ts
-  stage node --import vite-plus/register scripts/e2e-network.ts
+  stage node --import tsx scripts/e2e-input.ts
+  stage node --import tsx scripts/e2e-network.ts
   node scripts/verify_network_evidence.ts --root evidence --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" | tee evidence/network-independent-verification.json
-  stage node --import vite-plus/register scripts/e2e-recording.ts
+  stage node --import tsx scripts/e2e-recording.ts
   stage node scripts/e2e-exchange.ts
   stage node scripts/e2e-api-functional-proof.ts
   stage node scripts/e2e-idle.ts

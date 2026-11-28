@@ -1075,6 +1075,9 @@ async function handle(req: Request) {
     }
   return result;
 }
+// Keep every API response request-time and on the Node runtime.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const GET = handle;
 export const POST = handle;
 export const DELETE = handle;

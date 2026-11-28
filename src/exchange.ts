@@ -109,7 +109,7 @@ export function exchangePod(id: string, account: string, uid: string, token: str
         {
           name: "files",
           ...brokerImage(),
-          command: ["node", "--import", "vite-plus/register", "src/run-exchange-broker.ts"],
+          command: ["node", "--import", "tsx", "src/run-exchange-broker.ts"],
           env: [
             { name: "EXCHANGE_TOKEN", value: token },
             { name: "NODE_DISABLE_COMPILE_CACHE", value: "1" },

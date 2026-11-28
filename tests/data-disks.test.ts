@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { vmManifest, type ComputerSpec } from "../src/spec";
 import {

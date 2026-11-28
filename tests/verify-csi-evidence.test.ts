@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { capacity, digest, requireEvidence } from "../scripts/verify_csi_evidence.ts";
 test("PVC capacity quantities", () => {

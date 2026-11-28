@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { onceSuccessful } from "../src/once-successful";
 test("migration is single-flight, retries failure and caches only success", async () => {

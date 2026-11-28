@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, writeFile, symlink, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -31,7 +31,7 @@ test("VirtioFS uses distinct owned PVC and counts all reservations", () => {
   assert.deepEqual(p.spec.containers[0].command, [
     "node",
     "--import",
-    "vite-plus/register",
+    "tsx",
     "src/run-exchange-broker.ts",
   ]);
   assert.deepEqual(p.spec.containers[0].env, [
@@ -41,7 +41,7 @@ test("VirtioFS uses distinct owned PVC and counts all reservations", () => {
   const policy = readFileSync(new URL("../infra/exchange-policy.yaml", import.meta.url), "utf8");
   assert.ok(
     policy.includes(
-      "command == [\x27node\x27,\x27--import\x27,\x27vite-plus/register\x27,\x27src/run-exchange-broker.ts\x27]",
+      "command == [\x27node\x27,\x27--import\x27,\x27tsx\x27,\x27src/run-exchange-broker.ts\x27]",
     ),
   );
   assert.ok(policy.includes("c.env[1].name == \x27NODE_DISABLE_COMPILE_CACHE\x27"));

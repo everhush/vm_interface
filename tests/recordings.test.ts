@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { recordingSpec, recordingPath, RECORDING_DIR } from "../src/recordings";
 test("capture requires explicit consent and bounded duration", () => {

@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { migrationViolations } from "../scripts/check-source-migration.ts";
 test("reject tracked legacy scripts and build configs", () => {
@@ -49,61 +49,15 @@ test("inspect tests and reject indirect executable invocation", () => {
   );
 });
 
-test("reject redundant standalone tool configuration and executable paths", () => {
-  assert(migrationViolations("eslint.config.mjs", "").length);
-  assert(
-    migrationViolations("package.json", JSON.stringify({ devDependencies: { eslint: "9" } }))
-      .length,
-  );
-  assert(
-    migrationViolations(
-      "package.json",
-      JSON.stringify({ scripts: { test: "tsx --test tests/*.ts" } }),
-    ).length,
-  );
-  assert(
-    migrationViolations("infra/app.yaml", 'command: ["node","--import","tsx","src/run.ts"]').length,
-  );
-  assert(
-    migrationViolations("src/exchange.ts", 'const env={name:"TSX_DISABLE_CACHE",value:"1"}').length,
-  );
-  assert(
-    migrationViolations("scripts/android-guest-transfer.ts", '["--import","tsx","relay.ts"]')
-      .length,
-  );
-  assert(migrationViolations("tests/example.test.ts", 'import test from "node:test"').length);
-  assert.deepEqual(
-    migrationViolations(
-      "package.json",
-      JSON.stringify({
-        devDependencies: {
-          vite: "npm:@voidzero-dev/vite-plus-core@8.3.8001",
-          "vite-plus": "1.8.0",
-        },
-        scripts: { test: "vp test run" },
-      }),
-    ),
-    [],
-  );
-  assert.deepEqual(
-    migrationViolations("scripts/run.sh", "node --import vite-plus/register src/run.ts"),
-    [],
-  );
-  assert(
-    migrationViolations("package.json", JSON.stringify({ devDependencies: { vite: "^8.0.0" } }))
-      .length,
-  );
-  assert(
-    migrationViolations(
-      "package-lock.json",
-      JSON.stringify({ packages: { "node_modules/eslint": { version: "9.0.0" } } }),
-    ).length,
-  );
-  assert.deepEqual(
-    migrationViolations(
-      "package-lock.json",
-      JSON.stringify({ packages: { "node_modules/vite-plus": { version: "1.8.0" } } }),
-    ),
-    [],
-  );
+test("reject removed framework configuration, dependencies and executable paths", () => {
+  assert(migrationViolations("vite.config.ts", "").length);
+  for (const name of ["vinext", "vite", "vite-plus", "vitest", "@vitejs/plugin-react", "@voidzero-dev/vite-plus-core", "react-server-dom-webpack"])
+    assert(migrationViolations("package.json", JSON.stringify({ dependencies: { [name]: "1" } })).length, name);
+  assert(migrationViolations("package.json", JSON.stringify({ scripts: { build: "vp build" } })).length);
+  assert(migrationViolations("infra/app.yaml", 'command: ["node","--import","vite-plus/register","src/run.ts"]').length);
+  assert(migrationViolations("tests/example.test.ts", 'import { test } from "vite-plus/test"').length);
+  assert(migrationViolations("package-lock.json", JSON.stringify({ packages: { "node_modules/next/node_modules/vite": { version: "8" } } })).length);
+  assert.deepEqual(migrationViolations("package.json", JSON.stringify({ dependencies: { next: "16", tsx: "4" }, scripts: { build: "next build", test: "node --import tsx scripts/run-static-tests.ts" } })), []);
+  assert.deepEqual(migrationViolations("scripts/run.sh", "node --import tsx src/run.ts"), []);
+  assert.deepEqual(migrationViolations("tests/example.test.ts", 'import { test } from "node:test"'), []);
 });

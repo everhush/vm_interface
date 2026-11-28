@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { sourceIdentity } from "../scripts/verify-evidence.ts";
 test("exact hosted and device run identities", () => {

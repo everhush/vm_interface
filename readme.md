@@ -1,5 +1,7 @@
 # VM Interface
 
+**Branch scope:** Next.js compatibility candidate. Existing primary-branch hosted evidence is retained for comparison; this branch requires its own locked build, HTTP checks and native integration evidence before claiming runtime parity.
+
 **A programmable, API-first platform for real virtual machines on Kubernetes.**
 
 VM Interface gives applications, developers and external automation systems a common way to provision, inspect and operate persistent computers. It exposes VM lifecycle, storage, display, input, file transfer and networking through versioned APIs instead of requiring clients to manipulate Kubernetes or install a proprietary agent in every guest.
@@ -32,7 +34,7 @@ These are examples of hosted-qualified building blocks, not a promise of a hoste
 ```mermaid
 flowchart LR
     C["Client / console / external automation"]
-    A["Vinext REST API (TypeScript)"]
+    A["Next.js REST API (TypeScript)"]
     G["TLS WSS console & TCP gateway"]
     P["PostgreSQL / Drizzle"]
     K["K3s · KubeVirt · CDI"]
@@ -51,7 +53,7 @@ flowchart LR
     R --> K
 ```
 
-Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/KVM supplies guest execution, while CloudNativePG/PostgreSQL stores durable account and operation state. Console, exchange and recording workers are separate services in the deployment. [Architecture and trust boundaries](docs/architecture.md). [Dedicated managed Kubernetes evaluation](docs/managed-kubernetes.md) uses explicit context, immutable registry digest and eligible KVM/CSI/CNI; no production runtime certification is claimed.
+Next.js and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/KVM supplies guest execution, while CloudNativePG/PostgreSQL stores durable account and operation state. Console, exchange and recording workers are separate services in the deployment. [Architecture and trust boundaries](docs/architecture.md). [Dedicated managed Kubernetes evaluation](docs/managed-kubernetes.md) uses explicit context, immutable registry digest and eligible KVM/CSI/CNI; no production runtime certification is claimed.
 
 ## Current capability status
 
@@ -72,9 +74,9 @@ Full results and exact commit: [validation record](docs/validation.md). The runt
 
 ## Implementation and migration
 
-The current `main` already contains the consolidated Kubernetes-only implementation: Vinext and TypeScript on Node.js 24, the pinned Vite+ toolchain, daemonless OCI image construction, and KubeVirt-managed guests. All 65 former Python files are accounted for in the [migration inventory](docs/toolchain-migration.md); no legacy Python source or Dockerfile is required. Database schema initialization and compatibility upgrades are centralized in [`src/db.ts`](src/db.ts); see the [schema and upgrade guide](docs/database-schema.md).
+The current `main` already contains the consolidated Kubernetes-only implementation: Next.js and TypeScript on Node.js 24, the pinned Vite+ toolchain, daemonless OCI image construction, and KubeVirt-managed guests. All 65 former Python files are accounted for in the [migration inventory](docs/toolchain-migration.md); no legacy Python source or Dockerfile is required. Database schema initialization and compatibility upgrades are centralized in [`src/db.ts`](src/db.ts); see the [schema and upgrade guide](docs/database-schema.md).
 
-Use `main` for evaluation source and the exact tested SHA below for reproducing hosted evidence. Historical development branches are not separate installations or required migration steps. See [repository maintenance](docs/repository-maintenance.md) for repository conventions.
+Use this branch for framework compatibility evaluation. The historical exact qualified SHA below belongs to the primary framework; its results are not Next.js qualification. Historical development branches are not separate installations or required migration steps. See [repository maintenance](docs/repository-maintenance.md) for repository conventions.
 
 ## Getting started
 
@@ -89,7 +91,7 @@ git checkout main
 bash scripts/device-validate.sh checks
 ```
 
-This bootstraps the locked project-local Vite+ CLI with `npm ci`, then runs `vp check` (format, type checking and lint), `vp test run`, `vp build`, the source migration guard and shell syntax checks. Node.js 24.11 or newer within the 24.x release line is required. Vinext remains the application runtime. It does not install K3s or certify a guest. Do not run provisioning scripts merely to browse the code.
+This installs locked dependencies with `npm ci`, then runs TypeScript checks, the native Node test runner through the independent TypeScript loader, `next build`, the source migration guard and shell syntax checks. Node.js 24.11 or newer within the 24.x release line is required. Next.js is the application runtime. It does not install K3s or certify a guest. Do not run provisioning scripts merely to browse the code.
 
 ### 2. Try the full evaluation on a disposable x86_64 Linux device
 
@@ -143,7 +145,7 @@ Exact source: `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. See the [migration rec
 
 | Path                 | Purpose                                                               |
 | -------------------- | --------------------------------------------------------------------- |
-| `app/`               | Vinext app and versioned API route                                    |
+| `app/`               | Next.js App Router and versioned API route                                    |
 | `src/`               | VM schema, operations, persistence, storage, gateways and workers     |
 | `infra/`             | K3s/KubeVirt/CDI/CNPG deployment and least-privilege policies         |
 | `scripts/`           | Provisioning, API-only tests, media acquisition and verifiers         |

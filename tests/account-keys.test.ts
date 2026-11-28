@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { apiKeyToken, keySpec, keyUsable, requirePermission } from "../src/account-keys";
 test("key spec and credential separation", () => {

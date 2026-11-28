@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { quantity, eligibleNodes } from "../scripts/kvm_capacity.ts";
 test("canonical quantities", () => {

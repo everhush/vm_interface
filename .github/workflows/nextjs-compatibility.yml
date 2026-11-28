@@ -1,0 +1,74 @@
+name: Next.js compatibility checks
+on:
+  push:
+    branches: [nextjs]
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: nextjs-compatibility-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  compatibility:
+    if: github.repository == 'everhush/vm_interface' && github.ref == 'refs/heads/nextjs'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Resolve lock only for initial framework migration
+        if: hashFiles('package-lock.json') == ''
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Retain generated lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-resolved-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Record lock for source reconciliation
+        run: |
+          node --input-type=module -e 'import {readFileSync} from "node:fs"; const b=readFileSync("package-lock.json").toString("base64"); for(let i=0;i<b.length;i+=3000)console.log("VM_NEXT_LOCK:"+b.slice(i,i+3000));'
+      - run: bash scripts/install-evidence-tools.sh
+      - run: bash scripts/device-validate.sh checks
+        env:
+          VM_STATIC_TEST_REPORT: ${{ runner.temp }}/vm-interface-test-report.json
+      - name: Smoke test production Next.js HTTP server
+        run: |
+          npm run start -- --hostname 127.0.0.1 --port 3099 > "$RUNNER_TEMP/nextjs-server.log" 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true; cat "$RUNNER_TEMP/nextjs-server.log"' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:3099/; then break; fi
+            sleep 1
+          done
+          node --input-type=module - <<'NODE'
+          import assert from "node:assert/strict";
+          const root = "http://127.0.0.1:3099";
+          const home = await fetch(root);
+          assert.equal(home.status, 200);
+          assert.match(await home.text(), /VM Interface API/);
+          for (const method of ["GET", "POST", "PATCH", "PUT", "DELETE"]) {
+            const response = await fetch(root + "/api/v1/computers", { method });
+            assert.equal(response.status, 401, method);
+            assert.deepEqual(await response.json(), { error: "Unauthorized" });
+          }
+          const health = await fetch(root + "/api/v1/health");
+          assert.notEqual(health.status, 200, "No database or Kubernetes credentials: readiness must fail closed");
+          console.log("Production HTTP route and authorization smoke passed");
+          NODE
+      - name: Retain static test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-static-test-report
+          path: ${{ runner.temp }}/vm-interface-test-report.json
+          if-no-files-found: warn
+          retention-days: 7

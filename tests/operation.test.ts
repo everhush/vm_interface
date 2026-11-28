@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PENDING_TIMEOUT_MS, pendingIsStale, replaySubmission } from "../src/operation";
 

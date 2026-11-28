@@ -1,4 +1,4 @@
-import { test } from "vite-plus/test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { activeClaim, mayAcquire } from "../src/input-lease";
 test("only a human may take over a live automation lease", () => {
