@@ -1,7 +1,7 @@
 # Kubernetes and Vite+ migration record — issue #13
 
 **Candidate:** [`34652dc2fffd585e8e95aac1a2df63b3552da8f8`](https://github.com/everhush/vm_interface/commit/34652dc2fffd585e8e95aac1a2df63b3552da8f8)  
-**Status:** Exact hosted qualification and independent artifact review completed on 2026-11-27 UTC. Eligible for source-preview promotion and issue #12 validation-only handoff; not a stable release or independent device acceptance.
+**Status:** Exact hosted qualification and independent artifact review completed on 2026-11-27 UTC. Promoted to primary source preview; issue #12 validation-only handoff ready; not a stable release or independent device acceptance.
 
 ## Source inventory
 
@@ -119,6 +119,10 @@ Independently decoded all original MP4s and matched control/functional original 
 Android preparation archive verified the pinned disk manifests, both scenario preflight hashes and APK SHA-256 `c7e7743df447e1233bf442d41913b9fc84398e6c3781f9ef81f243779cb32074` (12709 bytes); APK package/version 3.0/3, hosted v1/v2/v3 signatures and local JAR signature verified. Disposable signing identity only, not production signing approval. Actual guest boot and compatibility remain unverified.
 
 Supporting diagnostic core [46077339894](https://github.com/everhush/vm_interface/actions/runs/46077339894) on `21de1b3c1eb460dac0e3f98ec906838bf9a0dd9f` also passed all native stages and independent review, but it is not the final evidence source. Exact-candidate results above govern handoff.
+
+## Consolidated source and branch maintenance
+
+The migrated implementation is already incorporated into `main`. The retained historical migration and qualification refs are not required installation steps. See [repository maintenance](repository-maintenance.md) and [branch inventory](branch-cleanup.tsv) for the reviewed cleanup candidates; do not merge obsolete preparation trees over the exact qualified source. Database schema definitions and existing compatibility migrations remain centralized in [src/db.ts](../src/db.ts), with [upgrade boundaries](database-schema.md) documented separately.
 
 ## Handoff boundary
 

@@ -6,6 +6,8 @@ Start with the [project README](../readme.md). VM Interface is an Apache-2.0 eva
 | --- | --- |
 | Understand the design and trust boundaries | [Architecture](architecture.md) |
 | Evaluate a dedicated managed Kubernetes cluster | [Managed Kubernetes deployment](managed-kubernetes.md) |
+| Understand schema initialization and upgrade limitations | [Database schema and upgrades](database-schema.md) |
+| Maintain branches and public source | [Repository maintenance](repository-maintenance.md), [branch inventory](branch-cleanup.tsv) |
 | Try the API and build a client | [API guide and lifecycle walkthrough](api.md) |
 | Export a stopped VM's disk or exchange bundle | [Disk export](disk-export.md) |
 | Reproduce the evaluation safely on real hardware | [Device validation](device-validation.md) |
@@ -17,7 +19,7 @@ Start with the [project README](../readme.md). VM Interface is an Apache-2.0 eva
 
 ## Which source should I use?
 
-- Browse or build the current `main` source for the evaluation preview. The legacy default branch is kept aligned.
+- Browse or build the current `main` source for the evaluation preview. The legacy default branch is kept aligned until a repository administrator selects `main` as GitHub's default.
 - For reproducibility and issue #12 use exact hosted-qualified `34652dc2fffd585e8e95aac1a2df63b3552da8f8` and follow the [migration record](toolchain-migration.md) and device guide. Documentation-only successors do not constitute new same-SHA CI.
 - The original specification and engineering log preserve prior decisions and failures, including superseded Windows requirements. They are historical, not the current feature list or a request to restart development.
 

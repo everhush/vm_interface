@@ -4,7 +4,7 @@
 
 VM Interface gives applications, developers and external automation systems a common way to provision, inspect and operate persistent computers. It exposes VM lifecycle, storage, display, input, file transfer and networking through versioned APIs instead of requiring clients to manipulate Kubernetes or install a proprietary agent in every guest.
 
-[Apache-2.0](LICENSE) · [Documentation](docs/README.md) · [API guide](docs/api.md) · [Validation results](docs/validation.md) · [Contributing](CONTRIBUTING.md)
+[Apache-2.0](LICENSE) · [Documentation](docs/README.md) · [API guide](docs/api.md) · [Validation results](docs/validation.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
 > **Evaluation preview — Kubernetes/Vite+ migration hosted qualification passed on 27 November 2026 UTC.** See the [migration record](docs/toolchain-migration.md) for the exact independently reviewed candidate. Independent native-device acceptance ([#12](https://github.com/everhush/vm_interface/issues/12)) remains pending, including native ARM64 Android. This is not a production service or a stable/certified release. Use only clean, disposable, authorized devices.
 
@@ -70,6 +70,12 @@ Vinext and TypeScript implement the REST API. K3s hosts KubeVirt and CDI; QEMU/K
 
 Full results and exact commit: [validation record](docs/validation.md). The runtime capability/schema endpoints are authoritative for allowed configurations; a supported request is not a guarantee of guest conformance.
 
+## Implementation and migration
+
+The current `main` already contains the consolidated Kubernetes-only implementation: Vinext and TypeScript on Node.js 24, the pinned Vite+ toolchain, daemonless OCI image construction, and KubeVirt-managed guests. All 65 former Python files are accounted for in the [migration inventory](docs/toolchain-migration.md); no legacy Python source or Dockerfile is required. Database schema initialization and compatibility upgrades are centralized in [`src/db.ts`](src/db.ts); see the [schema and upgrade guide](docs/database-schema.md).
+
+Use `main` for evaluation source and the exact tested SHA below for reproducing hosted evidence. Historical development branches are not separate installations or required migration steps. See [repository maintenance](docs/repository-maintenance.md) for the branch policy and cleanup inventory.
+
 ## Getting started
 
 ### 1. Inspect and test the source (no KVM required)
@@ -91,7 +97,7 @@ This bootstraps the locked project-local Vite+ CLI with `npm ci`, then runs `vp 
 
 ```sh
 # Reproduce the exact hosted-qualified implementation:
-git checkout 34652dc2fffd585e8e95aac1a2df63b3552da8f8
+git switch --detach 34652dc2fffd585e8e95aac1a2df63b3552da8f8
 sudo "$(command -v node)" scripts/device-preflight.ts --architecture amd64
 bash scripts/device-validate.sh core --confirm-disposable
 ```
@@ -146,9 +152,9 @@ Exact source: `34652dc2fffd585e8e95aac1a2df63b3552da8f8`. See the [migration rec
 | `docs/`              | Public guides, qualification ledger and archived design specification |
 | `.github/workflows/` | Hosted qualification workflows; guarded to public upstream      |
 
-## Roadmap and boundaries
+## Roadmap and release boundaries
 
-Next milestone: [independent native-device acceptance (#12)](https://github.com/everhush/vm_interface/issues/12). Three consecutive comprehensive reviewed independent passes are required before stable release; current count is **0/3**. Use the [acceptance record template](docs/acceptance-record.md) to retain independent evidence and record the verdict without changing source. The current scope deliberately excludes a general dashboard, production identity/registration/OAuth, AI agents and production EKS/cloud deployment. See [release checklist](docs/release-checklist.md) and [original product specification](docs/product-specification.md) for the wider roadmap. Report defects rather than weakening test assertions.
+Next milestone: [independent native-device acceptance (#12)](https://github.com/everhush/vm_interface/issues/12). Three consecutive comprehensive reviewed independent passes are required before stable release; current count is **0/3**. Use the [acceptance record template](docs/acceptance-record.md) to retain independent evidence and record the verdict without changing source. The current scope deliberately excludes a general dashboard, production identity/registration/OAuth, AI agents and production EKS/cloud deployment. See the [release checklist](docs/release-checklist.md) and [original product specification](docs/product-specification.md) for the wider roadmap. Report defects rather than weakening test assertions.
 
 ## License and security
 

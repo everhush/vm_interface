@@ -1,6 +1,6 @@
 # Public source and release checklist
 
-This is the preparation checklist for an evaluation source preview. It does not authorize a change in repository visibility or a stable release.
+The repository is already publicly visible as an evaluation source preview. This checklist distinguishes completed source preparation from remaining maintainer settings, security/distribution review and stable release gates.
 
 ## Prepared in the primary source tree
 
@@ -14,7 +14,7 @@ This is the preparation checklist for an evaluation source preview. It does not 
 
 ## Publication audit — primary source preview
 
-Current exact hosted qualification: `34652dc2fffd585e8e95aac1a2df63b3552da8f8` (all four hosted gates passed and evidence independently reviewed). See [migration record](toolchain-migration.md). Any source-preview promotion is a fast-forward of qualified executable content and documentation-only successors; keep `main`/`master` aligned. Do not start #12 under this implementation issue or publish a stable release. The prior publication audit below is historical.
+Current exact hosted qualification: `34652dc2fffd585e8e95aac1a2df63b3552da8f8` (all four hosted gates passed and evidence independently reviewed). See [migration record](toolchain-migration.md). Any source-preview promotion is a fast-forward of qualified executable content and documentation-only successors; keep `main`/`master` aligned. Issue #13 is closed. Do not start independent #12 acceptance as a source-maintenance task or publish a stable release. The prior publication audit below is historical.
 
 The review on 2026-11-27 inspected the previously finalized tree `40ef574c216030b5ff132c6d0443296203ed6af0` against exact hosted qualification `7e095afe6274137104f15caf9cbaef7738d6a9ba`. Both primary refs were identical. The Git tree contained 218 blobs: 196 unchanged, 6 modified and 16 added, with no deletions. All executable sources, dependencies, tests, deployment manifests and workflows matched; only documentation, license, issue/PR templates and `.gitignore` differed. Subsequent quickstart and publication-guidance edits are also non-runtime; recheck the complete tree comparison before any publication.
 
@@ -22,12 +22,16 @@ The upstream had 67 retained branches (62 unique heads), no tags or GitHub relea
 
 A targeted content review covered the five CI workflows, `infra/app.yaml`, `infra/namespace.yaml`, `src/db.ts`, `src/auth.ts`, `scripts/device-validate.sh`, `scripts/provision-ci.sh` and `scripts/showcase-native.ts`. No matches for checked private key, GitHub/AWS/Google token, JWT, credential-in-URL or long literal credential patterns were found. This is a limited pattern review, **not a comprehensive secret scan**, dependency vulnerability audit or approval of public visibility. Complete history, issues/PRs, private attachments and artifacts still require an authorized maintainer review. Keep private guest media and credentials outside the source checkout; the OCI builder archives an explicit allowlist of tracked application files.
 
-## Historical publication checklist and continuing public-source review
+## Current branch and source audit — 2026-11-28 IST
 
-- [ ] Maintainer explicitly approves source visibility and reviews **all** reachable branches/tags and complete git history for credentials, confidential data, third-party source/media and inappropriate personal information; review issue/PR bodies, attachments and Actions logs/artifacts as well. Rotate any exposed credential and remediate before publication. A current-tree filename review is not a full secret scan.
+Reviewed primary baseline `a9542d8abdcc50b67d08d78f2880e542869b6bb2`: 232 tracked blobs; comparison to the exact hosted SHA found only nine documentation paths different, including one addition. No tracked Python source, Dockerfile/.dockerignore, guest binary/recording or private-key filenames matched the checked patterns. The repository is public; no open PRs or GitHub releases were returned. 76 branch refs at 68 distinct heads were compared against primary: 28 non-primary refs have no unique commits, and 46 have unique history. Retain four qualification entry refs and review the 24 remaining ancestor/equal-head refs for pruning. See [repository maintenance](repository-maintenance.md) and [branch inventory](branch-cleanup.tsv) for the exact snapshot and safe leased deletion procedure. No refs or default settings were changed by the audit. The database migration mechanism is consolidated in [src/db.ts](../src/db.ts); production upgrades remain unqualified (see [schema guide](database-schema.md)).
+
+## Continuing public-source review and maintainer settings
+
+- [ ] Maintainer reviews **all** reachable branches/tags and complete git history for credentials, confidential data, third-party source/media and inappropriate personal information; review issue/PR bodies, attachments and Actions logs/artifacts as well. Rotate any exposed credential and remediate before publication. A current-tree filename review is not a full secret scan.
 - [ ] Review license/ownership of contributed source and dependency obligations, notices and guest media terms. Do not redistribute external binaries or images without authorization.
 - [ ] Set the default branch to `main` in repository settings (keep the legacy `master` aligned until changed). The connected integration cannot change this setting or configure branch protection; do not interpret alignment as a settings update. Configure branch protection, review requirements, security/private vulnerability reporting and Actions permissions; keep qualification restricted to the authorized public upstream and explicit implementation/preparation branches.
-- [ ] Choose visibility, repository description/topics and access permissions in repository settings; avoid publishing private CI artifacts automatically. Source preview status and qualification boundaries must remain visible. Do not imply a public CI badge means main's post-qualification documentation commit ran native tests.
+- [ ] Confirm public visibility, set repository description/topics and review access permissions in repository settings; avoid publishing private CI artifacts automatically. Source preview status and qualification boundaries must remain visible. Do not imply a public CI badge means main's post-qualification documentation commit ran native tests.
 
 ## Maintainer settings and suggested public presentation
 
@@ -35,7 +39,7 @@ The upstream is the source of truth. Keep the legacy default `master` aligned wi
 
 Suggested description: **API-first control plane for real, persistent virtual machines on Kubernetes.** Suggested topics: `kubevirt`, `kubernetes`, `kvm`, `virtualization`, `typescript`, `vinext`, `vnc`, `rest-api`. Do not advertise native Android or a stable version before the relevant gates pass. Use the README and [validation record](validation.md) instead of a misleading live CI badge linked to a private fork.
 
-Before enabling public access, review private repository/fork visibility implications, issue/PR history, artifacts, commit author metadata, dependency and operator advisories, and secret scanning across all refs. Set least-privilege Actions permissions, branch rules and private vulnerability reporting if available. Keep security contact and support status in [SECURITY.md](../SECURITY.md). These are maintainer settings/review actions, not evidence of completed native acceptance.
+For ongoing public source maintenance, review historical repository/fork visibility implications, issue/PR history, artifacts, commit author metadata, dependency and operator advisories, and secret scanning across all refs. Set least-privilege Actions permissions, branch rules and private vulnerability reporting if available. Keep security contact and support status in [SECURITY.md](../SECURITY.md). These are maintainer settings/review actions, not evidence of completed native acceptance.
 
 ## Before stable release or production use
 
